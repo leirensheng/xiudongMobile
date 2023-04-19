@@ -12,7 +12,7 @@
 		</div>
 
 		<div class="bottom">
-			<button @click="clear" class="clear" type="primary">清除</button>
+			<button @click="clear" class="clear" type="primary" v-if="msgArr.length">清除</button>
 			<button @click="stop" class="stop" v-if="innerAudioContext" type="success">停止</button>
 
 		</div>
@@ -73,21 +73,19 @@ export default {
 		call(phoneNumber, i) {
 			uni.showActionSheet({
 				itemList: [phoneNumber, '呼叫'],
-				success: function (res) {
-					console.log(res);
+				success:  (res)=> {
 					if ([0, 1].includes(res.tapIndex)) {
+						this.msgArr.splice(i, 1)
 						uni.makePhoneCall({
 							phoneNumber,
 						})
 					}
 				}
 			})
-			this.msgArr.splice(i, 1)
 		},
 
 		stop() {
 			this.innerAudioContext.destroy()
-
 			this.innerAudioContext = null
 		},
 		sendMsg(msg) {
