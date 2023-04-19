@@ -66,9 +66,17 @@ export default {
 			this.msgArr = []
 		},
 		call(phoneNumber, i) {
-			uni.makePhoneCall({
-				phoneNumber
-			});
+			uni.showActionSheet({
+				itemList: [phone, '呼叫'],
+				success: function (res) {
+					console.log(res);
+					if (res.tapIndex == 1) {
+						uni.makePhoneCall({
+							phoneNumber,
+						})
+					}
+				}
+			})
 			this.msgArr.splice(i, 1)
 		},
 
