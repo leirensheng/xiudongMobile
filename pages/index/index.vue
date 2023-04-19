@@ -56,6 +56,7 @@ export default {
 		playSong() {
 			this.innerAudioContext = uni.createInnerAudioContext();
 			this.innerAudioContext.autoplay = true;
+			this.innerAudioContext.loop = true
 			this.innerAudioContext.src = '/static/1.mp3';   //铃声文件的路径
 			this.innerAudioContext.onPlay(() => {
 				console.log('开始播放');
