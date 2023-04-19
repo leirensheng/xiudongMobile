@@ -5,14 +5,18 @@
 			<div class="dot" :style="{ background: connected ? '#49e749' : 'red' }"> </div>
 		</div>
 		<div class="all-message">
+			<div class="sum" v-if="msgArr.length">共有{{ msgArr.length }}条消息</div>
 			<div class="message" v-for="(item, index) in msgArr" :key="item.phone" @click="call(item.phone, index)">
-				<div>{{ item.msg }}</div>
+				<div>{{ index + 1 }}: {{ item.msg }}</div>
 			</div>
 		</div>
 
-		<button @click="clear" class="stop">清除</button>
+		<div class="bottom">
+			<button @click="clear" class="clear" type="primary">清除</button>
+			<button @click="stop" class="stop" v-if="innerAudioContext" type="success">停止</button>
 
-		<button @click="stop" class="stop" v-if="innerAudioContext">停止</button>
+		</div>
+
 	</view>
 </template>
 
@@ -67,10 +71,10 @@ export default {
 		},
 		call(phoneNumber, i) {
 			uni.showActionSheet({
-				itemList: [phone, '呼叫'],
+				itemList: [phoneNumber, '呼叫'],
 				success: function (res) {
 					console.log(res);
-					if (res.tapIndex == 1) {
+					if ([0, 1].includes(res.tapIndex)) {
 						uni.makePhoneCall({
 							phoneNumber,
 						})
@@ -102,11 +106,13 @@ export default {
 	flex-direction: column;
 	justify-content: center;
 	align-items: center;
+	// padding: 15px;
 }
 
 .status {
 	display: flex;
 	align-items: center;
+	padding-top: 20px;
 
 	.dot {
 		margin-left: 15px;
@@ -117,7 +123,16 @@ export default {
 }
 
 .all-message {
+	margin: 20px;
+	flex: 1;
+	overflow: auto;
+
+	.sum {
+		text-align: center;
+	}
+
 	.message {
+		padding: 10px;
 		margin: 10px;
 		display: flex;
 		justify-content: center;
@@ -125,7 +140,11 @@ export default {
 	}
 }
 
-.stop {
-	margin-top: 20px;
+.bottom {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 20px;
+	padding-bottom: 20px;
 }
 </style>
