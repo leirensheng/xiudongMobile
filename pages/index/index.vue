@@ -44,9 +44,10 @@ export default {
 		uni.onSocketMessage((res) => {
 			console.log('收到服务器内容：' + res.data);
 			let { type, msg, phone } = JSON.parse(res.data)
-			this.msgArr.push({ msg, phone })
+
 			console.log(type)
 			if (type === 'ticketSuccess') {
+				this.msgArr.push({ msg, phone })
 				this.playSong()
 			}
 

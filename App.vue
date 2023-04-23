@@ -33,32 +33,42 @@ export default {
 			})
 		},
 		async connect() {
+			console.log('尝试连接')
+			clearInterval(this.heartTimer)
+			this.connected = false
 			let isLocal = await this.checkIsInLocal()
 			let host = isLocal ? '192.168.2.9' : '7l235k7324.yicp.fun'
 			uni.connectSocket({
 				url: `ws://${host}:4000/socket-app/` + this.uid
 			});
 		},
- 
+
+		startHeatBeat() {
+			clearInterval(this.heartTimer)
+			this.heartTimer = setInterval(() => {
+				uni.sendSocketMessage({
+					data: 'ping',
+					success: res => {
+						console.log('状态：已连接');
+					},
+					fail: err => {
+						console.log('连接失败重新连接....');
+						this.connect();
+					}
+				});
+			}, 1000);
+		},
 		init() {
-			console.log('尝试连接')
 			this.connect()
-			uni.onSocketOpen((res) => {
+			uni.onSocketOpen( (res)=> {
 				console.log('WebSocket连接已打开！');
-				clearTimeout(this.timer)
 				this.connected = true
+				this.startHeatBeat()
 			});
 			uni.onSocketError((res) => {
 				this.connected = false
 				console.log('WebSocket连接打开失败，请检查！');
-				clearTimeout(this.timer)
-				this.timer = setTimeout(() => {
-					this.connect()
-				}, 3000);
-			});
-			uni.onSocketClose((res) => {
-				console.log('WebSocket 已关闭！');
-				this.connect()
+				this.startHeatBeat()
 			});
 		}
 	},
