@@ -56,7 +56,7 @@ export default {
 						this.connect();
 					}
 				});
-			}, 1000);
+			}, 60000);
 		},
 		init() {
 			this.connect()

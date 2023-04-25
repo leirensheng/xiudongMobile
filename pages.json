@@ -5,8 +5,27 @@
 			"style": {
 				"navigationBarTitleText": "秀动消息"
 			}
+		},
+		{
+			"path": "pages/remote/index",
+			"style": {
+				"navigationBarTitleText": "远程配置"
+			}
 		}
 	],
+	"tabBar": {
+		"list": [
+			{
+				"pagePath": "pages/index/index",
+				"text": "消息"
+			},
+			{
+				"pagePath": "pages/remote/index",
+				"text": "用户配置"	
+
+			}
+		]
+	},
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "uni-app",
