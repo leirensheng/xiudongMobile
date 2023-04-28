@@ -47,7 +47,9 @@ export default {
 			clearInterval(this.heartTimer)
 			this.heartTimer = setInterval(() => {
 				uni.sendSocketMessage({
-					data: 'ping',
+					data: JSON.stringify({
+						type: 'ping'
+					}),
 					success: res => {
 						console.log('状态：已连接');
 					},
