@@ -14,13 +14,16 @@
 
         <div class="data">
             <uni-swipe-action ref="swipeAction">
-                <uni-swipe-action-item v-for="(item, index) in data" :right-options="rightOptions" :key="item.phone"
-                    @click="swipeClick($event, item)">
+                <uni-swipe-action-item v-for="(item, index) in data" :right-options="rightOptions" :key="item.username"
+                    @click="swipeClick($event, item)" :disabled="!!item.status">
                     <div class="item" :style="getStyle(item)">
                         <div class="phone">{{ item.phone }}</div>
                         <div class="name">{{ item.username }}</div>
-                        <div class="activityName">{{ item.activityName }}
-                            <img class="copy" src="/static/copy.svg" @click="openCopyDialog(item.activityId)" />
+                        <div class="activityName">
+                            <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" />
+
+                            {{ item.activityName }}
+                            <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item.activityId)" />
                         </div>
 
                         <button class="btn" size="mini" type="warn" v-if="item.status" @click="stop(item.pid)">停止</button>
@@ -37,13 +40,24 @@
 
         <uni-popup ref="popup" type="bottom">
             <div class="dialog">
-                <div class="form">
+                <div class="form" v-if="isEdit">
+                    <input type="text" v-model="editForm.port" placeholder="port">
+                    <input type="text" v-model="editForm.activityId" placeholder="activityId">
+                    <input type="number" v-model="editForm.nameIndex" placeholder="nameIndex">
+                    <input type="text" v-model="editForm.remark" placeholder="remark">
+                    <input type="text" v-model="editForm.uid" placeholder="uid">
+                    <checkbox-group @change="changeTarget" class="checkbox-group">
+                        <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
+                            :checked="editForm.targetTypes.includes(item)">{{ item }}
+                        </checkbox>
+                    </checkbox-group>
+                    <button class="btn" type="primary" @click="confirmEdit">确定修改</button>
+                </div>
+                <div class="form" v-else>
                     <input type="text" v-model="form.username" placeholder="username">
                     <input type="text" v-model="form.phone" placeholder="phone">
-                    <button class="btn" size="mini" type="primary" @click="add">新增</button>
-
+                    <button class="btn" type="primary" @click="add">新增</button>
                 </div>
-
             </div>
         </uni-popup>
 
@@ -55,16 +69,19 @@ import { request } from '@/utils.js'
 export default {
     data() {
         return {
+            targetTypeIndexes: [],
+            editForm: {},
+            isEdit: false,
             rightOptions: [
                 {
                     text: '删除',
                     style: {
-                        backgroundColor: '#007aff'
+                        backgroundColor: '#dd524d'
                     }
                 }, {
                     text: 'toCheck',
                     style: {
-                        backgroundColor: '#dd524d'
+                        backgroundColor: 'orange'
                     }
                 }
             ],
@@ -143,26 +160,55 @@ export default {
     },
 
     methods: {
+        changeTarget(e) {
+            this.editForm.targetTypes = e.detail.value
+        },
+        async confirmEdit() {
+            let keys = ['activityId', 'port', 'nameIndex', 'remark', 'uid', 'targetTypes']
+            let form = keys.reduce((prev, cur) => {
+                prev[cur] = this.editForm[cur]
+                return prev
+            }, {})
+            let data = {
+                username: this.editForm.username,
+                config: form
+            }
+            this.loading = true
+            await request({ method: 'post', url: this.host + "/editConfig/", data });
+            this.$refs.popup.close()
+            this.loading = false
+            this.getConfig()
 
-       async swipeClick({ index }, { username }) {
+        },
+        async openEditDialog(item) {
+            this.editForm = { ...item }
+            this.isEdit = true
+            this.$refs.popup.open('bottom')
+        },
+        async swipeClick({ index }, { username }) {
             if (index === 0) {
-                let res = await request({ method: 'post', url: this.host + "/removeConfig/",data:{username} });
+                this.loading = true
+                await request({ method: 'post', url: this.host + "/removeConfig/", data: { username } });
                 this.getConfig()
+                this.loading = false
             } else {
-
+                this.loading = true
+                await request({ method: 'post', url: this.host + "/toCheck/", data: { username } });
+                this.getConfig()
+                this.loading = false
             }
         },
         async add() {
             this.loading = true
             let data = { ...this.form, activityId: this.addActivityId }
             let res = await request({ method: 'post', url: this.host + "/addInfo/", data });
-            console.log(res)
             this.$refs.popup.close()
             this.loading = false
             this.getConfig()
         },
         openCopyDialog(activityId) {
             this.addActivityId = activityId
+            this.isEdit = false
             this.$refs.popup.open('bottom')
         },
         changeUnique(e) {
@@ -202,7 +248,6 @@ export default {
                 username,
                 ...one,
                 config: one,
-                targetTypes: Object.keys(one.typeMap || []),
             }));
 
             let items = this.queryItems.filter(item => item.value);
@@ -298,20 +343,22 @@ export default {
 }
 
 .data {
-    padding: 5px;
+    // padding: 15px;
 
     .item {
-        padding: 10px 0;
+        padding: 10px;
         display: flex;
         justify-content: center;
         align-items: center;
+        border-bottom: 1px solid rgb(223, 223, 223);
 
-        >:not(:last-child) {
-            padding-left: 10px;
+        >:not(:first-child) {
+            margin-left: 10px;
             flex-shrink: 0;
             word-break: break-all;
 
         }
+
 
         .name {
             width: 60px;
@@ -324,8 +371,8 @@ export default {
             .copy {
                 position: relative;
                 top: 4px;
-                width: 22px;
-                height: 22px;
+                width: 25px;
+                height: 18px;
             }
         }
 
@@ -355,6 +402,12 @@ input {
         >* {
             width: 100%;
             margin: 10px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
         }
     }
 }
