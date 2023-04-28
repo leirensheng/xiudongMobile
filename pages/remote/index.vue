@@ -144,9 +144,9 @@ export default {
 
     methods: {
 
-       async swipeClick({ index }, { username }) {
+        async swipeClick({ index }, { username }) {
             if (index === 0) {
-                let res = await request({ method: 'post', url: this.host + "/removeConfig/",data:{username} });
+                let res = await request({ method: 'post', url: this.host + "/removeConfig/", data: { username } });
                 this.getConfig()
             } else {
 
@@ -231,16 +231,19 @@ export default {
             }
         },
         async getConfig() {
-            this.data = []
-            let {
-                config, pidToCmd
-            } = await request({ url: this.host + "/getAllUserConfig" });
-            this.config = config
-            this.pidToCmd = pidToCmd
-            this.filterData()
-
-
-
+            this.loading = true
+            try {
+                this.data = []
+                let {
+                    config, pidToCmd
+                } = await request({ url: this.host + "/getAllUserConfig" });
+                this.config = config
+                this.pidToCmd = pidToCmd
+                this.filterData()
+            } catch (e) {
+                console.log(e)
+            }
+            this.loading = false
             // let options = Object.values(config).map(({ activityId, activityName }) => ({
             //     activityId,
             //     activityName,
