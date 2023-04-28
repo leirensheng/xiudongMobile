@@ -6,21 +6,47 @@
         </div>
         <div class="search">
             <input v-for="(item, index) in queryItems" :key="index" type="text" :placeholder="item.column"
-                v-model="item.value">
+                v-model="item.value" />
+            <span style="width:40px;flex-shrink: 0;">去重</span>
+            <switch @change="changeUnique" />
+
         </div>
 
         <div class="data">
-            <div class="item" v-for="(item, index) in data" :key="index" :style="getStyle(item)">
-                <div class="phone">{{ item.phone }}</div>
+            <uni-swipe-action ref="swipeAction">
+                <uni-swipe-action-item v-for="(item, index) in data" :right-options="rightOptions" :key="item.phone"
+                    @click="swipeClick($event, item)">
+                    <div class="item" :style="getStyle(item)">
+                        <div class="phone">{{ item.phone }}</div>
+                        <div class="name">{{ item.username }}</div>
+                        <div class="activityName">{{ item.activityName }}
+                            <img class="copy" src="/static/copy.svg" @click="openCopyDialog(item.activityId)" />
+                        </div>
 
-                <div class="name">{{ item.username }}</div>
-                <div class="activityName">{{ item.activityName }}</div>
+                        <button class="btn" size="mini" type="warn" v-if="item.status" @click="stop(item.pid)">停止</button>
+                        <button class="btn" size="mini" type="primary" v-else @click="start(item)">启动</button>
+                    </div>
+                    <!-- <view class="content-box">
+					<text class="content-text">{{ item.content }}</text>
+				</view> -->
+                </uni-swipe-action-item>
+            </uni-swipe-action>
 
-                <button class="btn" size="mini" type="warn" v-if="item.status" @click="stop(item.pid)">停止</button>
-                <button class="btn" size="mini" type="primary" v-else @click="start(item)">启动</button>
+
+        </div>
+
+        <uni-popup ref="popup" type="bottom">
+            <div class="dialog">
+                <div class="form">
+                    <input type="text" v-model="form.username" placeholder="username">
+                    <input type="text" v-model="form.phone" placeholder="phone">
+                    <button class="btn" size="mini" type="primary" @click="add">新增</button>
+
+                </div>
 
             </div>
-        </div>
+        </uni-popup>
+
     </div>
 </template>
 
@@ -29,8 +55,23 @@ import { request } from '@/utils.js'
 export default {
     data() {
         return {
+            rightOptions: [
+                {
+                    text: '删除',
+                    style: {
+                        backgroundColor: '#007aff'
+                    }
+                }, {
+                    text: 'toCheck',
+                    style: {
+                        backgroundColor: '#dd524d'
+                    }
+                }
+            ],
             data: [],
+            isUnique: false,
             loading: false,
+            form: {},
             queryItems: [
                 {
                     column: 'username',
@@ -64,7 +105,11 @@ export default {
 
         };
     },
+
     watch: {
+        isUnique() {
+            this.filterData()
+        },
         selected() {
             this.getConfig()
         },
@@ -98,8 +143,32 @@ export default {
     },
 
     methods: {
-        getStyle(item) {
 
+       async swipeClick({ index }, { username }) {
+            if (index === 0) {
+                let res = await request({ method: 'post', url: this.host + "/removeConfig/",data:{username} });
+                this.getConfig()
+            } else {
+
+            }
+        },
+        async add() {
+            this.loading = true
+            let data = { ...this.form, activityId: this.addActivityId }
+            let res = await request({ method: 'post', url: this.host + "/addInfo/", data });
+            console.log(res)
+            this.$refs.popup.close()
+            this.loading = false
+            this.getConfig()
+        },
+        openCopyDialog(activityId) {
+            this.addActivityId = activityId
+            this.$refs.popup.open('bottom')
+        },
+        changeUnique(e) {
+            this.isUnique = e.detail.value
+        },
+        getStyle(item) {
             return {
                 background: item.hasSuccess ? '#aaffaa' : item.remark?.includes('频繁') ? 'rgb(225, 223, 223)' : 'white'
 
@@ -152,8 +221,14 @@ export default {
                 one.pid = cmdToPid[cmd];
             });
 
-            this.data = data
-            console.log(data)
+            if (this.isUnique) {
+                let activityIds = [...new Set(data.map(one => Number(one.activityId)))];
+                this.data = activityIds.map(activityId =>
+                    data.find(one => Number(one.activityId) === activityId),
+                );
+            } else {
+                this.data = data;
+            }
         },
         async getConfig() {
             this.data = []
@@ -213,14 +288,13 @@ export default {
 }
 
 .search {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
     padding: 15px;
 
-    input {
-        border: 1px solid gainsboro;
-        margin-bottom: 10px;
-        padding: 10px;
-        border-radius: 10px;
-    }
+
 }
 
 .data {
@@ -246,11 +320,42 @@ export default {
         .activityName {
             flex: 1;
             flex-shrink: 1;
+
+            .copy {
+                position: relative;
+                top: 4px;
+                width: 22px;
+                height: 22px;
+            }
         }
 
         .btn {}
 
         // flex: 1;
+    }
+}
+
+input {
+    border: 1px solid gainsboro;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.dialog {
+    background-color: white;
+    padding: 20px;
+    padding-bottom: 60px;
+
+    .form {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+
+        >* {
+            width: 100%;
+            margin: 10px;
+        }
     }
 }
 </style>
