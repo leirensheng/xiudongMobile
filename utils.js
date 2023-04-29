@@ -5,13 +5,19 @@ let request = (options) =>
       timeout: 20000,
       success: (res) => {
         console.log(res);
-        let { code, data,msg } = res.data;
+        let { code, data, msg } = res.data;
+        let tips = msg;
         if (code !== 0) {
+          tips = msg || "出错";
+        }
+        if (tips) {
           uni.showToast({
-            title:msg|| '出错',
-            icon:'error',
-            duration: 2000
+            title: tips,
+            icon: "error",
+            duration: 2000,
           });
+        }
+        if (code !== 0) {
           reject();
         } else {
           resolve(data);
