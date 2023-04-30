@@ -106,7 +106,7 @@ export default {
                     hostname: '7l235k7324.yicp.fun',
                 },
                 {
-                    name: '公司',
+                    name: '惠普',
                     hostname: '100.115.170.87',
                 },
                 {
