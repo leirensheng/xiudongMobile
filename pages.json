@@ -7,9 +7,15 @@
 			}
 		},
 		{
-			"path": "pages/remote/index",
+			"path": "pages/xiudong/index",
 			"style": {
-				"navigationBarTitleText": "远程配置"
+				"navigationBarTitleText": "秀动"
+			}
+		},
+		{
+			"path": "pages/damai/index",
+			"style": {
+				"navigationBarTitleText": "大麦"
 			}
 		}
 	],
@@ -20,9 +26,12 @@
 				"text": "消息"
 			},
 			{
-				"pagePath": "pages/remote/index",
-				"text": "用户配置"	
-
+				"pagePath": "pages/xiudong/index",
+				"text": "秀动"	
+			},
+			{
+				"pagePath": "pages/damai/index",
+				"text": "大麦"	
 			}
 		]
 	},

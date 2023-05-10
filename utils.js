@@ -2,7 +2,7 @@ let request = (options) =>
   new Promise((resolve, reject) => {
     uni.request({
       ...options,
-      timeout: 20000,
+      timeout: options.timeout|| 20000,
       success: (res) => {
         console.log(res);
         let { code, data, msg } = res.data;

@@ -2,7 +2,7 @@
     <div class="remote">
         <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
-                    === item.hostname ? 'selected' : ''">{{ item.name }}</div>
+                === item.hostname ? 'selected' : ''">{{ item.name }}</div>
         </div>
         <div class="search">
             <input v-for="(item, index) in queryItems" :key="index" type="text" :placeholder="item.column"
@@ -41,13 +41,18 @@
         <uni-popup ref="popup" type="bottom">
             <div class="dialog">
                 <div class="form" v-if="isEdit">
-                    <input type="text" v-model="editForm.port" placeholder="port">
-                    <input type="text" v-model="editForm.activityId" placeholder="activityId">
-                    <input type="number" v-model="editForm.nameIndex" placeholder="nameIndex">
-                    <input type="text" v-model="editForm.remark" placeholder="remark">
-                    <input type="text" v-model="editForm.uid" placeholder="uid">
-                    <checkbox-group @change="changeTarget" class="checkbox-group">
+                    <input type="text" v-model="editForm[field]" :placeholder="field" v-for="(field, index) in inputFields"
+                        :key="index">
+
+
+                    <checkbox-group v-if="platform === 'xiudong'" @change="changeTarget" class="checkbox-group">
                         <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
+                            :checked="editForm.targetTypes.includes(item)">{{ item }}
+                        </checkbox>
+                    </checkbox-group>
+
+                    <checkbox-group v-else @change="changeTarget" class="checkbox-group">
+                        <checkbox :value="item" v-for="(item, index) in Object.values(editForm.skuIdToTypeMap)" :key="index"
                             :checked="editForm.targetTypes.includes(item)">{{ item }}
                         </checkbox>
                     </checkbox-group>
@@ -56,6 +61,9 @@
                 <div class="form" v-else>
                     <input type="text" v-model="form.username" placeholder="username">
                     <input type="text" v-model="form.phone" placeholder="phone">
+                    <input type="text" v-if="platform === 'damai'" v-model="form.password" placeholder="password">
+                    <input type="text" v-model="form.uid" placeholder="uid">
+
                     <button class="btn" type="primary" @click="add">新增</button>
                 </div>
             </div>
@@ -65,26 +73,24 @@
 </template>
 
 <script>
+let platformMap = {
+    xiudong: '4000',
+    damai: '5000'
+}
 import { request } from '@/utils.js'
 export default {
+    props: {
+        platform: {
+            type: String,
+            default: 'xiudong',
+        }
+    },
     data() {
         return {
             targetTypeIndexes: [],
             editForm: {},
             isEdit: false,
-            rightOptions: [
-                {
-                    text: '删除',
-                    style: {
-                        backgroundColor: '#dd524d'
-                    }
-                }, {
-                    text: 'toCheck',
-                    style: {
-                        backgroundColor: 'orange'
-                    }
-                }
-            ],
+
             data: [],
             isUnique: false,
             loading: false,
@@ -102,8 +108,9 @@ export default {
             selected: '',
             pcs: [
                 {
+                    hostname: '127.0.0.1',
                     name: '华硕',
-                    hostname: '7l235k7324.yicp.fun',
+                    // hostname: '7l235k7324.yicp.fun',
                 },
                 {
                     name: '惠普',
@@ -149,14 +156,45 @@ export default {
     },
     created() {
 
+
+
     },
     mounted() {
 
     },
     computed: {
-        host() {
-            return `http://${this.selected}:4000`
+        rightOptions() {
+            let options = [
+                {
+                    text: '删除',
+                    style: {
+                        backgroundColor: '#dd524d'
+                    }
+                }, {
+                    text: 'toCheck',
+                    style: {
+                        backgroundColor: 'orange'
+                    }
+                }
+            ]
+            if (this.platform === 'damai') {
+                options.pop()
+            }
+            return options
         },
+        host() {
+            return `http://${this.selected}:${platformMap[this.platform]}`
+        },
+        inputFields() {
+            return this.fields.filter(one => one !== 'targetTypes')
+        },
+        fields() {
+            let map = {
+                xiudong: ['activityId', 'port', 'nameIndex', 'remark', 'uid', 'targetTypes'],
+                damai: ['activityId', 'port', 'password', 'showOrders', 'remark', 'uid', 'targetTypes'],
+            }
+            return map[this.platform]
+        }
     },
 
     methods: {
@@ -164,7 +202,8 @@ export default {
             this.editForm.targetTypes = e.detail.value
         },
         async confirmEdit() {
-            let keys = ['activityId', 'port', 'nameIndex', 'remark', 'uid', 'targetTypes']
+
+            let keys = this.fields
             let form = keys.reduce((prev, cur) => {
                 prev[cur] = this.editForm[cur]
                 return prev
@@ -201,7 +240,7 @@ export default {
         async add() {
             this.loading = true
             let data = { ...this.form, activityId: this.addActivityId }
-            let res = await request({ method: 'post', url: this.host + "/addInfo/", data });
+            let res = await request({ method: 'post', url: this.host + "/addInfo/", data, timeout: 120000 });
             this.$refs.popup.close()
             this.loading = false
             this.getConfig()
@@ -264,6 +303,9 @@ export default {
                 one.hasSuccess = Boolean(one.hasSuccess);
                 one.status = cmds.some(cmd => cmd.replace(/\s+show/, '') === one.cmd) ? 1 : 0;
                 one.pid = cmdToPid[cmd];
+                if (this.platform === 'damai') {
+                    one.showOrders = one.orders.join(',')
+                }
             });
 
             if (this.isUnique) {
@@ -408,9 +450,13 @@ input {
         }
 
         .checkbox-group {
+            max-height: 20vh;
+            gap: 20px;
+            overflow: auto;
             display: flex;
             justify-content: space-around;
             align-items: center;
+            flex-wrap: wrap;
         }
     }
 }
