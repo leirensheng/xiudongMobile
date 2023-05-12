@@ -255,6 +255,7 @@ export default {
         openCopyDialog(activityId) {
             this.addActivityId = activityId
             this.isEdit = false
+            this.form = {}
             this.$refs.popup.open('bottom')
         },
         changeUnique(e) {
