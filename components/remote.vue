@@ -44,6 +44,10 @@
                     <input type="text" v-model="editForm[field]" :placeholder="field" v-for="(field, index) in inputFields"
                         :key="index">
 
+                    <div class="is-success">
+                        <span>是否成功: </span>
+                        <switch :checked="editForm.hasSuccess" @change="handleSwitchChange" />
+                    </div>
 
                     <checkbox-group v-if="platform === 'xiudong'" @change="changeTarget" class="checkbox-group">
                         <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
@@ -186,12 +190,12 @@ export default {
             return `http://${this.selected}:${platformMap[this.platform]}`
         },
         inputFields() {
-            return this.fields.filter(one => one !== 'targetTypes')
+            return this.fields.filter(one => !['targetTypes', 'hasSuccess'].includes(one))
         },
         fields() {
             let map = {
-                xiudong: ['activityId', 'port', 'nameIndex', 'remark', 'uid', 'targetTypes'],
-                damai: ['activityId', 'port', 'password', 'showOrders', 'remark', 'uid', 'targetTypes'],
+                xiudong: ['activityId', 'port', 'nameIndex', 'remark', 'uid', 'targetTypes', "hasSuccess"],
+                damai: ['activityId', 'port', 'password', 'showOrders', 'remark', 'uid', 'targetTypes', "hasSuccess"],
             }
             return map[this.platform]
         }
@@ -200,6 +204,9 @@ export default {
     methods: {
         changeTarget(e) {
             this.editForm.targetTypes = e.detail.value
+        },
+        handleSwitchChange(e){
+            this.editForm.hasSuccess = e.detail.value
         },
         async confirmEdit() {
 
@@ -336,7 +343,7 @@ export default {
                 this.pidToCmd = pidToCmd
                 this.filterData()
             } catch (e) {
-                console.log('出错',e)
+                console.log('出错', e)
                 if (e.errMsg.includes('abort')) {
                     setTimeout(() => {
                         this.loading = true
@@ -448,7 +455,7 @@ input {
 
 .dialog {
     background-color: white;
-    padding:10px 20px;
+    padding: 10px 20px;
 
     .form {
         display: flex;
@@ -459,12 +466,21 @@ input {
         >* {
             width: 100%;
             margin: 5px;
-            &:last-child{
+
+            &:last-child {
                 margin-bottom: 0;
             }
         }
 
+        .is-success{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgb(221, 221, 222);
+        }
         .checkbox-group {
+            padding: 10px 0;
             max-height: 20vh;
             gap: 10px;
             overflow: auto;
