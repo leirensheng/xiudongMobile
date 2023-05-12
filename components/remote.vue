@@ -241,15 +241,15 @@ export default {
             this.loading = true
             let data = { ...this.form, activityId: this.addActivityId }
 
-            if(data.uid){
-                data.uid = data.uid.replace('尊敬的用户，你的UID是：','')
+            if (data.uid) {
+                data.uid = data.uid.replace('尊敬的用户，你的UID是：', '')
             }
-             await request({ method: 'post', url: this.host + "/addInfo/", data, timeout: 120000 });
+            await request({ method: 'post', url: this.host + "/addInfo/", data, timeout: 120000 });
             this.$refs.popup.close()
             this.loading = false
             this.isUnique = false
             await this.getConfig()
-            let target = this.data.find(one=> one.username === data.username )
+            let target = this.data.find(one => one.username === data.username)
             this.start(target)
         },
         openCopyDialog(activityId) {
@@ -330,12 +330,17 @@ export default {
                 this.data = []
                 let {
                     config, pidToCmd
-                } = await request({ url: this.host + "/getAllUserConfig" });
+                } = await request({ url: this.host + "/getAllUserConfig", cancelPre: true });
                 this.config = config
                 this.pidToCmd = pidToCmd
                 this.filterData()
             } catch (e) {
-                console.log(e)
+                console.log('出错')
+                if (e.errMsg.includes('abort')) {
+                    setTimeout(() => {
+                        this.loading = true
+                    }, 0);
+                }
             }
             this.loading = false
             // let options = Object.values(config).map(({ activityId, activityName }) => ({
