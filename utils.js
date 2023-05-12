@@ -20,7 +20,7 @@ let request = (options) =>
           uni.showToast({
             title: tips,
             icon: "error",
-            duration: 2000,
+            duration: 3500,
           });
         }
         if (code !== 0) {
