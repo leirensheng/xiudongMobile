@@ -1,7 +1,7 @@
 let urlToRequest = {}
 let request = (options) =>
   new Promise((resolve, reject) => {
-    let path  = new URL(options.url).pathname
+    let path  = options.url.split('/').pop()
     let pre = urlToRequest[path]
     if(pre && options.cancelPre){
       pre.abort()

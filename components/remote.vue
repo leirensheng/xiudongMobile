@@ -335,7 +335,7 @@ export default {
                 this.pidToCmd = pidToCmd
                 this.filterData()
             } catch (e) {
-                console.log('出错')
+                console.log('出错',e)
                 if (e.errMsg.includes('abort')) {
                     setTimeout(() => {
                         this.loading = true
