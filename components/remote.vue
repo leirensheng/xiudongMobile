@@ -41,8 +41,8 @@
         <uni-popup ref="popup" type="bottom">
             <div class="dialog">
                 <div class="form" v-if="isEdit">
-                    <input type="text" v-model="editForm[field]" :placeholder="field" v-for="(field, index) in inputFields"
-                        :key="index">
+                    <my-input type="text" v-model="editForm[field]" :placeholder="field"
+                        v-for="(field, index) in inputFields" :key="index" />
 
                     <div class="is-success">
                         <span>是否成功: </span>
@@ -63,10 +63,12 @@
                     <button class="btn" type="primary" @click="confirmEdit">确定修改</button>
                 </div>
                 <div class="form" v-else>
-                    <input type="text" v-model="form.username" placeholder="username">
-                    <input type="text" v-model="form.phone" placeholder="phone">
-                    <input type="text" v-if="platform === 'damai'" v-model="form.password" placeholder="password">
-                    <input type="text" v-model="form.uid" placeholder="uid">
+                    <my-input type="text" v-model="form.phone" placeholder="phone" @blur="handlePhone" />
+                    <my-input type="text" v-if="platform === 'damai'" v-model="form.password" placeholder="password"
+                        @blur="handlePass" />
+                    <my-input type="text" v-model="form.username" placeholder="username" />
+
+                    <my-input type="text" v-model="form.uid" placeholder="uid" />
 
                     <button class="btn" type="primary" @click="add">新增</button>
                 </div>
@@ -202,6 +204,27 @@ export default {
     },
 
     methods: {
+        handlePhone() {
+            if (this.form.phone) {
+                let [, ...left] = this.form.phone.split(/\s+/)
+                let res = this.form.phone.match(/\d{11}/)
+                if (res) {
+                    this.form.phone = res[0]
+                }
+                if (left.length) {
+                    this.form.password = left.join("")
+                    this.handlePass()
+                }
+            }
+        },
+        handlePass() {
+            if (this.form.password) {
+                let res = this.form.password.split(/\s+/)
+                res = res.slice(-1)[0]
+                res = res.replace(/(密码是)|(密码:)|(密码是:)|(密码：)|(密码是：)|(密码)/g, '')
+                this.form.password = res
+            }
+        },
         changeTarget(e) {
             this.editForm.targetTypes = e.detail.value
         },
