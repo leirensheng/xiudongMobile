@@ -1,5 +1,5 @@
 <template>
-    <remote-config platform="damai"></remote-config>
+    <remote-config platform="damai" ref="remote"></remote-config>
 </template>
 
 <script>
