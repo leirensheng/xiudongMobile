@@ -9,12 +9,16 @@
 		{
 			"path": "pages/xiudong/index",
 			"style": {
-				"navigationBarTitleText": "秀动"
+				"navigationBarTitleText": "秀动",
+				"enablePullDownRefresh": true
+
 			}
 		},
 		{
 			"path": "pages/damai/index",
 			"style": {
+				"enablePullDownRefresh": true,
+
 				"navigationBarTitleText": "大麦"
 			}
 		}

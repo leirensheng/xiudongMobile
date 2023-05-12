@@ -16,6 +16,10 @@ export default {
     created() {
 
     },
+    async onPullDownRefresh() {
+        await this.$refs.remote.getConfig()
+        uni.stopPullDownRefresh();
+    },
     mounted() {
 
     },

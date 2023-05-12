@@ -1,11 +1,11 @@
 <template>
-    <remote-config platform="xiudong"></remote-config>
+    <remote-config platform="xiudong" ref="remote"></remote-config>
 </template>
 
 <script>
 import RemoteConfig from '../../components/remote.vue'
 export default {
-    components:{
+    components: {
         RemoteConfig
     },
     data() {
@@ -16,6 +16,10 @@ export default {
     created() {
 
     },
+    async onPullDownRefresh() {
+        await this.$refs.remote.getConfig()
+        uni.stopPullDownRefresh();
+    },
     mounted() {
 
     },
@@ -25,6 +29,4 @@ export default {
 };
 </script>
 
-<style scoped lang="scss">
-
-</style>
+<style scoped lang="scss"></style>
