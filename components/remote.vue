@@ -448,8 +448,7 @@ input {
 
 .dialog {
     background-color: white;
-    padding: 20px;
-    padding-bottom: 60px;
+    padding:10px 20px;
 
     .form {
         display: flex;
@@ -459,12 +458,15 @@ input {
 
         >* {
             width: 100%;
-            margin: 10px;
+            margin: 5px;
+            &:last-child{
+                margin-bottom: 0;
+            }
         }
 
         .checkbox-group {
             max-height: 20vh;
-            gap: 20px;
+            gap: 10px;
             overflow: auto;
             display: flex;
             justify-content: space-around;
