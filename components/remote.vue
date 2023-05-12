@@ -205,7 +205,7 @@ export default {
         changeTarget(e) {
             this.editForm.targetTypes = e.detail.value
         },
-        handleSwitchChange(e){
+        handleSwitchChange(e) {
             this.editForm.hasSuccess = e.detail.value
         },
         async confirmEdit() {
@@ -270,7 +270,7 @@ export default {
         },
         getStyle(item) {
             return {
-                background: item.hasSuccess ? '#aaffaa' : item.remark?.includes('频繁') ? 'rgb(225, 223, 223)' : 'white'
+                background: item.hasSuccess ? '#aaffaa' : item.remark?.includes('频繁') ? 'rgb(225, 223, 223)' : !item.uid ? 'rgb(254, 214, 91)' : 'white'
 
             }
         },
@@ -472,13 +472,14 @@ input {
             }
         }
 
-        .is-success{
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
+        .is-success {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             padding-bottom: 10px;
             border-bottom: 1px solid rgb(221, 221, 222);
         }
+
         .checkbox-group {
             padding: 10px 0;
             max-height: 20vh;
