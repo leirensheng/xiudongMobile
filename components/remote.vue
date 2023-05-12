@@ -108,9 +108,9 @@ export default {
             selected: '',
             pcs: [
                 {
-                    hostname: '127.0.0.1',
+                    // hostname: '192.168.2.9',
                     name: '华硕',
-                    // hostname: '7l235k7324.yicp.fun',
+                    hostname: '7l235k7324.yicp.fun',
                 },
                 {
                     name: '惠普',
@@ -240,10 +240,17 @@ export default {
         async add() {
             this.loading = true
             let data = { ...this.form, activityId: this.addActivityId }
-            let res = await request({ method: 'post', url: this.host + "/addInfo/", data, timeout: 120000 });
+
+            if(data.uid){
+                data.uid = data.uid.replace('尊敬的用户，你的UID是：','')
+            }
+             await request({ method: 'post', url: this.host + "/addInfo/", data, timeout: 120000 });
             this.$refs.popup.close()
             this.loading = false
-            this.getConfig()
+            this.isUnique = false
+            await this.getConfig()
+            let target = this.data.find(one=> one.username === data.username )
+            this.start(target)
         },
         openCopyDialog(activityId) {
             this.addActivityId = activityId
