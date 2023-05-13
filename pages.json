@@ -21,6 +21,13 @@
 
 				"navigationBarTitleText": "大麦"
 			}
+		},
+		{
+			"path": "pages/damai/ticket",
+			"style": {
+				"enablePullDownRefresh": true,
+				"navigationBarTitleText": "即将开"
+			}
 		}
 	],
 	"tabBar": {
@@ -36,6 +43,10 @@
 			{
 				"pagePath": "pages/damai/index",
 				"text": "大麦"	
+			},
+			{
+				"pagePath": "pages/damai/ticket",
+				"text": "抢"	
 			}
 		]
 	},
