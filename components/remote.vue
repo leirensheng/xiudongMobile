@@ -29,6 +29,8 @@
                         <button class="btn" size="mini" type="warn" v-if="item.status" @click="stop(item.pid)">停止</button>
                         <button class="btn" size="mini" type="primary" v-else @click="start(item)">启动</button>
                     </div>
+
+                    <div v-if="index && (item.port !== data[index - 1].port)" class="divide"> </div>
                     <!-- <view class="content-box">
 					<text class="content-text">{{ item.content }}</text>
 				</view> -->
@@ -41,8 +43,11 @@
         <uni-popup ref="popup" type="bottom">
             <div class="dialog">
                 <div class="form" v-if="isEdit">
-                    <my-input type="text" v-model="editForm[field]" :placeholder="field"
-                        v-for="(field, index) in inputFields" :key="index" />
+                    <div v-for="(field, index) in inputFields" :key="index" class="input-wrap">
+                        <span>{{ field }}</span>
+                        <my-input type="text" v-model="editForm[field]" :placeholder="field" />
+
+                    </div>
 
                     <div class="is-success">
                         <span>是否成功: </span>
@@ -431,7 +436,11 @@ export default {
 }
 
 .data {
+
     // padding: 15px;
+    .divide {
+        border: 2px dotted rgb(78, 195, 36);
+    }
 
     .item {
         padding: 10px;
@@ -495,6 +504,18 @@ input {
             }
         }
 
+        .input-wrap {
+            display: flex;
+            // justify-content:center;
+            align-items: center;
+
+            span {
+                margin-right: 5px;
+                width: 80px;
+                text-align: center;
+            }
+        }
+
         .is-success {
             display: flex;
             justify-content: space-between;
@@ -514,5 +535,4 @@ input {
             flex-wrap: wrap;
         }
     }
-}
-</style>
+}</style>

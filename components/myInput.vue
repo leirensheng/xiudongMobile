@@ -1,5 +1,5 @@
 <template>
-    <input type="text" v-bind="$attrs" cursor-spacing="30" @input="valueChange">
+    <input type="text" v-bind="$attrs" cursor-spacing="80" @input="valueChange">
 </template>
 
 <script>
