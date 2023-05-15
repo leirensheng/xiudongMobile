@@ -60,6 +60,10 @@
                         <span>是否成功: </span>
                         <switch :checked="editForm.hasSuccess" @change="handleSwitchChange" />
                     </div>
+                    <div class="is-success">
+                        <span>重新获取信息: </span>
+                        <switch :checked="editForm.isRefresh" @change="handleRefreshChange" />
+                    </div>
 
                     <checkbox-group v-if="platform === 'xiudong'" @change="changeTarget" class="checkbox-group">
                         <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
@@ -243,8 +247,10 @@ export default {
         handleSwitchChange(e) {
             this.editForm.hasSuccess = e.detail.value
         },
+        handleRefreshChange(e){
+            this.editForm.isRefresh = e.detail.value
+        },
         async confirmEdit() {
-
             let keys = this.fields
             let form = keys.reduce((prev, cur) => {
                 prev[cur] = this.editForm[cur]
@@ -252,7 +258,8 @@ export default {
             }, {})
             let data = {
                 username: this.editForm.username,
-                config: form
+                config: form,
+                isRefresh: this.editForm.isRefresh
             }
             this.loading = true
             await request({ method: 'post', url: this.host + "/editConfig/", data });
