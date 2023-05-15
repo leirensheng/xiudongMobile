@@ -18,12 +18,12 @@
                     @click="swipeClick($event, item)" :disabled="!!item.status">
                     <div class="item" :style="getStyle(item)">
                         <div class="phone">
-                                <div>{{ item.phone }}</div>
-                                <div>{{item.username}}</div>
+                            <div>{{ item.phone }}</div>
+                            <div>{{ item.username }}</div>
                         </div>
 
                         <div class="targetTypes">
-                            <div class="target-type" v-for="(item, index) in item.targetTypes" :key="index">{{item}}</div>
+                            <div class="target-type" v-for="(item, index) in item.targetTypes" :key="index">{{ item }}</div>
                         </div>
 
                         <div class="activityName">
@@ -304,9 +304,30 @@ export default {
             this.isUnique = e.detail.value
         },
         getStyle(item) {
-            return {
-                background: item.hasSuccess ? '#aaffaa' : item.remark?.includes('频繁') ? 'rgb(225, 223, 223)' : !item.uid ? 'rgb(254, 214, 91)' : 'white'
+            let arr = [
+                {
+                    condition: item.hasSuccess,
+                    background: '#aaffaa'
+                },
+                {
+                    condition: item.remark?.includes('频繁'),
+                    background: 'rgb(225, 223, 223)'
+                },
+                {
+                    condition: !item.uid,
+                    background: 'rgb(254, 214, 91)'
+                },
+                {
+                    condition: item.remark?.includes('优先'),
+                    background: '#21a1ab',
+                    color: 'white'
+                },
 
+            ]
+            let target = arr.find(one=> one.condition)
+            return {
+                background:target?target.background: 'white',
+                color: target?target.color||'black':'black'
             }
         },
 
@@ -462,17 +483,20 @@ export default {
             word-break: break-all;
 
         }
-        .phone{
+
+        .phone {
             width: 120px;
             text-align: center;
-            >*{
+
+            >* {
                 line-height: 2;
             }
         }
 
         .targetTypes {
             width: 70px;
-            .target-type{
+
+            .target-type {
                 line-height: 2;
             }
         }
