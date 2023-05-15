@@ -17,11 +17,17 @@
                 <uni-swipe-action-item v-for="(item, index) in data" :right-options="rightOptions" :key="item.username"
                     @click="swipeClick($event, item)" :disabled="!!item.status">
                     <div class="item" :style="getStyle(item)">
-                        <div class="phone">{{ item.phone }}</div>
-                        <div class="name">{{ item.username }}</div>
+                        <div class="phone">
+                                <div>{{ item.phone }}</div>
+                                <div>{{item.username}}</div>
+                        </div>
+
+                        <div class="targetTypes">
+                            <div class="target-type" v-for="(item, index) in item.targetTypes" :key="index">{{item}}</div>
+                        </div>
+
                         <div class="activityName">
                             <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" />
-
                             {{ item.activityName }}
                             <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item.activityId)" />
                         </div>
@@ -440,7 +446,7 @@ export default {
 
     // padding: 15px;
     .divide {
-        border: 2px dotted rgb(83, 240, 25);
+        border: 2px dotted rgb(78, 195, 36);
     }
 
     .item {
@@ -456,10 +462,19 @@ export default {
             word-break: break-all;
 
         }
+        .phone{
+            width: 120px;
+            text-align: center;
+            >*{
+                line-height: 2;
+            }
+        }
 
-
-        .name {
-            width: 60px;
+        .targetTypes {
+            width: 70px;
+            .target-type{
+                line-height: 2;
+            }
         }
 
         .activityName {
@@ -536,5 +551,4 @@ input {
             flex-wrap: wrap;
         }
     }
-}
-</style>
+}</style>
