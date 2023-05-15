@@ -30,7 +30,8 @@
                         <button class="btn" size="mini" type="primary" v-else @click="start(item)">启动</button>
                     </div>
 
-                    <div v-if="index && (item.port !== data[index - 1].port)" class="divide"> </div>
+                    <div v-if="(index !== data.length - 1) && (Number(item.port) !== Number(data[index + 1].port))"
+                        class="divide"> </div>
                     <!-- <view class="content-box">
 					<text class="content-text">{{ item.content }}</text>
 				</view> -->
@@ -439,7 +440,7 @@ export default {
 
     // padding: 15px;
     .divide {
-        border: 2px dotted rgb(78, 195, 36);
+        border: 2px dotted rgb(83, 240, 25);
     }
 
     .item {
@@ -535,4 +536,5 @@ input {
             flex-wrap: wrap;
         }
     }
-}</style>
+}
+</style>
