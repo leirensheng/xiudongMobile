@@ -7,9 +7,8 @@
         <div class="search">
             <input v-for="(item, index) in queryItems" :key="index" type="text" :placeholder="item.column"
                 v-model="item.value" />
-            <span style="width:40px;flex-shrink: 0;">去重</span>
             <switch @change="changeUnique" />
-
+            <button type="primary" @click="reset" size="mini"  style="flex-shrink: 0;">重置</button>
         </div>
 
         <div class="data">
@@ -220,6 +219,11 @@ export default {
     },
 
     methods: {
+        reset(){
+            this.queryItems.forEach(one=> {
+                one.value=''
+            })
+        },
         handlePhone() {
             if (this.form.phone) {
                 let [, ...left] = this.form.phone.split(/\s+/)
