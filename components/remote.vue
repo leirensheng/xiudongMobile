@@ -9,7 +9,7 @@
                 v-model="item.value" />
             <switch @change="changeUnique" />
 
-            <picker @change="bindPickerChange" :value="selectedActivityIndex"
+            <picker v-show="activities.length" @change="bindPickerChange" :value="selectedActivityIndex"
                 :range="activities">
                 <image style="width: 16px;height:16px" src="/static/filter.svg" />
             </picker>
