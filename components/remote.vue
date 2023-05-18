@@ -484,7 +484,7 @@ export default {
 
 <style scoped lang="scss">
 .remote {
-    overflow: auto;
+    // overflow: auto;
 }
 
 .pcs {
