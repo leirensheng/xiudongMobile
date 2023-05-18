@@ -1,5 +1,5 @@
 <template>
-    <div class="remote" :style="{height:windowHeight+'px'}">
+    <div class="remote" :style="{ height: windowHeight + 'px' }">
         <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
@@ -15,16 +15,19 @@
         <uni-swipe-action>
             <template v-for="(one, index) in groupData" :key="one.group">
                 <div class="activity">{{ one.group }}</div>
-                <uni-swipe-action-item v-for="(item) in one.data" :right-options="rightOptions" :key="item.username+item.phone"
-                    @click="swipeClick($event, item)" :disabled="!!item.status">
+                <uni-swipe-action-item v-for="(item) in one.data" :right-options="rightOptions"
+                    :key="item.username + item.phone" @click="swipeClick($event, item)" :disabled="!!item.status">
 
                     <!-- <div class="activity" v-if="index===0|| (item.activityName!== data[index-1].activityName )">{{item.activityName}}</div> -->
 
-                    <div class="item" :style="getStyle(item)" :key="item.username+item.phone">
+                    <div class="item" :style="getStyle(item)" :key="item.username + item.phone">
                         <div class="phone">
                             <!-- <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" /> -->
                             <div>{{ item.phone }}</div>
                             <div>{{ item.username }}</div>
+                            <div>{{ item.nameIndex }}</div>
+                            <div>{{ item.showOrders }}</div>
+
                             <!-- <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item.activityId)" /> -->
 
                         </div>
@@ -33,14 +36,19 @@
                             <div class="target-type" v-for="(item, index) in item.targetTypes" :key="index">{{ item }}</div>
                         </div>
 
-                        <div class="activityName">
-                            <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" />
-                            {{ item.activityName }}
-                            <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item.activityId)" />
+                        <div class="remark">
+                            {{ item.remark }}
                         </div>
 
-                        <button class="btn" size="mini" type="warn" v-if="item.status" @click="stop(item.pid)">停止</button>
-                        <button class="btn" size="mini" type="primary" v-else @click="start(item)">启动</button>
+                        <div class="btns">
+                            <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" />
+                            <button class="btn" size="mini" type="warn" v-if="item.status"
+                                @click="stop(item.pid)">停止</button>
+                            <button class="btn" size="mini" type="primary" v-else @click="start(item)">启动</button>
+                            <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item.activityId)" />
+
+                        </div>
+
                     </div>
 
                     <!-- <view class="content-box">
@@ -48,7 +56,7 @@
 				</view> -->
                 </uni-swipe-action-item>
             </template>
-            </uni-swipe-action>
+        </uni-swipe-action>
 
 
 
@@ -116,7 +124,7 @@ export default {
     },
     data() {
         return {
-            windowHeight:0,
+            windowHeight: 0,
             groupData: [],
             targetTypeIndexes: [],
             editForm: {},
@@ -415,7 +423,7 @@ export default {
         getGroup(data) {
             this.data = data
             let res = []
-            if (!data.length){
+            if (!data.length) {
                 this.getGroupData = []
             }
             let cur = {
@@ -423,13 +431,13 @@ export default {
                 data: []
             }
 
-            data.forEach((one,index)=>{
+            data.forEach((one, index) => {
                 if (cur.group === one.activityName) {
                     cur.data.push(one)
-                    if(index === data.length -1 && !res.length){
+                    if (index === data.length - 1 && !res.length) {
                         res.push(cur)
                     }
-                    
+
                 } else {
                     res.push(cur)
                     cur = {
@@ -439,14 +447,14 @@ export default {
                 }
 
             })
-          
+
             console.log(res)
             this.groupData = res
         },
         async getConfig() {
             this.loading = true
             try {
-                this.groupData =[]
+                this.groupData = []
                 this.data = []
                 let {
                     config, pidToCmd
@@ -527,9 +535,7 @@ export default {
     z-index: 88;
     background: rgb(94, 128, 177);
     color: white;
-    // margin: 10px 5px;
     text-align: center;
-    text-align: justify;
     padding: 5px;
 }
 
@@ -564,26 +570,37 @@ export default {
     }
 
     .targetTypes {
-        width: 70px;
+        flex: 1;
+
 
         .target-type {
+            text-align: center;
             line-height: 2;
         }
     }
 
-    .activityName {
-        flex: 1;
-        flex-shrink: 1;
+    .remark {
+        width: 30px;
+    }
+
+    .btns {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+
+        button {
+            margin: 12px;
+        }
 
         .copy {
+            // margin: 10px;
             position: relative;
-            top: 4px;
+            // top: 4px;
             width: 25px;
             height: 18px;
         }
     }
-
-    .btn {}
 
     // flex: 1;
 }
@@ -644,5 +661,4 @@ input {
             flex-wrap: wrap;
         }
     }
-}
-</style>
+}</style>
