@@ -9,9 +9,9 @@
                 v-model="item.value" />
             <switch @change="changeUnique" />
 
-            <picker style="height:16px ;width: 60px;" @change="bindPickerChange" :value="selectedActivityIndex"
+            <picker @change="bindPickerChange" :value="selectedActivityIndex"
                 :range="activities">
-                <view class="uni-input">{{ activities[selectedActivityIndex] }}</view>
+                <image style="width: 16px;height:16px" src="/static/filter.svg" />
             </picker>
         </div>
 
