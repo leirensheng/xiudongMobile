@@ -1,5 +1,5 @@
 <template>
-    <div class="remote">
+    <div class="remote" :style="{height:windowHeight+'px'}">
         <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
@@ -8,17 +8,25 @@
             <input v-for="(item, index) in queryItems" :key="index" type="text" :placeholder="item.column"
                 v-model="item.value" />
             <switch @change="changeUnique" />
-            <button type="primary" @click="reset" size="mini"  style="flex-shrink: 0;">重置</button>
+            <button type="primary" @click="reset" size="mini" style="flex-shrink: 0;">重置</button>
         </div>
 
-        <div class="data">
-            <uni-swipe-action ref="swipeAction">
-                <uni-swipe-action-item v-for="(item, index) in data" :right-options="rightOptions" :key="item.username"
+
+        <uni-swipe-action>
+            <template v-for="(one, index) in groupData" :key="one.group">
+                <div class="activity">{{ one.group }}</div>
+                <uni-swipe-action-item v-for="(item) in one.data" :right-options="rightOptions" :key="item.username+item.phone"
                     @click="swipeClick($event, item)" :disabled="!!item.status">
-                    <div class="item" :style="getStyle(item)">
+
+                    <!-- <div class="activity" v-if="index===0|| (item.activityName!== data[index-1].activityName )">{{item.activityName}}</div> -->
+
+                    <div class="item" :style="getStyle(item)" :key="item.username+item.phone">
                         <div class="phone">
+                            <!-- <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" /> -->
                             <div>{{ item.phone }}</div>
                             <div>{{ item.username }}</div>
+                            <!-- <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item.activityId)" /> -->
+
                         </div>
 
                         <div class="targetTypes">
@@ -35,19 +43,19 @@
                         <button class="btn" size="mini" type="primary" v-else @click="start(item)">启动</button>
                     </div>
 
-                    <div v-if="(index !== data.length - 1) && (Number(item.port) !== Number(data[index + 1].port))"
-                        class="divide"> </div>
                     <!-- <view class="content-box">
 					<text class="content-text">{{ item.content }}</text>
 				</view> -->
                 </uni-swipe-action-item>
+            </template>
             </uni-swipe-action>
 
 
-        </div>
 
-        <uni-popup ref="popup" type="bottom">
-            <div class="dialog">
+
+
+        <uni-popup ref="popup" type="bottom" @touchmove.stop>
+            <div class="dialog" @touchmove.stop>
                 <div class="form" v-if="isEdit">
                     <div v-for="(field, index) in inputFields" :key="index" class="input-wrap">
                         <span>{{ field }}</span>
@@ -108,6 +116,8 @@ export default {
     },
     data() {
         return {
+            windowHeight:0,
+            groupData: [],
             targetTypeIndexes: [],
             editForm: {},
             isEdit: false,
@@ -177,7 +187,9 @@ export default {
     },
     created() {
 
-
+        let res = uni.getSystemInfoSync()
+        console.log(res)
+        this.windowHeight = res.windowHeight
 
     },
     mounted() {
@@ -219,9 +231,9 @@ export default {
     },
 
     methods: {
-        reset(){
-            this.queryItems.forEach(one=> {
-                one.value=''
+        reset() {
+            this.queryItems.forEach(one => {
+                one.value = ''
             })
         },
         handlePhone() {
@@ -251,7 +263,7 @@ export default {
         handleSwitchChange(e) {
             this.editForm.hasSuccess = e.detail.value
         },
-        handleRefreshChange(e){
+        handleRefreshChange(e) {
             this.editForm.isRefresh = e.detail.value
         },
         async confirmEdit() {
@@ -335,10 +347,10 @@ export default {
                 },
 
             ]
-            let target = arr.find(one=> one.condition)
+            let target = arr.find(one => one.condition)
             return {
-                background:target?target.background: 'white',
-                color: target?target.color||'black':'black'
+                background: target ? target.background : 'white',
+                color: target ? target.color || 'black' : 'black'
             }
         },
 
@@ -392,16 +404,49 @@ export default {
 
             if (this.isUnique) {
                 let activityIds = [...new Set(data.map(one => Number(one.activityId)))];
-                this.data = activityIds.map(activityId =>
+                data = activityIds.map(activityId =>
                     data.find(one => Number(one.activityId) === activityId),
                 );
             } else {
-                this.data = data;
+                data = data;
             }
+            this.getGroup(data)
+        },
+        getGroup(data) {
+            this.data = data
+            let res = []
+            if (!data.length){
+                this.getGroupData = []
+            }
+            let cur = {
+                group: data.length ? data[0].activityName : '',
+                data: []
+            }
+
+            data.forEach((one,index)=>{
+                if (cur.group === one.activityName) {
+                    cur.data.push(one)
+                    if(index === data.length -1 && !res.length){
+                        res.push(cur)
+                    }
+                    
+                } else {
+                    res.push(cur)
+                    cur = {
+                        group: one.activityName,
+                        data: [one]
+                    }
+                }
+
+            })
+          
+            console.log(res)
+            this.groupData = res
         },
         async getConfig() {
             this.loading = true
             try {
+                this.groupData =[]
                 this.data = []
                 let {
                     config, pidToCmd
@@ -438,6 +483,10 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.remote {
+    overflow: auto;
+}
+
 .pcs {
     display: flex;
     justify-content: center;
@@ -470,64 +519,73 @@ export default {
     align-items: center;
     gap: 10px;
     padding: 15px;
-
-
 }
 
-.data {
+.activity {
+    position: sticky;
+    top: 0;
+    z-index: 88;
+    background: rgb(94, 128, 177);
+    color: white;
+    // margin: 10px 5px;
+    text-align: center;
+    text-align: justify;
+    padding: 5px;
+}
 
-    // padding: 15px;
-    .divide {
-        border: 2px dotted rgb(78, 195, 36);
+.item {
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-bottom: 1px solid rgb(223, 223, 223);
+
+    >:not(:first-child) {
+        margin-left: 10px;
+        flex-shrink: 0;
+        word-break: break-all;
+
     }
 
-    .item {
-        padding: 10px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        border-bottom: 1px solid rgb(223, 223, 223);
+    .phone {
+        width: 120px;
+        text-align: center;
 
-        >:not(:first-child) {
-            margin-left: 10px;
-            flex-shrink: 0;
-            word-break: break-all;
-
+        >* {
+            line-height: 2;
         }
 
-        .phone {
-            width: 120px;
-            text-align: center;
-
-            >* {
-                line-height: 2;
-            }
-        }
-
-        .targetTypes {
-            width: 70px;
-
-            .target-type {
-                line-height: 2;
-            }
-        }
-
-        .activityName {
-            flex: 1;
-            flex-shrink: 1;
-
-            .copy {
-                position: relative;
-                top: 4px;
-                width: 25px;
-                height: 18px;
-            }
-        }
-
-        .btn {}
-
-        // flex: 1;
+        // .copy {
+        //     position: relative;
+        //     top: 4px;
+        //     width: 25px;
+        //     height: 18px;
+        // }
     }
+
+    .targetTypes {
+        width: 70px;
+
+        .target-type {
+            line-height: 2;
+        }
+    }
+
+    .activityName {
+        flex: 1;
+        flex-shrink: 1;
+
+        .copy {
+            position: relative;
+            top: 4px;
+            width: 25px;
+            height: 18px;
+        }
+    }
+
+    .btn {}
+
+    // flex: 1;
 }
 
 input {
@@ -586,4 +644,5 @@ input {
             flex-wrap: wrap;
         }
     }
-}</style>
+}
+</style>
