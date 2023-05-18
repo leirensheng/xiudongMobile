@@ -5,10 +5,14 @@
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
         </div>
         <div class="search">
-            <input v-for="(item, index) in queryItems" :key="index" type="text" :placeholder="item.column"
+            <input v-for="(item, index) in queryItems.filter(one=> one.column!=='activityId')" :key="index" type="text" :placeholder="item.column"
                 v-model="item.value" />
             <switch @change="changeUnique" />
-            <button type="primary" @click="reset" size="mini" style="flex-shrink: 0;">重置</button>
+
+            <picker style="height:16px ;width: 60px;" @change="bindPickerChange" :value="selectedActivityIndex"
+                :range="activities">
+                <view class="uni-input">{{ activities[selectedActivityIndex] }}</view>
+            </picker>
         </div>
 
 
@@ -126,10 +130,11 @@ export default {
         return {
             windowHeight: 0,
             groupData: [],
+            groupDataCopy:[],
             targetTypeIndexes: [],
             editForm: {},
             isEdit: false,
-
+            selectedActivityIndex: -1,
             data: [],
             isUnique: false,
             loading: false,
@@ -142,6 +147,10 @@ export default {
                 {
                     column: 'phone',
                     value: ''
+                },
+                {
+                    column:"activityId",
+                    value:''
                 }
             ],
             selected: '',
@@ -171,6 +180,10 @@ export default {
 
     watch: {
         isUnique() {
+            this.filterData()
+        },
+        selectedActivityId(val){
+            this.queryItems.find(one=> one.column==='activityId').value = val
             this.filterData()
         },
         selected() {
@@ -204,6 +217,15 @@ export default {
 
     },
     computed: {
+        selectedActivityId(){
+            return this.selectedActivityIndex!== -1 ?this.activityInfo[this.selectedActivityIndex].activityId:''
+        },
+        activityInfo() {
+            return this.groupDataCopy.map(one => ({ activityId: one.data[0].activityId, activityName: one.group }))
+        },
+        activities() {
+            return this.activityInfo.map(one => one.activityName)
+        },
         rightOptions() {
             let options = [
                 {
@@ -239,10 +261,15 @@ export default {
     },
 
     methods: {
+        bindPickerChange(e) {
+            this.selectedActivityIndex = e.detail.value
+        },
+
         reset() {
             this.queryItems.forEach(one => {
                 one.value = ''
             })
+            this.selectedActivityIndex = -1
         },
         handlePhone() {
             if (this.form.phone) {
@@ -377,7 +404,7 @@ export default {
             await request({ url: this.host + "/close/" + pid + '?isFromRemote=1' });
             this.getConfig()
         },
-        filterData() {
+        filterData(isFirstGet) {
 
             let cmds = Object.values(this.pidToCmd);
 
@@ -418,9 +445,9 @@ export default {
             } else {
                 data = data;
             }
-            this.getGroup(data)
+            this.getGroup(data,isFirstGet)
         },
-        getGroup(data) {
+        getGroup(data,isFirstGet) {
             this.data = data
             let res = []
             if (!data.length) {
@@ -440,6 +467,9 @@ export default {
             })
             console.log(res)
             this.groupData = res
+            if(isFirstGet){
+                this.groupDataCopy = JSON.parse(JSON.stringify(this.groupData))
+            }
         },
         async getConfig() {
             this.loading = true
@@ -451,7 +481,7 @@ export default {
                 } = await request({ url: this.host + "/getAllUserConfig", cancelPre: true });
                 this.config = config
                 this.pidToCmd = pidToCmd
-                this.filterData()
+                this.filterData(true)
             } catch (e) {
                 console.log('出错', e)
                 if (e.errMsg.includes('abort')) {

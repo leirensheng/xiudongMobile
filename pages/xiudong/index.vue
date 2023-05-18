@@ -17,6 +17,7 @@ export default {
 
     },
     async onPullDownRefresh() {
+         this.$refs.remote.reset()
         await this.$refs.remote.getConfig()
         uni.stopPullDownRefresh();
     },
