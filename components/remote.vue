@@ -426,28 +426,18 @@ export default {
             if (!data.length) {
                 this.getGroupData = []
             }
-            let cur = {
-                group: data.length ? data[0].activityName : '',
-                data: []
-            }
-
-            data.forEach((one, index) => {
-                if (cur.group === one.activityName) {
-                    cur.data.push(one)
-                    if (index === data.length - 1 && !res.length) {
-                        res.push(cur)
-                    }
-
-                } else {
-                    res.push(cur)
+            let cur = null
+            data.forEach((one) => {
+                if (!cur || cur.group !== one.activityName) {
                     cur = {
                         group: one.activityName,
                         data: [one]
                     }
+                    res.push(cur)
+                } else if (cur.group === one.activityName) {
+                    cur.data.push(one)
                 }
-
             })
-
             console.log(res)
             this.groupData = res
         },
@@ -661,4 +651,5 @@ input {
             flex-wrap: wrap;
         }
     }
-}</style>
+}
+</style>
