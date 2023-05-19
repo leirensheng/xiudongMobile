@@ -1,5 +1,8 @@
 <template>
-    <div class="remote" :style="{ height: windowHeight + 'px' }">
+    <div class="remote">
+
+        <page-meta :page-style="'overflow:' + (show ? 'hidden' : 'visible')"></page-meta>
+
         <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
@@ -70,17 +73,20 @@
                         <switch :checked="editForm.isRefresh" @change="handleRefreshChange" />
                     </div>
 
-                    <checkbox-group v-if="platform === 'xiudong'" @change="changeTarget" class="checkbox-group">
-                        <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
-                            :checked="editForm.targetTypes.includes(item)">{{ item }}
-                        </checkbox>
-                    </checkbox-group>
+                    <scroll-view class="checkbox-wrap" scroll-y>
+                        <checkbox-group v-if="platform === 'xiudong'" @change="changeTarget" class="checkbox-group">
+                            <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
+                                :checked="editForm.targetTypes.includes(item)">{{ item }}
+                            </checkbox>
+                        </checkbox-group>
 
-                    <checkbox-group v-else @change="changeTarget" class="checkbox-group">
-                        <checkbox :value="item" v-for="(item, index) in Object.values(editForm.skuIdToTypeMap)" :key="index"
-                            :checked="editForm.targetTypes.includes(item)">{{ item }}
-                        </checkbox>
-                    </checkbox-group>
+                        <checkbox-group v-else @change="changeTarget" class="checkbox-group">
+                            <checkbox :value="item" v-for="(item, index) in Object.values(editForm.skuIdToTypeMap)"
+                                :key="index" :checked="editForm.targetTypes.includes(item)">{{ item }}
+                            </checkbox>
+                        </checkbox-group>
+                    </scroll-view>
+
                     <button class="btn" type="primary" @click="confirmEdit">确定修改</button>
                 </div>
                 <div class="form" v-else>
@@ -140,7 +146,7 @@ export default {
                     value: ''
                 }
             ],
-            selected: '',
+            selected: '7l235k7324.yicp.fun',
             pcs: [
                 {
                     // hostname: '192.168.2.9',
@@ -173,8 +179,11 @@ export default {
             this.queryItems.find(one => one.column === 'activityId').value = val
             this.filterData()
         },
-        selected() {
-            this.getConfig()
+        selected: {
+            immediate: true,
+            handler() {
+                this.getConfig()
+            }
         },
         queryItems: {
             deep: true,
@@ -699,11 +708,13 @@ input {
             border-bottom: 1px solid rgb(221, 221, 222);
         }
 
+        .checkbox-wrap {
+            max-height: 20vh;
+        }
+
         .checkbox-group {
             padding: 10px 0;
-            max-height: 20vh;
             gap: 10px;
-            overflow: auto;
             display: flex;
             justify-content: space-around;
             align-items: center;
