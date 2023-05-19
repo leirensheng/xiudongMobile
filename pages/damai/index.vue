@@ -16,6 +16,11 @@ export default {
     created() {
 
     },
+    onShow(){
+        if(this.$refs.remote&&this.$refs.remote.show && !this.$refs.remote.isEdit){
+            this.$refs.remote.readDataFromClip()
+        }
+    },
     async onPullDownRefresh() {
         this.$refs.remote.reset()
         await this.$refs.remote.getConfig()

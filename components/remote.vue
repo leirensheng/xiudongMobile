@@ -5,8 +5,8 @@
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
         </div>
         <div class="search">
-            <input v-for="(item, index) in queryItems.filter(one=> one.column!=='activityId')" :key="index" type="text" :placeholder="item.column"
-                v-model="item.value" />
+            <input v-for="(item, index) in queryItems.filter(one => one.column !== 'activityId')" :key="index" type="text"
+                :placeholder="item.column" v-model="item.value" />
             <switch @change="changeUnique" />
 
             <picker v-show="activities.length" @change="bindPickerChange" :value="selectedActivityIndex"
@@ -52,7 +52,7 @@
             </template>
         </uni-swipe-action>
 
-        <uni-popup ref="popup" type="bottom" @touchmove.stop>
+        <uni-popup ref="popup" type="bottom" @touchmove.stop @change="changePopup">
             <div class="dialog" @touchmove.stop>
                 <div class="form" v-if="isEdit">
                     <div v-for="(field, index) in inputFields" :key="index" class="input-wrap">
@@ -114,9 +114,10 @@ export default {
     },
     data() {
         return {
+            show: false,
             windowHeight: 0,
             groupData: [],
-            groupDataCopy:[],
+            groupDataCopy: [],
             targetTypeIndexes: [],
             editForm: {},
             isEdit: false,
@@ -135,8 +136,8 @@ export default {
                     value: ''
                 },
                 {
-                    column:"activityId",
-                    value:''
+                    column: "activityId",
+                    value: ''
                 }
             ],
             selected: '',
@@ -168,8 +169,8 @@ export default {
         isUnique() {
             this.filterData()
         },
-        selectedActivityId(val){
-            this.queryItems.find(one=> one.column==='activityId').value = val
+        selectedActivityId(val) {
+            this.queryItems.find(one => one.column === 'activityId').value = val
             this.filterData()
         },
         selected() {
@@ -203,8 +204,8 @@ export default {
 
     },
     computed: {
-        selectedActivityId(){
-            return this.selectedActivityIndex!== -1 ?this.activityInfo[this.selectedActivityIndex].activityId:''
+        selectedActivityId() {
+            return this.selectedActivityIndex !== -1 ? this.activityInfo[this.selectedActivityIndex].activityId : ''
         },
         activityInfo() {
             return this.groupDataCopy.map(one => ({ activityId: one.data[0].activityId, activityName: one.group }))
@@ -247,6 +248,9 @@ export default {
     },
 
     methods: {
+        changePopup(e) {
+            this.show = e.show
+        },
         bindPickerChange(e) {
             this.selectedActivityIndex = e.detail.value
         },
@@ -343,6 +347,30 @@ export default {
             this.isEdit = false
             this.form = {}
             this.$refs.popup.open('bottom')
+            this.readDataFromClip()
+        },
+        readDataFromClip() {
+            uni.getClipboardData({
+                success: (clip) => {
+                    let clipData = clip.data
+                    if (!clipData.length) return
+                    let [first] = clipData.split(/\s+/)
+                    let res = first.match(/\d{11}/)
+                    if (res) {
+                        this.form.phone = clipData
+                        this.handlePhone()
+                    } else if (clipData.includes('UID')) {
+                        this.form.uid = clipData
+                    } else if (this.platform === 'damai') {
+                        this.form.password = first
+                        this.handlePass()
+                    }
+                    uni.setClipboardData({
+                        data: '',
+                    });
+                    uni.hideToast()
+                }
+            });
         },
         changeUnique(e) {
             this.isUnique = e.detail.value
@@ -431,9 +459,9 @@ export default {
             } else {
                 data = data;
             }
-            this.getGroup(data,isFirstGet)
+            this.getGroup(data, isFirstGet)
         },
-        getGroup(data,isFirstGet) {
+        getGroup(data, isFirstGet) {
             this.data = data
             let res = []
             if (!data.length) {
@@ -453,7 +481,7 @@ export default {
             })
             console.log(res)
             this.groupData = res
-            if(isFirstGet){
+            if (isFirstGet) {
                 this.groupDataCopy = JSON.parse(JSON.stringify(this.groupData))
             }
         },
