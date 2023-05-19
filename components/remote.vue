@@ -26,14 +26,10 @@
 
                     <div class="item" :style="getStyle(item)" :key="item.username + item.phone">
                         <div class="phone">
-                            <!-- <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" /> -->
                             <div>{{ item.phone }}</div>
                             <div>{{ item.username }}</div>
                             <div>{{ item.nameIndex }}</div>
                             <div>{{ item.showOrders }}</div>
-
-                            <!-- <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item.activityId)" /> -->
-
                         </div>
 
                         <div class="targetTypes">
@@ -50,21 +46,11 @@
                                 @click="stop(item.pid)">停止</button>
                             <button class="btn" size="mini" type="primary" v-else @click="start(item)">启动</button>
                             <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item.activityId)" />
-
                         </div>
-
                     </div>
-
-                    <!-- <view class="content-box">
-					<text class="content-text">{{ item.content }}</text>
-				</view> -->
                 </uni-swipe-action-item>
             </template>
         </uni-swipe-action>
-
-
-
-
 
         <uni-popup ref="popup" type="bottom" @touchmove.stop>
             <div class="dialog" @touchmove.stop>
