@@ -313,6 +313,7 @@ export default {
             this.editForm = { ...item }
             this.isEdit = true
             this.$refs.popup.open('bottom')
+            this.readDataFromClip()
         },
         async swipeClick({ index }, { username }) {
             if (index === 0) {
@@ -353,22 +354,36 @@ export default {
             uni.getClipboardData({
                 success: (clip) => {
                     let clipData = clip.data
-                    if (!clipData.length) return
-                    let [first] = clipData.split(/\s+/)
-                    let res = first.match(/\d{11}/)
-                    if (res) {
-                        this.form.phone = clipData
-                        this.handlePhone()
-                    } else if (clipData.includes('UID')) {
-                        this.form.uid = clipData
-                    } else if (this.platform === 'damai') {
-                        this.form.password = first
-                        this.handlePass()
+                    let handled = false
+                    if (this.isEdit) {
+                        if (!this.editForm.uid && clipData.includes('UID')) {
+                            this.editForm.uid = clipData
+                            handled = true
+                        }
+                    } else {
+                        if (!clipData.length) return
+                        let [first] = clipData.split(/\s+/)
+                        let res = first.match(/\d{11}/)
+                        if (res) {
+                            this.form.phone = clipData
+                            this.handlePhone()
+                            handled = true
+
+                        } else if (clipData.includes('UID')) {
+                            handled = true
+                            this.form.uid = clipData
+                        } else if (this.platform === 'damai') {
+                            this.form.password = first
+                            this.handlePass()
+                            handled = true
+                        }
                     }
-                    uni.setClipboardData({
-                        data: '',
-                    });
-                    uni.hideToast()
+                    if (handled) {
+                        uni.setClipboardData({
+                            data: '',
+                        });
+                        uni.hideToast()
+                    }
                 }
             });
         },

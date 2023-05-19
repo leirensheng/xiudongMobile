@@ -17,7 +17,7 @@ export default {
 
     },
     onShow(){
-        if(this.$refs.remote&&this.$refs.remote.show && !this.$refs.remote.isEdit){
+        if(this.$refs.remote&&this.$refs.remote.show){
             this.$refs.remote.readDataFromClip()
         }
     },
