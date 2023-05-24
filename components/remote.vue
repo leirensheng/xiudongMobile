@@ -1,55 +1,64 @@
 <template>
     <div class="remote">
+
+        <page-meta :page-style="'overflow:' + (show ? 'hidden' : 'visible')"></page-meta>
+
         <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
         </div>
         <div class="search">
-            <input v-for="(item, index) in queryItems" :key="index" type="text" :placeholder="item.column"
-                v-model="item.value" />
+            <input v-for="(item, index) in queryItems.filter(one => one.column !== 'activityId')" :key="index" type="text"
+                :placeholder="item.column" v-model="item.value" />
             <switch @change="changeUnique" />
-            <button type="primary" @click="reset" size="mini"  style="flex-shrink: 0;">重置</button>
-            <image class="copy" src="/static/add.svg" @click="openAddDialog" />
 
+
+            <picker v-show="activities.length" @change="bindPickerChange" :value="selectedActivityIndex"
+                :range="activities">
+                <image style="width: 16px;height:16px" src="/static/filter.svg" />
+            </picker>
         </div>
 
-        <div class="data">
-            <uni-swipe-action ref="swipeAction">
-                <uni-swipe-action-item v-for="(item, index) in data" :right-options="rightOptions" :key="item.username"
-                    @click="swipeClick($event, item)" :disabled="!!item.status">
-                    <div class="item" :style="getStyle(item)">
+
+        <uni-swipe-action>
+            <template v-for="(one, index) in groupData" :key="one.group">
+                <div class="activity">{{ one.group }}</div>
+                <uni-swipe-action-item v-for="(item) in one.data" :right-options="rightOptions"
+                    :key="item.username + item.phone" @click="swipeClick($event, item)" :disabled="!!item.status">
+
+                    <!-- <div class="activity" v-if="index===0|| (item.activityName!== data[index-1].activityName )">{{item.activityName}}</div> -->
+
+                    <div class="item" :style="getStyle(item)" :key="item.username + item.phone">
                         <div class="phone">
                             <div>{{ item.phone }}</div>
                             <div>{{ item.username }}</div>
+                            <div>{{ item.nameIndex }}</div>
+                            <div>{{ item.showOrders }}</div>
                         </div>
 
                         <div class="targetTypes">
                             <div class="target-type" v-for="(item, index) in item.targetTypes" :key="index">{{ item }}</div>
                         </div>
 
-                        <div class="activityName">
-                            <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" />
-                            {{ item.activityName }}
-                            <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item)" />
+
+                        <div class="remark">
+                            {{ item.remark }}
                         </div>
 
-                        <button class="btn" size="mini" type="warn" v-if="item.status" @click="stop(item.pid)">停止</button>
-                        <button class="btn" size="mini" type="primary" v-else @click="start(item)">启动</button>
+                        <div class="btns">
+                            <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" />
+                            <button class="btn" size="mini" type="warn" v-if="item.status"
+                                @click="stop(item.pid)">停止</button>
+                            <button class="btn" size="mini" type="primary" v-else @click="start(item)">启动</button>
+                            <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item)" />
+                        </div>
                     </div>
-
-                    <div v-if="(index !== data.length - 1) && (Number(item.port) !== Number(data[index + 1].port))"
-                        class="divide"> </div>
-                    <!-- <view class="content-box">
-					<text class="content-text">{{ item.content }}</text>
-				</view> -->
                 </uni-swipe-action-item>
-            </uni-swipe-action>
+            </template>
+        </uni-swipe-action>
 
-
-        </div>
-
-        <uni-popup ref="popup" type="bottom">
-            <div class="dialog">
+        <uni-popup ref="popup" type="bottom" @touchmove.stop @change="changePopup">
+            <div class="dialog" @touchmove.stop>
                 <div class="form" v-if="isEdit">
                     <div v-for="(field, index) in inputFields" :key="index" class="input-wrap">
                         <span>{{ field }}</span>
@@ -66,22 +75,26 @@
                         <switch :checked="editForm.isRefresh" @change="handleRefreshChange" />
                     </div>
 
-                    <checkbox-group v-if="platform === 'xiudong'" @change="changeTarget" class="checkbox-group">
-                        <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
-                            :checked="editForm.targetTypes.includes(item)">{{ item }}
-                        </checkbox>
-                    </checkbox-group>
+                    <scroll-view class="checkbox-wrap" scroll-y>
+                        <checkbox-group v-if="platform === 'xiudong'" @change="changeTarget" class="checkbox-group">
+                            <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
+                                :checked="editForm.targetTypes.includes(item)">{{ item }}
+                            </checkbox>
+                        </checkbox-group>
 
-                    <checkbox-group v-else @change="changeTarget" class="checkbox-group">
-                        <checkbox :value="item" v-for="(item, index) in Object.values(editForm.skuIdToTypeMap)" :key="index"
-                            :checked="editForm.targetTypes.includes(item)">{{ item }}
-                        </checkbox>
-                    </checkbox-group>
+                        <checkbox-group v-else @change="changeTarget" class="checkbox-group">
+                            <checkbox :value="item" v-for="(item, index) in Object.values(editForm.skuIdToTypeMap)"
+                                :key="index" :checked="editForm.targetTypes.includes(item)">{{ item }}
+                            </checkbox>
+                        </checkbox-group>
+                    </scroll-view>
+
                     <button class="btn" type="primary" @click="confirmEdit">确定修改</button>
                 </div>
                 <div class="form" v-else>
-                    <my-input type="text" v-model="form.activityId" placeholder="phone"  />
-                    <my-input type="text" v-model="form.port" placeholder="phone" />
+                    <my-input type="text" v-model="form.activityId" placeholder="activityId"  />
+                    <my-input type="text" v-model="form.port" placeholder="port" />
+                    <my-input type="text" v-model="form.showOrders" placeholder="remark" />
 
 
                     <my-input type="text" v-model="form.phone" placeholder="phone" @blur="handlePhone" />
@@ -90,6 +103,7 @@
                     <my-input type="text" v-model="form.username" placeholder="username" />
 
                     <my-input type="text" v-model="form.uid" placeholder="uid" />
+                    <my-input type="text" v-model="form.remark" placeholder="remark" />
 
                     <button class="btn" type="primary" @click="add">新增</button>
                 </div>
@@ -114,10 +128,14 @@ export default {
     },
     data() {
         return {
+            show: false,
+            windowHeight: 0,
+            groupData: [],
+            groupDataCopy: [],
             targetTypeIndexes: [],
             editForm: {},
             isEdit: false,
-
+            selectedActivityIndex: -1,
             data: [],
             isUnique: false,
             loading: false,
@@ -130,9 +148,13 @@ export default {
                 {
                     column: 'phone',
                     value: ''
+                },
+                {
+                    column: "activityId",
+                    value: ''
                 }
             ],
-            selected: '',
+            selected: '7l235k7324.yicp.fun',
             pcs: [
                 {
                     // hostname: '192.168.2.9',
@@ -161,8 +183,15 @@ export default {
         isUnique() {
             this.filterData()
         },
-        selected() {
-            this.getConfig()
+        selectedActivityId(val) {
+            this.queryItems.find(one => one.column === 'activityId').value = val
+            this.filterData()
+        },
+        selected: {
+            immediate: true,
+            handler() {
+                this.getConfig()
+            }
         },
         queryItems: {
             deep: true,
@@ -183,13 +212,24 @@ export default {
     },
     created() {
 
-
+        let res = uni.getSystemInfoSync()
+        console.log(res)
+        this.windowHeight = res.windowHeight
 
     },
     mounted() {
 
     },
     computed: {
+        selectedActivityId() {
+            return this.selectedActivityIndex !== -1 ? this.activityInfo[this.selectedActivityIndex].activityId : ''
+        },
+        activityInfo() {
+            return this.groupDataCopy.map(one => ({ activityId: one.data[0].activityId, activityName: one.group }))
+        },
+        activities() {
+            return this.activityInfo.map(one => one.activityName)
+        },
         rightOptions() {
             let options = [
                 {
@@ -225,13 +265,18 @@ export default {
     },
 
     methods: {
-        openAddDialog(){
-
+        changePopup(e) {
+            this.show = e.show
         },
-        reset(){
-            this.queryItems.forEach(one=> {
-                one.value=''
+        bindPickerChange(e) {
+            this.selectedActivityIndex = e.detail.value
+        },
+
+        reset() {
+            this.queryItems.forEach(one => {
+                one.value = ''
             })
+            this.selectedActivityIndex = -1
         },
         handlePhone() {
             if (this.form.phone) {
@@ -260,7 +305,7 @@ export default {
         handleSwitchChange(e) {
             this.editForm.hasSuccess = e.detail.value
         },
-        handleRefreshChange(e){
+        handleRefreshChange(e) {
             this.editForm.isRefresh = e.detail.value
         },
         async confirmEdit() {
@@ -285,6 +330,7 @@ export default {
             this.editForm = { ...item }
             this.isEdit = true
             this.$refs.popup.open('bottom')
+            this.readDataFromClip()
         },
         async swipeClick({ index }, { username }) {
             if (index === 0) {
@@ -302,7 +348,6 @@ export default {
         async add() {
             this.loading = true
             let data = { ...this.form }
-            console.log(this.form)
 
             if (data.uid) {
                 data.uid = data.uid.replace('尊敬的用户，你的UID是：', '')
@@ -319,9 +364,48 @@ export default {
             this.isEdit = false
             this.form = {
                 activityId,
-                port
+                port,
+                showOrders:'0',
             }
             this.$refs.popup.open('bottom')
+            this.readDataFromClip()
+        },
+        readDataFromClip() {
+            uni.getClipboardData({
+                success: (clip) => {
+                    let clipData = clip.data
+                    let handled = false
+                    if (this.isEdit) {
+                        if (!this.editForm.uid && clipData.includes('UID')) {
+                            this.editForm.uid = clipData
+                            handled = true
+                        }
+                    } else {
+                        if (!clipData.length) return
+                        let [first] = clipData.split(/\s+/)
+                        let res = first.match(/\d{11}/)
+                        if (res) {
+                            this.form.phone = clipData
+                            this.handlePhone()
+                            handled = true
+
+                        } else if (clipData.includes('UID')) {
+                            handled = true
+                            this.form.uid = clipData
+                        } else if (this.platform === 'damai') {
+                            this.form.password = first
+                            this.handlePass()
+                            handled = true
+                        }
+                    }
+                    if (handled) {
+                        uni.setClipboardData({
+                            data: '',
+                        });
+                        uni.hideToast()
+                    }
+                }
+            });
         },
         changeUnique(e) {
             this.isUnique = e.detail.value
@@ -347,10 +431,10 @@ export default {
                 },
 
             ]
-            let target = arr.find(one=> one.condition)
+            let target = arr.find(one => one.condition)
             return {
-                background:target?target.background: 'white',
-                color: target?target.color||'black':'black'
+                background: target ? target.background : 'white',
+                color: target ? target.color || 'black' : 'black'
             }
         },
 
@@ -369,7 +453,7 @@ export default {
             await request({ url: this.host + "/close/" + pid + '?isFromRemote=1' });
             this.getConfig()
         },
-        filterData() {
+        filterData(isFirstGet) {
 
             let cmds = Object.values(this.pidToCmd);
 
@@ -404,23 +488,49 @@ export default {
 
             if (this.isUnique) {
                 let activityIds = [...new Set(data.map(one => Number(one.activityId)))];
-                this.data = activityIds.map(activityId =>
+                data = activityIds.map(activityId =>
                     data.find(one => Number(one.activityId) === activityId),
                 );
             } else {
-                this.data = data;
+                data = data;
+            }
+            this.getGroup(data, isFirstGet)
+        },
+        getGroup(data, isFirstGet) {
+            this.data = data
+            let res = []
+            if (!data.length) {
+                this.getGroupData = []
+            }
+            let cur = null
+            data.forEach((one) => {
+                if (!cur || cur.group !== one.activityName) {
+                    cur = {
+                        group: one.activityName,
+                        data: [one]
+                    }
+                    res.push(cur)
+                } else if (cur.group === one.activityName) {
+                    cur.data.push(one)
+                }
+            })
+            console.log(res)
+            this.groupData = res
+            if (isFirstGet) {
+                this.groupDataCopy = JSON.parse(JSON.stringify(this.groupData))
             }
         },
         async getConfig() {
             this.loading = true
             try {
+                this.groupData = []
                 this.data = []
                 let {
                     config, pidToCmd
                 } = await request({ url: this.host + "/getAllUserConfig", cancelPre: true });
                 this.config = config
                 this.pidToCmd = pidToCmd
-                this.filterData()
+                this.filterData(true)
             } catch (e) {
                 console.log('出错', e)
                 if (e.errMsg.includes('abort')) {
@@ -450,6 +560,10 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.remote {
+    // overflow: auto;
+}
+
 .pcs {
     display: flex;
     justify-content: center;
@@ -482,64 +596,82 @@ export default {
     align-items: center;
     gap: 10px;
     padding: 15px;
-
-
 }
 
-.data {
+.activity {
+    position: sticky;
+    top: 0;
+    z-index: 88;
+    background: rgb(94, 128, 177);
+    color: white;
+    text-align: center;
+    padding: 5px;
+}
 
-    // padding: 15px;
-    .divide {
-        border: 2px dotted rgb(78, 195, 36);
+.item {
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-bottom: 1px solid rgb(223, 223, 223);
+
+    >:not(:first-child) {
+        margin-left: 10px;
+        flex-shrink: 0;
+        word-break: break-all;
+
     }
 
-    .item {
-        padding: 10px;
+    .phone {
+        width: 120px;
+        text-align: center;
+
+        >* {
+            line-height: 2;
+        }
+
+        // .copy {
+        //     position: relative;
+        //     top: 4px;
+        //     width: 25px;
+        //     height: 18px;
+        // }
+    }
+
+    .targetTypes {
+        flex: 1;
+
+
+        .target-type {
+            text-align: center;
+            line-height: 2;
+        }
+    }
+
+    .remark {
+        width: 30px;
+    }
+
+    .btns {
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
-        border-bottom: 1px solid rgb(223, 223, 223);
 
-        >:not(:first-child) {
-            margin-left: 10px;
-            flex-shrink: 0;
-            word-break: break-all;
-
+        button {
+            margin: 12px;
         }
 
-        .phone {
-            width: 120px;
-            text-align: center;
-
-            >* {
-                line-height: 2;
-            }
+        .copy {
+            // margin: 10px;
+            position: relative;
+            // top: 4px;
+            width: 25px;
+            height: 18px;
         }
-
-        .targetTypes {
-            width: 70px;
-
-            .target-type {
-                line-height: 2;
-            }
-        }
-
-        .activityName {
-            flex: 1;
-            flex-shrink: 1;
-
-            .copy {
-                position: relative;
-                top: 4px;
-                width: 25px;
-                height: 18px;
-            }
-        }
-
-        .btn {}
-
-        // flex: 1;
     }
+
+    // flex: 1;
 }
 
 input {
@@ -587,15 +719,18 @@ input {
             border-bottom: 1px solid rgb(221, 221, 222);
         }
 
+        .checkbox-wrap {
+            max-height: 20vh;
+        }
+
         .checkbox-group {
             padding: 10px 0;
-            max-height: 20vh;
             gap: 10px;
-            overflow: auto;
             display: flex;
             justify-content: space-around;
             align-items: center;
             flex-wrap: wrap;
         }
     }
-}</style>
+}
+</style>
