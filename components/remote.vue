@@ -9,6 +9,8 @@
                 v-model="item.value" />
             <switch @change="changeUnique" />
             <button type="primary" @click="reset" size="mini"  style="flex-shrink: 0;">重置</button>
+            <image class="copy" src="/static/add.svg" @click="openAddDialog" />
+
         </div>
 
         <div class="data">
@@ -28,7 +30,7 @@
                         <div class="activityName">
                             <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" />
                             {{ item.activityName }}
-                            <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item.activityId)" />
+                            <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item)" />
                         </div>
 
                         <button class="btn" size="mini" type="warn" v-if="item.status" @click="stop(item.pid)">停止</button>
@@ -78,6 +80,10 @@
                     <button class="btn" type="primary" @click="confirmEdit">确定修改</button>
                 </div>
                 <div class="form" v-else>
+                    <my-input type="text" v-model="form.activityId" placeholder="phone"  />
+                    <my-input type="text" v-model="form.port" placeholder="phone" />
+
+
                     <my-input type="text" v-model="form.phone" placeholder="phone" @blur="handlePhone" />
                     <my-input type="text" v-if="platform === 'damai'" v-model="form.password" placeholder="password"
                         @blur="handlePass" />
@@ -219,6 +225,9 @@ export default {
     },
 
     methods: {
+        openAddDialog(){
+
+        },
         reset(){
             this.queryItems.forEach(one=> {
                 one.value=''
@@ -292,7 +301,8 @@ export default {
         },
         async add() {
             this.loading = true
-            let data = { ...this.form, activityId: this.addActivityId }
+            let data = { ...this.form }
+            console.log(this.form)
 
             if (data.uid) {
                 data.uid = data.uid.replace('尊敬的用户，你的UID是：', '')
@@ -305,10 +315,12 @@ export default {
             let target = this.data.find(one => one.username === data.username)
             this.start(target)
         },
-        openCopyDialog(activityId) {
-            this.addActivityId = activityId
+        openCopyDialog({activityId,port}) {
             this.isEdit = false
-            this.form = {}
+            this.form = {
+                activityId,
+                port
+            }
             this.$refs.popup.open('bottom')
         },
         changeUnique(e) {
