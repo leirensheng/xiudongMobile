@@ -21,7 +21,7 @@
 
         <uni-swipe-action>
             <template v-for="(one, index) in groupData" :key="one.group">
-                <div class="activity">{{ one.group }}</div>
+                <div class="activity">{{ one.group.slice(0,24).replace(/(\s+)|」|「/g,'') }}({{one.data.length}})</div>
                 <uni-swipe-action-item v-for="(item) in one.data" :right-options="rightOptions"
                     :key="item.username + item.phone" @click="swipeClick($event, item)" :disabled="!!item.status">
 
@@ -64,13 +64,16 @@
 
                     </div>
 
-                    <div class="is-success">
-                        <span>是否成功: </span>
-                        <switch :checked="editForm.hasSuccess" @change="handleSwitchChange" />
-                    </div>
-                    <div class="is-success">
-                        <span>重新获取信息: </span>
-                        <switch :checked="editForm.isRefresh" @change="handleRefreshChange" />
+                    <div class="switches">
+                        <div class="is-success">
+                            <span>是否成功: </span>
+                            <switch :checked="editForm.hasSuccess" @change="handleSwitchChange" />
+                        </div>
+                        <div class="is-success">
+                            <span>重新获取: </span>
+                            <switch :checked="editForm.isRefresh" @change="handleRefreshChange" />
+                        </div>
+
                     </div>
 
                     <scroll-view class="checkbox-wrap" scroll-y>
@@ -612,7 +615,7 @@ export default {
     }
 
     .phone {
-        width: 120px;
+        width: 110px;
         text-align: center;
 
         >* {
@@ -700,6 +703,12 @@ input {
             }
         }
 
+        .switches{
+            width: 100%;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
         .is-success {
             display: flex;
             justify-content: space-between;
@@ -709,7 +718,7 @@ input {
         }
 
         .checkbox-wrap {
-            max-height: 20vh;
+            max-height: 25vh;
         }
 
         .checkbox-group {
