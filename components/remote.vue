@@ -22,7 +22,7 @@
 
         <uni-swipe-action>
             <template v-for="(one, index) in groupData" :key="one.group">
-                <div class="activity">{{ one.group.slice(0,24).replace(/(\s+)|」|「/g,'') }}({{one.data.length}})</div>
+                <div class="activity">{{ one.group.slice(0, 24).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})</div>
                 <uni-swipe-action-item v-for="(item) in one.data" :right-options="rightOptions"
                     :key="item.username + item.phone" @click="swipeClick($event, item)" :disabled="!!item.status">
 
@@ -95,19 +95,10 @@
                     <button class="btn" type="primary" @click="confirmEdit">确定修改</button>
                 </div>
                 <div class="form" v-else>
-                    <my-input type="text" v-model="form.activityId" placeholder="activityId"  />
-                    <my-input type="text" v-model="form.port" placeholder="port" />
-                    <my-input type="text" v-model="form.showOrders" placeholder="remark" />
-
-
-                    <my-input type="text" v-model="form.phone" placeholder="phone" @blur="handlePhone" />
-                    <my-input type="text" v-if="platform === 'damai'" v-model="form.password" placeholder="password"
-                        @blur="handlePass" />
-                    <my-input type="text" v-model="form.username" placeholder="username" />
-
-                    <my-input type="text" v-model="form.uid" placeholder="uid" />
-                    <my-input type="text" v-model="form.remark" placeholder="remark" />
-
+                    <div v-for="(item, index) in addItems" :key="index" class="add-form-item">
+                        <span :style="{color: item.isSpecial?'red':'black'}" >{{item.name}}:</span>
+                        <my-input type="text" v-model="form[item.id]" :placeholder="item.id" @blur="handleBlur(item.id)"/>
+                    </div>
                     <button class="btn" type="primary" @click="add">新增</button>
                 </div>
             </div>
@@ -129,6 +120,7 @@ export default {
             default: 'xiudong',
         }
     },
+
     data() {
         return {
             show: false,
@@ -224,6 +216,11 @@ export default {
 
     },
     computed: {
+        addItems() {
+            let isDamai = this.platform === 'damai'
+            let fields = isDamai ? ['activityId', 'port', 'showOrders', 'phone', 'password', 'username', 'uid', 'remark'] : ['activityId', 'port', 'showOrders', 'phone', 'username', 'uid', 'remark']
+            return fields.map(one => ({ name: one, id: one, isSpecial:one === 'showOrders' }))
+        },
         selectedActivityId() {
             return this.selectedActivityIndex !== -1 ? this.activityInfo[this.selectedActivityIndex].activityId : ''
         },
@@ -268,6 +265,15 @@ export default {
     },
 
     methods: {
+        handlePass(id){
+            let map={
+                password: this.handlePass,
+                phone: this.handlePhone
+            }
+            if(map[id]){
+                map[id]()
+            }
+        },
         changePopup(e) {
             this.show = e.show
         },
@@ -350,7 +356,7 @@ export default {
         },
         async add() {
             this.loading = true
-            let data = { ...this.form }
+            let data = { ...this.form, isCopy: this.copyActivityId === this.form.activityId,showOrders: this.form.showOrders.replace(/,$/,'') }
 
             if (data.uid) {
                 data.uid = data.uid.replace('尊敬的用户，你的UID是：', '')
@@ -363,12 +369,13 @@ export default {
             let target = this.data.find(one => one.username === data.username)
             this.start(target)
         },
-        openCopyDialog({activityId,port}) {
+        openCopyDialog({ activityId, port }) {
             this.isEdit = false
+            this.copyActivityId =activityId
             this.form = {
                 activityId,
                 port,
-                showOrders:'0',
+                showOrders: '0,',
             }
             this.$refs.popup.open('bottom')
             this.readDataFromClip()
@@ -714,12 +721,13 @@ input {
             }
         }
 
-        .switches{
+        .switches {
             width: 100%;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
+
         .is-success {
             display: flex;
             justify-content: space-between;
@@ -739,6 +747,15 @@ input {
             justify-content: space-around;
             align-items: center;
             flex-wrap: wrap;
+        }
+        .add-form-item{
+            display:flex;
+            align-items:center;
+            span{
+                margin-right: 10px;
+                text-align: right;
+                width: 95px;
+            }
         }
     }
 }
