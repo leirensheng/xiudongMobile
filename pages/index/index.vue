@@ -49,16 +49,29 @@ export default {
 			if (type === 'ticketSuccess') {
 				this.msgArr.push({ msg, phone })
 				this.playSong()
+			} else if (type === 'tips') {
+				this.msgArr.push({ msg, phone })
+				this.playSong(true)
 			}
 
 		});
 	},
+	watch: {
+		msgArr: {
+			deep: true,
+			handler(val) {
+				if (!val.length) {
+					this.stop()
+				}
+			}
+		}
+	},
 	methods: {
-		playSong() {
+		playSong(isTips) {
 			this.innerAudioContext = uni.createInnerAudioContext();
 			this.innerAudioContext.autoplay = true;
 			this.innerAudioContext.loop = true
-			this.innerAudioContext.src = '/static/1.mp3';   //铃声文件的路径
+			this.innerAudioContext.src = isTips ? '/static/tips.mp3' : '/static/1.mp3';   //铃声文件的路径
 			this.innerAudioContext.onPlay(() => {
 				console.log('开始播放');
 			});
@@ -74,7 +87,7 @@ export default {
 		call(phoneNumber, i) {
 			uni.showActionSheet({
 				itemList: [phoneNumber, '呼叫'],
-				success:  (res)=> {
+				success: (res) => {
 					if ([0, 1].includes(res.tapIndex)) {
 						this.msgArr.splice(i, 1)
 						uni.makePhoneCall({
