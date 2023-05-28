@@ -33,8 +33,8 @@
                         <div class="phone">
                             <div>{{ item.phone }}</div>
                             <div>{{ item.username }}</div>
-                            <div>{{ item.nameIndex }}</div>
-                            <div>{{ item.showOrders }}</div>
+                            <div v-if="isXiudong">{{ item.nameIndex }}</div>
+                            <div v-if="isDamai">{{ item.showOrders }}</div>
                         </div>
 
                         <div class="targetTypes">
@@ -81,7 +81,8 @@
                     </div>
 
                     <scroll-view class="checkbox-wrap" scroll-y>
-                        <checkbox-group v-if="platform === 'xiudong'" @change="changeTarget" class="checkbox-group">
+                        <checkbox-group v-if="platform === 'xiudong' && editForm.typeMap" @change="changeTarget"
+                            class="checkbox-group">
                             <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
                                 :checked="editForm.targetTypes.includes(item)">{{ item }}
                             </checkbox>
@@ -218,9 +219,14 @@ export default {
 
     },
     computed: {
+        isDamai() {
+            return this.platform === 'damai'
+        },
+        isXiudong() {
+            return this.platform === 'xiudong'
+        },
         addItems() {
-            let isDamai = this.platform === 'damai'
-            let fields = isDamai ? ['activityId', 'port', 'showOrders', 'phone', 'password', 'username', 'uid', 'remark'] : ['activityId', 'port', 'showOrders', 'phone', 'username', 'uid', 'remark']
+            let fields = this.isDamai ? ['activityId', 'port', 'showOrders', 'phone', 'password', 'username', 'uid', 'remark'] : ['activityId', 'port', 'nameIndex', 'phone', 'username', 'uid', 'remark']
             return fields.map(one => ({ name: one, id: one, isSpecial: one === 'showOrders' }))
         },
         selectedActivityId() {
@@ -246,7 +252,7 @@ export default {
                     }
                 }
             ]
-            if (this.platform === 'damai') {
+            if (this.isDamai) {
                 options.pop()
             }
             return options
@@ -255,9 +261,9 @@ export default {
             return `http://${this.selected}:${platformMap[this.platform]}`
         },
         inputFields() {
-            return this.fields.filter(one => !['targetTypes', 'hasSuccess'].includes(one))
+            return this.editFields.filter(one => !['targetTypes', 'hasSuccess'].includes(one))
         },
-        fields() {
+        editFields() {
             let map = {
                 xiudong: ['activityId', 'port', 'nameIndex', 'remark', 'uid', 'targetTypes', "hasSuccess"],
                 damai: ['activityId', 'port', 'password', 'showOrders', 'remark', 'uid', 'targetTypes', "hasSuccess"],
@@ -327,7 +333,7 @@ export default {
         },
         checkForm(form, arr) {
             for (let one of arr) {
-                if (!form[one]) {
+                if (form[one] === '' || form[one] === undefined) {
                     uni.showToast({
                         title: one + '不能为空',
                         icon: "error",
@@ -339,7 +345,7 @@ export default {
             return true
         },
         async confirmEdit() {
-            let keys = this.fields
+            let keys = this.editFields
             let form = keys.reduce((prev, cur) => {
                 prev[cur] = this.editForm[cur]
                 return prev
@@ -350,7 +356,7 @@ export default {
                 isRefresh: this.editForm.isRefresh
             }
 
-            let arr = ['activity', 'port',]
+            let arr = ['activityId', 'port',]
 
             if (this.checkForm(form, arr)) {
                 this.loading = true
@@ -382,7 +388,7 @@ export default {
         async add() {
             let data = { ...this.form, isCopy: this.copyActivityId === this.form.activityId, showOrders: this.form.showOrders.replace(/,$/, '') }
 
-            let arr = this.platform === 'damai' ? ['phone', 'username', 'password', 'activityId', 'port'] : ['phone', 'username', 'activityId', 'port']
+            let arr = this.isDamai ? ['phone', 'username', 'password', 'activityId', 'port'] : ['phone', 'username', 'activityId', 'port', 'nameIndex']
             if (this.checkForm(data, arr)) {
                 this.loading = true
 
@@ -405,6 +411,7 @@ export default {
                 activityId,
                 port,
                 showOrders: '0,',
+                nameIndex: 0
             }
             this.$refs.popup.open('bottom')
             this.readDataFromClip()
@@ -415,7 +422,7 @@ export default {
                     let clipData = clip.data
                     let handled = false
 
-                    let reg = this.platform === 'damai' ? /itemId=(\d{12})/ : /activityId=(\d{6})/
+                    let reg = this.isDamai ? /itemId=(\d{12})/ : /activityId=(\d{6})/
                     let activityRes = clipData.match(reg)
                     if (this.isEdit) {
                         if (!this.editForm.uid && clipData.includes('UID')) {
@@ -427,17 +434,31 @@ export default {
                             this.editForm.activityId = activityRes[1]
                             this.editForm.port = ''
                             this.editForm.isRefresh = true
-                            uni.showToast({
-                                title: 'activity改变',
-                                icon: "none",
-                                duration: 3500,
-                            });
+                            setTimeout(() => {
+                                uni.showToast({
+                                    title: 'activity改变',
+                                    icon: "none",
+                                    duration: 3500,
+                                });
+                            }, 50);
+                            handled = true
                         }
                     } else {
                         if (!clipData.length) return
                         let [first] = clipData.split(/\s+/)
-                        let res = first.match(/\d{11}/)
-                        if (res) {
+                        let res = first.match(/1(3\d|4[5-9]|5[0-35-9]|6[567]|7[0-8]|8\d|9[0-35-9])\d{8}/)
+                        if (activityRes) {
+                            this.form.activityId = activityRes[1]
+                            this.form.port = ''
+                            setTimeout(() => {
+                                uni.showToast({
+                                    title: 'activity改变',
+                                    icon: "none",
+                                    duration: 3500,
+                                });
+                            }, 50);
+                            handled = true
+                        } else if (res) {
                             this.form.phone = clipData
                             this.handlePhone()
                             handled = true
@@ -445,20 +466,13 @@ export default {
                         } else if (clipData.includes('UID')) {
                             handled = true
                             this.form.uid = clipData
-                        } else if (this.platform === 'damai') {
+                        } else if (this.isDamai) {
                             this.form.password = first
                             this.handlePass()
                             handled = true
                         }
 
-                        if (activityRes) {
-                            this.form.activityId = activityRes[1]
-                            uni.showToast({
-                                title: 'activity改变',
-                                icon: "none",
-                                duration: 3500,
-                            });
-                        }
+
                     }
                     if (handled) {
                         uni.setClipboardData({
@@ -516,7 +530,6 @@ export default {
             this.getConfig()
         },
         filterData(isFirstGet) {
-
             let cmds = Object.values(this.pidToCmd);
 
             let cmdToPid = {};
@@ -543,7 +556,7 @@ export default {
                 one.hasSuccess = Boolean(one.hasSuccess);
                 one.status = cmds.some(cmd => cmd.replace(/\s+show/, '') === one.cmd) ? 1 : 0;
                 one.pid = cmdToPid[cmd];
-                if (this.platform === 'damai') {
+                if (this.isDamai) {
                     one.showOrders = one.orders.join(',')
                 }
             });
