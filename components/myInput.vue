@@ -7,6 +7,7 @@ export default {
     methods: {
         valueChange(e) {
             this.$emit('update:modelValue', e.detail.value)
+            this.$emit('change', e.detail.value)
         }
     }
 };

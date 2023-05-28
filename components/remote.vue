@@ -22,7 +22,8 @@
 
         <uni-swipe-action>
             <template v-for="(one, index) in groupData" :key="one.group">
-                <div class="activity">{{ one.group.slice(0, 24).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})</div>
+                <div class="activity">{{ (one.group || '').slice(0, 24).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})
+                </div>
                 <uni-swipe-action-item v-for="(item) in one.data" :right-options="rightOptions"
                     :key="item.username + item.phone" @click="swipeClick($event, item)" :disabled="!!item.status">
 
@@ -62,7 +63,8 @@
                 <div class="form" v-if="isEdit">
                     <div v-for="(field, index) in inputFields" :key="index" class="input-wrap">
                         <span>{{ field }}</span>
-                        <my-input type="text" v-model="editForm[field]" :placeholder="field" />
+                        <my-input type="text" v-model="editForm[field]" :placeholder="field"
+                            @change="(val) => changeEditForm(val, field)" />
 
                     </div>
 
@@ -96,8 +98,8 @@
                 </div>
                 <div class="form" v-else>
                     <div v-for="(item, index) in addItems" :key="index" class="add-form-item">
-                        <span :style="{color: item.isSpecial?'red':'black'}" >{{item.name}}:</span>
-                        <my-input type="text" v-model="form[item.id]" :placeholder="item.id" @blur="handleBlur(item.id)"/>
+                        <span :style="{ color: item.isSpecial ? 'red' : 'black' }">{{ item.name }}:</span>
+                        <my-input type="text" v-model="form[item.id]" :placeholder="item.id" @blur="handleBlur(item.id)" />
                     </div>
                     <button class="btn" type="primary" @click="add">新增</button>
                 </div>
@@ -219,7 +221,7 @@ export default {
         addItems() {
             let isDamai = this.platform === 'damai'
             let fields = isDamai ? ['activityId', 'port', 'showOrders', 'phone', 'password', 'username', 'uid', 'remark'] : ['activityId', 'port', 'showOrders', 'phone', 'username', 'uid', 'remark']
-            return fields.map(one => ({ name: one, id: one, isSpecial:one === 'showOrders' }))
+            return fields.map(one => ({ name: one, id: one, isSpecial: one === 'showOrders' }))
         },
         selectedActivityId() {
             return this.selectedActivityIndex !== -1 ? this.activityInfo[this.selectedActivityIndex].activityId : ''
@@ -265,12 +267,12 @@ export default {
     },
 
     methods: {
-        handlePass(id){
-            let map={
+        handleBlur(id) {
+            let map = {
                 password: this.handlePass,
                 phone: this.handlePhone
             }
-            if(map[id]){
+            if (map[id]) {
                 map[id]()
             }
         },
@@ -317,6 +319,25 @@ export default {
         handleRefreshChange(e) {
             this.editForm.isRefresh = e.detail.value
         },
+
+        changeEditForm(val, id) {
+            if (id === 'activityId') {
+                this.editForm.isRefresh = true
+            }
+        },
+        checkForm(form, arr) {
+            for (let one of arr) {
+                if (!form[one]) {
+                    uni.showToast({
+                        title: one + '不能为空',
+                        icon: "error",
+                        duration: 3500,
+                    });
+                    return false
+                }
+            }
+            return true
+        },
         async confirmEdit() {
             let keys = this.fields
             let form = keys.reduce((prev, cur) => {
@@ -328,12 +349,16 @@ export default {
                 config: form,
                 isRefresh: this.editForm.isRefresh
             }
-            this.loading = true
-            await request({ method: 'post', url: this.host + "/editConfig/", data });
-            this.$refs.popup.close()
-            this.loading = false
-            this.getConfig()
 
+            let arr = ['activity', 'port',]
+
+            if (this.checkForm(form, arr)) {
+                this.loading = true
+                await request({ method: 'post', url: this.host + "/editConfig/", data });
+                this.$refs.popup.close()
+                this.loading = false
+                this.getConfig()
+            }
         },
         async openEditDialog(item) {
             this.editForm = { ...item }
@@ -355,23 +380,27 @@ export default {
             }
         },
         async add() {
-            this.loading = true
-            let data = { ...this.form, isCopy: this.copyActivityId === this.form.activityId,showOrders: this.form.showOrders.replace(/,$/,'') }
+            let data = { ...this.form, isCopy: this.copyActivityId === this.form.activityId, showOrders: this.form.showOrders.replace(/,$/, '') }
 
-            if (data.uid) {
-                data.uid = data.uid.replace('尊敬的用户，你的UID是：', '')
+            let arr = this.platform === 'damai' ? ['phone', 'username', 'password', 'activityId', 'port'] : ['phone', 'username', 'activityId', 'port']
+            if (this.checkForm(data, arr)) {
+                this.loading = true
+
+                if (data.uid) {
+                    data.uid = data.uid.replace('尊敬的用户，你的UID是：', '')
+                }
+                await request({ method: 'post', url: this.host + "/addInfo/", data, timeout: 120000 });
+                this.$refs.popup.close()
+                this.loading = false
+                this.isUnique = false
+                await this.getConfig()
+                let target = this.data.find(one => one.username === data.username)
+                this.start(target)
             }
-            await request({ method: 'post', url: this.host + "/addInfo/", data, timeout: 120000 });
-            this.$refs.popup.close()
-            this.loading = false
-            this.isUnique = false
-            await this.getConfig()
-            let target = this.data.find(one => one.username === data.username)
-            this.start(target)
         },
         openCopyDialog({ activityId, port }) {
             this.isEdit = false
-            this.copyActivityId =activityId
+            this.copyActivityId = activityId
             this.form = {
                 activityId,
                 port,
@@ -385,10 +414,24 @@ export default {
                 success: (clip) => {
                     let clipData = clip.data
                     let handled = false
+
+                    let reg = this.platform === 'damai' ? /itemId=(\d{12})/ : /activityId=(\d{6})/
+                    let activityRes = clipData.match(reg)
                     if (this.isEdit) {
                         if (!this.editForm.uid && clipData.includes('UID')) {
                             this.editForm.uid = clipData
                             handled = true
+                        }
+
+                        if (activityRes) {
+                            this.editForm.activityId = activityRes[1]
+                            this.editForm.port = ''
+                            this.editForm.isRefresh = true
+                            uni.showToast({
+                                title: 'activity改变',
+                                icon: "none",
+                                duration: 3500,
+                            });
                         }
                     } else {
                         if (!clipData.length) return
@@ -406,6 +449,15 @@ export default {
                             this.form.password = first
                             this.handlePass()
                             handled = true
+                        }
+
+                        if (activityRes) {
+                            this.form.activityId = activityRes[1]
+                            uni.showToast({
+                                title: 'activity改变',
+                                icon: "none",
+                                duration: 3500,
+                            });
                         }
                     }
                     if (handled) {
@@ -748,10 +800,12 @@ input {
             align-items: center;
             flex-wrap: wrap;
         }
-        .add-form-item{
-            display:flex;
-            align-items:center;
-            span{
+
+        .add-form-item {
+            display: flex;
+            align-items: center;
+
+            span {
                 margin-right: 10px;
                 text-align: right;
                 width: 95px;
