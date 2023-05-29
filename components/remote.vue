@@ -22,7 +22,7 @@
 
         <uni-swipe-action>
             <template v-for="(one, index) in groupData" :key="one.group">
-                <div class="activity">{{ (one.group || '').slice(0, 24).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})
+                <div class="activity" @click="showCalc(one.data[0].activityId)">{{ (one.group || '').slice(0, 24).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})
                 </div>
                 <uni-swipe-action-item v-for="(item) in one.data" :right-options="rightOptions"
                     :key="item.username + item.phone" @click="swipeClick($event, item)" :disabled="!!item.status">
@@ -106,17 +106,21 @@
                 </div>
             </div>
         </uni-popup>
-
+        <calc-activity v-model="isShowCalc" :host="host" :activityId="calcActivityId"></calc-activity>
     </div>
 </template>
 
 <script>
+import calcActivity from './calcActivity.vue'
 let platformMap = {
     xiudong: '4000',
     damai: '5000'
 }
 import { request } from '@/utils.js'
 export default {
+    components:{
+        calcActivity
+    },
     props: {
         platform: {
             type: String,
@@ -126,6 +130,8 @@ export default {
 
     data() {
         return {
+            calcActivityId: '',
+            isShowCalc:false,
             show: false,
             windowHeight: 0,
             groupData: [],
@@ -155,9 +161,9 @@ export default {
             selected: '7l235k7324.yicp.fun',
             pcs: [
                 {
-                    // hostname: '192.168.2.9',
+                    hostname: '192.168.2.9',
                     name: '华硕',
-                    hostname: '7l235k7324.yicp.fun',
+                    // hostname: '7l235k7324.yicp.fun',
                 },
                 {
                     name: '惠普',
@@ -273,6 +279,10 @@ export default {
     },
 
     methods: {
+        showCalc(id){
+            this.calcActivityId = id
+            this.isShowCalc = true
+        },
         handleBlur(id) {
             let map = {
                 password: this.handlePass,
