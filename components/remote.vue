@@ -451,7 +451,7 @@ export default {
         readDataFromClip() {
             uni.getClipboardData({
                 success: (clip) => {
-                    let clipData = clip.data
+                    let clipData = clip.data.replace(/(账号)|(手机)/g,'').trim()
                     let handled = false
 
                     let reg = this.isDamai ? /itemId=(\d{12})/ : /activityId=(\d{6})/
