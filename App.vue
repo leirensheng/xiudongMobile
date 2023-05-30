@@ -5,6 +5,7 @@ export default {
 	},
 	data() {
 		return {
+			host:'',
 			uid: 'uidabc',
 			connected: false
 		}
@@ -38,6 +39,7 @@ export default {
 			this.connected = false
 			let isLocal = await this.checkIsInLocal()
 			let host = isLocal ? '192.168.2.9' : '7l235k7324.yicp.fun'
+			this.host = host
 			uni.connectSocket({
 				url: `ws://${host}:4000/socket-app/` + this.uid
 			});

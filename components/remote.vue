@@ -22,7 +22,8 @@
 
         <uni-swipe-action>
             <template v-for="(one, index) in groupData" :key="one.group">
-                <div class="activity" @click="showCalc(one.data[0].activityId)">{{ (one.group || '').slice(0, 24).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})
+                <div class="activity" @click="showCalc(one.data[0].activityId)">{{ (one.group || '').slice(0,
+                    24).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})
                 </div>
                 <uni-swipe-action-item v-for="(item) in one.data" :right-options="rightOptions"
                     :key="item.username + item.phone" @click="swipeClick($event, item)" :disabled="!!item.status">
@@ -118,7 +119,7 @@ let platformMap = {
 }
 import { request } from '@/utils.js'
 export default {
-    components:{
+    components: {
         calcActivity
     },
     props: {
@@ -131,7 +132,7 @@ export default {
     data() {
         return {
             calcActivityId: '',
-            isShowCalc:false,
+            isShowCalc: false,
             show: false,
             windowHeight: 0,
             groupData: [],
@@ -158,10 +159,10 @@ export default {
                     value: ''
                 }
             ],
-            selected: '7l235k7324.yicp.fun',
+            selected: this.$root.host,
             pcs: [
                 {
-                    hostname: '192.168.2.9',
+                    hostname: window.host,
                     name: '华硕',
                     // hostname: '7l235k7324.yicp.fun',
                 },
@@ -225,6 +226,27 @@ export default {
 
     },
     computed: {
+        pcs() {
+            return [
+                {
+                    hostname: this.$root.host,
+                    name: '华硕',
+                },
+                {
+                    name: '惠普',
+                    hostname: '100.115.170.87',
+                },
+                {
+                    name: '3',
+                    hostname: '100.95.67.33'
+                },
+                {
+                    name: '4',
+                    hostname: '100.116.129.127',
+                },
+
+            ]
+        },
         isDamai() {
             return this.platform === 'damai'
         },
@@ -279,7 +301,7 @@ export default {
     },
 
     methods: {
-        showCalc(id){
+        showCalc(id) {
             this.calcActivityId = id
             this.isShowCalc = true
         },
@@ -475,7 +497,7 @@ export default {
 
                         } else if (clipData.includes('UID')) {
                             handled = true
-                            this.form.uid = clipData
+                            this.form.uid = clipData.trim()
                         } else if (this.isDamai) {
                             this.form.password = first
                             this.handlePass()
