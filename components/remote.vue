@@ -126,6 +126,10 @@ export default {
         platform: {
             type: String,
             default: 'xiudong',
+        },
+        pcHost:{
+            type:String,
+            default:''
         }
     },
 
@@ -159,27 +163,8 @@ export default {
                     value: ''
                 }
             ],
-            selected: this.$root.host,
-            pcs: [
-                {
-                    hostname: window.host,
-                    name: '华硕',
-                    // hostname: '7l235k7324.yicp.fun',
-                },
-                {
-                    name: '惠普',
-                    hostname: '100.115.170.87',
-                },
-                {
-                    name: '3',
-                    hostname: '100.95.67.33'
-                },
-                {
-                    name: '4',
-                    hostname: '100.116.129.127',
-                },
+            selected: this.pcHost,
 
-            ],
 
         };
     },
@@ -229,7 +214,7 @@ export default {
         pcs() {
             return [
                 {
-                    hostname: this.$root.host,
+                    hostname: this.pcHost,
                     name: '华硕',
                 },
                 {
@@ -451,7 +436,9 @@ export default {
         readDataFromClip() {
             uni.getClipboardData({
                 success: (clip) => {
-                    let clipData = clip.data.replace(/(账号)|(手机)/g,'').trim()
+                    let clipData = clip.data.replace(/(账号)|(手机)|(账号:)|(手机:)|(账号：)|(手机：)/g,'').trim()
+                     clipData = clipData.replace(/密码/g,' 密码').trim()
+
                     let handled = false
 
                     let reg = this.isDamai ? /itemId=(\d{12})/ : /activityId=(\d{6})/
