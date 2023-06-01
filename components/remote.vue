@@ -433,6 +433,7 @@ export default {
                 await this.getConfig()
                 this.loading = false
                 this.recoverScroll()
+                let target = this.data.find(one => one.username === data.username)
                 this.start(target)
 
 
