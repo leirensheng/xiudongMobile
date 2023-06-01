@@ -1,5 +1,7 @@
 <template>
-    <scroll-view :scroll-top="scrollTop" scroll-y="true" class="remote" @scroll="scroll" 	>
+    <div class="remote" ref="remote">
+
+        <page-meta :page-style="'overflow:' + (show ? 'hidden' : 'visible')"></page-meta>
         <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
@@ -27,7 +29,8 @@
 
                     <!-- <div class="activity" v-if="index===0|| (item.activityName!== data[index-1].activityName )">{{item.activityName}}</div> -->
 
-                    <div class="item" :style="getStyle(item)" :key="item.username + item.phone" :id="item.username + item.phone">
+                    <div class="item" :style="getStyle(item)" :key="item.username + item.phone"
+                        :id="item.username + item.phone">
                         <div class="phone">
                             <div>{{ item.phone }}</div>
                             <div>{{ item.username }}</div>
@@ -46,8 +49,7 @@
 
                         <div class="btns">
                             <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" />
-                            <button class="btn" size="mini" type="warn" v-if="item.status"
-                                @click="stop(item)">停止</button>
+                            <button class="btn" size="mini" type="warn" v-if="item.status" @click="stop(item)">停止</button>
                             <button class="btn" size="mini" type="primary" v-else @click="start(item)">启动</button>
                             <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item)" />
                         </div>
@@ -55,7 +57,7 @@
                 </uni-swipe-action-item>
             </template>
         </uni-swipe-action>
-    </scroll-view>
+    </div>
     <!-- <page-meta :page-style="'overflow:' + (show ? 'hidden' : 'visible')"></page-meta> -->
 
 
@@ -122,23 +124,26 @@ export default {
         calcActivity
     },
     props: {
+        scrollTop: {
+            type: Number,
+            default: 0
+        },
         platform: {
             type: String,
             default: 'xiudong',
         },
-        pcHost:{
-            type:String,
-            default:''
+        pcHost: {
+            type: String,
+            default: ''
         }
     },
 
     data() {
         return {
-            scrollTopId:'',
+            scrollTopId: '',
             old: {
                 scrollTop: 0
             },
-            scrollTop: 50,
             calcActivityId: '',
             isShowCalc: false,
             show: false,
@@ -215,6 +220,7 @@ export default {
 
     },
     computed: {
+
         pcs() {
             return [
                 {
@@ -290,10 +296,7 @@ export default {
     },
 
     methods: {
-        scroll: function (e) {
-            console.log(e)
-            this.old.scrollTop = e.detail.scrollTop
-        },
+
         showCalc(id) {
             this.calcActivityId = id
             this.isShowCalc = true
@@ -387,21 +390,13 @@ export default {
                 this.loading = true
                 await request({ method: 'post', url: this.host + "/editConfig/", data });
                 this.$refs.popup.close()
+                await this.getConfig()
                 this.loading = false
-               await this.getConfig()
+                this.recoverScroll()
+            }
+        },
 
-               this.scrollTop = this.old.scrollTop
-                // this.scrollToUser(data.username)
-              
-            }
-        },
-        
-        scrollToUser(username){
-            let target = this.data.find(one=> one.username === username)
-            if(target){
-                this.scrollTopId= target.username + target.phone
-            }
-        },
+
         async openEditDialog(item) {
             this.editForm = { ...item }
             this.isEdit = true
@@ -412,14 +407,15 @@ export default {
             if (index === 0) {
                 this.loading = true
                 await request({ method: 'post', url: this.host + "/removeConfig/", data: { username } });
-                this.getConfig()
+                await this.getConfig()
                 this.loading = false
             } else {
                 this.loading = true
                 await request({ method: 'post', url: this.host + "/toCheck/", data: { username } });
-                this.getConfig()
+                await this.getConfig()
                 this.loading = false
             }
+            this.recoverScroll()
         },
         async add() {
             let data = { ...this.form, isCopy: this.copyActivityId === this.form.activityId, showOrders: this.form.showOrders.replace(/,$/, '') }
@@ -433,12 +429,22 @@ export default {
                 }
                 await request({ method: 'post', url: this.host + "/addInfo/", data, timeout: 120000 });
                 this.$refs.popup.close()
-                this.loading = false
                 this.isUnique = false
                 await this.getConfig()
-                this.scrollToUser(data.username)
+                this.loading = false
+                this.recoverScroll()
                 this.start(target)
+
+
             }
+        },
+        async recoverScroll() {
+            await this.$nextTick()
+            uni.pageScrollTo({
+                duration: 0,
+                scrollTop: this.scrollTop,
+                direction: 0
+            })
         },
         openCopyDialog({ activityId, port }) {
             this.isEdit = false
@@ -455,8 +461,8 @@ export default {
         readDataFromClip() {
             uni.getClipboardData({
                 success: (clip) => {
-                    let clipData = clip.data.replace(/(账号)|(手机)|(账号:)|(手机:)|(账号：)|(手机：)/g,'').trim()
-                     clipData = clipData.replace(/密码/g,' 密码').trim()
+                    let clipData = clip.data.replace(/(账号)|(手机)|(账号:)|(手机:)|(账号：)|(手机：)/g, '').trim()
+                    clipData = clipData.replace(/密码/g, ' 密码').trim()
 
                     let handled = false
 
@@ -560,14 +566,14 @@ export default {
                 console.log(e)
             }
 
-            this.getConfig()
+            await this.getConfig()
+            this.recoverScroll()
             this.loading = false
         },
         async stop(item) {
             await request({ url: this.host + "/close/" + item.pid + '?isFromRemote=1' });
             await this.getConfig()
-
-            this.scrollToUser(item.username)
+            this.recoverScroll()
         },
         filterData(isFirstGet) {
             let cmds = Object.values(this.pidToCmd);
@@ -646,11 +652,6 @@ export default {
                 this.config = config
                 this.pidToCmd = pidToCmd
                 this.filterData(true)
-
-                setTimeout(() => {
-                    
-                    this.scrollTop = 300
-                }, 0);
             } catch (e) {
                 console.log('出错', e)
                 if (e.errMsg.includes('abort')) {
@@ -681,7 +682,7 @@ export default {
 
 <style scoped lang="scss">
 .remote {
-    height: 100vh;
+    // height: 100vh;
     // overflow: auto;
 }
 

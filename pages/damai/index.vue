@@ -1,5 +1,5 @@
 <template>
-    <remote-config v-if="isReady" platform="damai" ref="remote" :pcHost="pcHost"></remote-config>
+    <remote-config v-if="isReady" platform="damai" ref="remote" :pcHost="pcHost" :scrollTop="scrollTop"></remote-config>
 </template>
 
 <script>
@@ -12,8 +12,12 @@ export default {
     data() {
         return {
             isReady: false,
-            pcHost: ''
+            pcHost: '',
+            scrollTop: 0
         };
+    },
+    onPageScroll(e){
+        this.scrollTop = e.scrollTop
     },
     created() {
         if (globalData.pcHost) {
