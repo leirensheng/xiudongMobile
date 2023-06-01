@@ -1,8 +1,5 @@
 <template>
-    <div class="remote">
-
-        <page-meta :page-style="'overflow:' + (show ? 'hidden' : 'visible')"></page-meta>
-
+    <scroll-view :scroll-top="scrollTop" scroll-y="true" class="remote" @scroll="scroll" 	>
         <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
@@ -30,7 +27,7 @@
 
                     <!-- <div class="activity" v-if="index===0|| (item.activityName!== data[index-1].activityName )">{{item.activityName}}</div> -->
 
-                    <div class="item" :style="getStyle(item)" :key="item.username + item.phone">
+                    <div class="item" :style="getStyle(item)" :key="item.username + item.phone" :id="item.username + item.phone">
                         <div class="phone">
                             <div>{{ item.phone }}</div>
                             <div>{{ item.username }}</div>
@@ -50,7 +47,7 @@
                         <div class="btns">
                             <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" />
                             <button class="btn" size="mini" type="warn" v-if="item.status"
-                                @click="stop(item.pid)">停止</button>
+                                @click="stop(item)">停止</button>
                             <button class="btn" size="mini" type="primary" v-else @click="start(item)">启动</button>
                             <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item)" />
                         </div>
@@ -58,57 +55,59 @@
                 </uni-swipe-action-item>
             </template>
         </uni-swipe-action>
+    </scroll-view>
+    <!-- <page-meta :page-style="'overflow:' + (show ? 'hidden' : 'visible')"></page-meta> -->
 
-        <uni-popup ref="popup" type="bottom" @touchmove.stop @change="changePopup">
-            <div class="dialog" @touchmove.stop>
-                <div class="form" v-if="isEdit">
-                    <div v-for="(field, index) in inputFields" :key="index" class="input-wrap">
-                        <span>{{ field }}</span>
-                        <my-input type="text" v-model="editForm[field]" :placeholder="field"
-                            @change="(val) => changeEditForm(val, field)" />
 
-                    </div>
+    <uni-popup ref="popup" type="bottom" @touchmove.stop @change="changePopup">
+        <div class="dialog" @touchmove.stop>
+            <div class="form" v-if="isEdit">
+                <div v-for="(field, index) in inputFields" :key="index" class="input-wrap">
+                    <span>{{ field }}</span>
+                    <my-input type="text" v-model="editForm[field]" :placeholder="field"
+                        @change="(val) => changeEditForm(val, field)" />
 
-                    <div class="switches">
-                        <div class="is-success">
-                            <span>是否成功: </span>
-                            <switch :checked="editForm.hasSuccess" @change="handleSwitchChange" />
-                        </div>
-                        <div class="is-success">
-                            <span>重新获取: </span>
-                            <switch :checked="editForm.isRefresh" @change="handleRefreshChange" />
-                        </div>
-
-                    </div>
-
-                    <scroll-view class="checkbox-wrap" scroll-y>
-                        <checkbox-group v-if="platform === 'xiudong' && editForm.typeMap" @change="changeTarget"
-                            class="checkbox-group">
-                            <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
-                                :checked="editForm.targetTypes.includes(item)">{{ item }}
-                            </checkbox>
-                        </checkbox-group>
-
-                        <checkbox-group v-else @change="changeTarget" class="checkbox-group">
-                            <checkbox :value="item" v-for="(item, index) in Object.values(editForm.skuIdToTypeMap)"
-                                :key="index" :checked="editForm.targetTypes.includes(item)">{{ item }}
-                            </checkbox>
-                        </checkbox-group>
-                    </scroll-view>
-
-                    <button class="btn" type="primary" @click="confirmEdit">确定修改</button>
                 </div>
-                <div class="form" v-else>
-                    <div v-for="(item, index) in addItems" :key="index" class="add-form-item">
-                        <span :style="{ color: item.isSpecial ? 'red' : 'black' }">{{ item.name }}:</span>
-                        <my-input type="text" v-model="form[item.id]" :placeholder="item.id" @blur="handleBlur(item.id)" />
+
+                <div class="switches">
+                    <div class="is-success">
+                        <span>是否成功: </span>
+                        <switch :checked="editForm.hasSuccess" @change="handleSwitchChange" />
                     </div>
-                    <button class="btn" type="primary" @click="add">新增</button>
+                    <div class="is-success">
+                        <span>重新获取: </span>
+                        <switch :checked="editForm.isRefresh" @change="handleRefreshChange" />
+                    </div>
+
                 </div>
+
+                <scroll-view class="checkbox-wrap" scroll-y>
+                    <checkbox-group v-if="platform === 'xiudong' && editForm.typeMap" @change="changeTarget"
+                        class="checkbox-group">
+                        <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
+                            :checked="editForm.targetTypes.includes(item)">{{ item }}
+                        </checkbox>
+                    </checkbox-group>
+
+                    <checkbox-group v-else @change="changeTarget" class="checkbox-group">
+                        <checkbox :value="item" v-for="(item, index) in Object.values(editForm.skuIdToTypeMap)" :key="index"
+                            :checked="editForm.targetTypes.includes(item)">{{ item }}
+                        </checkbox>
+                    </checkbox-group>
+                </scroll-view>
+
+                <button class="btn" type="primary" @click="confirmEdit">确定修改</button>
             </div>
-        </uni-popup>
-        <calc-activity v-model="isShowCalc" :host="host" :activityId="calcActivityId"></calc-activity>
-    </div>
+            <div class="form" v-else>
+                <div v-for="(item, index) in addItems" :key="index" class="add-form-item">
+                    <span :style="{ color: item.isSpecial ? 'red' : 'black' }">{{ item.name }}:</span>
+                    <my-input type="text" v-model="form[item.id]" :placeholder="item.id" @blur="handleBlur(item.id)" />
+                </div>
+                <button class="btn" type="primary" @click="add">新增</button>
+            </div>
+        </div>
+    </uni-popup>
+    <calc-activity v-model="isShowCalc" :host="host" :activityId="calcActivityId"></calc-activity>
 </template>
 
 <script>
@@ -131,6 +130,11 @@ export default {
 
     data() {
         return {
+            scrollTopId:'',
+            old: {
+                scrollTop: 0
+            },
+            scrollTop: 50,
             calcActivityId: '',
             isShowCalc: false,
             show: false,
@@ -301,6 +305,10 @@ export default {
     },
 
     methods: {
+        scroll: function (e) {
+            console.log(e)
+            this.old.scrollTop = e.detail.scrollTop
+        },
         showCalc(id) {
             this.calcActivityId = id
             this.isShowCalc = true
@@ -395,7 +403,18 @@ export default {
                 await request({ method: 'post', url: this.host + "/editConfig/", data });
                 this.$refs.popup.close()
                 this.loading = false
-                this.getConfig()
+               await this.getConfig()
+
+               this.scrollTop = this.old.scrollTop
+                // this.scrollToUser(data.username)
+              
+            }
+        },
+        
+        scrollToUser(username){
+            let target = this.data.find(one=> one.username === username)
+            if(target){
+                this.scrollTopId= target.username + target.phone
             }
         },
         async openEditDialog(item) {
@@ -432,7 +451,7 @@ export default {
                 this.loading = false
                 this.isUnique = false
                 await this.getConfig()
-                let target = this.data.find(one => one.username === data.username)
+                this.scrollToUser(data.username)
                 this.start(target)
             }
         },
@@ -451,7 +470,7 @@ export default {
         readDataFromClip() {
             uni.getClipboardData({
                 success: (clip) => {
-                    let clipData = clip.data.replace(/(账号)|(手机)/g,'').trim()
+                    let clipData = clip.data.replace(/(账号)|(手机)/g, '').trim()
                     let handled = false
 
                     let reg = this.isDamai ? /itemId=(\d{12})/ : /activityId=(\d{6})/
@@ -557,9 +576,11 @@ export default {
             this.getConfig()
             this.loading = false
         },
-        async stop(pid) {
-            await request({ url: this.host + "/close/" + pid + '?isFromRemote=1' });
-            this.getConfig()
+        async stop(item) {
+            await request({ url: this.host + "/close/" + item.pid + '?isFromRemote=1' });
+            await this.getConfig()
+
+            this.scrollToUser(item.username)
         },
         filterData(isFirstGet) {
             let cmds = Object.values(this.pidToCmd);
@@ -638,6 +659,11 @@ export default {
                 this.config = config
                 this.pidToCmd = pidToCmd
                 this.filterData(true)
+
+                setTimeout(() => {
+                    
+                    this.scrollTop = 300
+                }, 0);
             } catch (e) {
                 console.log('出错', e)
                 if (e.errMsg.includes('abort')) {
@@ -668,6 +694,7 @@ export default {
 
 <style scoped lang="scss">
 .remote {
+    height: 100vh;
     // overflow: auto;
 }
 

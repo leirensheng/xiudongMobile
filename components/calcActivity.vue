@@ -74,6 +74,8 @@ export default {
     min-height: 30vh;
     padding-bottom: 60px;
     background-color: white;
+    max-height: 80vh;
+    overflow: auto;
 
     .loading {
         margin: 20px auto;
