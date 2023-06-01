@@ -415,7 +415,6 @@ export default {
                 await this.getConfig()
                 this.loading = false
             }
-            this.recoverScroll()
         },
         async add() {
             let data = { ...this.form, isCopy: this.copyActivityId === this.form.activityId, showOrders: this.form.showOrders.replace(/,$/, '') }
@@ -432,7 +431,6 @@ export default {
                 this.isUnique = false
                 await this.getConfig()
                 this.loading = false
-                this.recoverScroll()
                 let target = this.data.find(one => one.username === data.username)
                 this.start(target)
 
@@ -568,13 +566,11 @@ export default {
             }
 
             await this.getConfig()
-            this.recoverScroll()
             this.loading = false
         },
         async stop(item) {
             await request({ url: this.host + "/close/" + item.pid + '?isFromRemote=1' });
             await this.getConfig()
-            this.recoverScroll()
         },
         filterData(isFirstGet) {
             let cmds = Object.values(this.pidToCmd);
@@ -662,6 +658,7 @@ export default {
                 }
             }
             this.loading = false
+            this.recoverScroll()
             // let options = Object.values(config).map(({ activityId, activityName }) => ({
             //     activityId,
             //     activityName,
