@@ -1,23 +1,33 @@
 <template>
-    <remote-config platform="damai" ref="remote"></remote-config>
+    <remote-config v-if="isReady" platform="damai" ref="remote" :pcHost="pcHost"></remote-config>
 </template>
 
 <script>
+import globalData from '../../globalData.js'
 import RemoteConfig from '../../components/remote.vue'
 export default {
-    components:{
+    components: {
         RemoteConfig
     },
     data() {
         return {
-
+            isReady: false,
+            pcHost: ''
         };
     },
     created() {
-
+        if (globalData.pcHost) {
+            this.isReady = true
+            this.pcHost = globalData.pcHost
+        } else {
+            uni.$on('hostDone', val => {
+                this.pcHost = val
+                this.isReady = true
+            })
+        }
     },
-    onShow(){
-        if(this.$refs.remote&&this.$refs.remote.show){
+    onShow() {
+        if (this.$refs.remote && this.$refs.remote.show) {
             this.$refs.remote.readDataFromClip()
         }
     },
@@ -35,6 +45,4 @@ export default {
 };
 </script>
 
-<style scoped lang="scss">
-
-</style>
+<style scoped lang="scss"></style>
