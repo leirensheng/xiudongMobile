@@ -392,7 +392,6 @@ export default {
                 this.$refs.popup.close()
                 await this.getConfig()
                 this.loading = false
-                this.recoverScroll()
             }
         },
 
@@ -437,11 +436,11 @@ export default {
 
             }
         },
-        async recoverScroll() {
+        async recoverScroll(scrollTop) {
             await this.$nextTick()
             uni.pageScrollTo({
                 duration: 0,
-                scrollTop: this.scrollTop,
+                scrollTop: scrollTop,
                 direction: 0
             })
         },
@@ -639,6 +638,7 @@ export default {
             }
         },
         async getConfig() {
+            let scrollTop = this.scrollTop
             this.loading = true
             try {
                 this.groupData = []
@@ -658,7 +658,7 @@ export default {
                 }
             }
             this.loading = false
-            this.recoverScroll()
+            this.recoverScroll(scrollTop)
             // let options = Object.values(config).map(({ activityId, activityName }) => ({
             //     activityId,
             //     activityName,
