@@ -189,7 +189,7 @@ export default {
         selected: {
             immediate: true,
             handler() {
-                this.getConfig()
+                this.getConfig(isFirst)
             }
         },
         queryItems: {
@@ -637,7 +637,7 @@ export default {
                 this.groupDataCopy = JSON.parse(JSON.stringify(this.groupData))
             }
         },
-        async getConfig() {
+        async getConfig(isFirst) {
             let scrollTop = this.scrollTop
             this.loading = true
             try {
@@ -648,7 +648,7 @@ export default {
                 } = await request({ url: this.host + "/getAllUserConfig", cancelPre: true });
                 this.config = config
                 this.pidToCmd = pidToCmd
-                this.filterData(true)
+                this.filterData(isFirst)
             } catch (e) {
                 console.log('出错', e)
                 if (e.errMsg.includes('abort')) {
