@@ -189,7 +189,7 @@ export default {
         selected: {
             immediate: true,
             handler() {
-                this.getConfig(isFirst)
+                this.getConfig(true)
             }
         },
         queryItems: {
