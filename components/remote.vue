@@ -1,7 +1,7 @@
 <template>
     <div class="remote" ref="remote">
 
-        <page-meta :page-style="'overflow:' + (show||isShowCalc ? 'hidden' : 'visible')"></page-meta>
+        <page-meta :page-style="'overflow:' + (show || isShowCalc ? 'hidden' : 'visible')"></page-meta>
         <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
@@ -84,14 +84,14 @@
                 </div>
 
                 <scroll-view class="checkbox-wrap" scroll-y>
-                    <checkbox-group v-if="platform === 'xiudong' && editForm.typeMap" @change="changeTarget"
-                        class="checkbox-group">
+                    <checkbox-group v-if="platform === 'xiudong' && editForm.typeMap"
+                        @change="(e) => changeTarget(editForm, e)" class="checkbox-group">
                         <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
                             :checked="editForm.targetTypes.includes(item)">{{ item }}
                         </checkbox>
                     </checkbox-group>
 
-                    <checkbox-group v-else @change="changeTarget" class="checkbox-group">
+                    <checkbox-group v-else @change="(e) => changeTarget(editForm, e)" class="checkbox-group">
                         <checkbox :value="item" v-for="(item, index) in Object.values(editForm.skuIdToTypeMap)" :key="index"
                             :checked="editForm.targetTypes.includes(item)">{{ item }}
                         </checkbox>
@@ -105,6 +105,22 @@
                     <span :style="{ color: item.isSpecial ? 'red' : 'black' }">{{ item.name }}:</span>
                     <my-input type="text" v-model="form[item.id]" :placeholder="item.id" @blur="handleBlur(item.id)" />
                 </div>
+
+
+                <scroll-view class="checkbox-wrap" scroll-y>
+                    <checkbox-group v-if="platform === 'xiudong' && form.typeMap" @change="(e) => changeTarget(form, e)"
+                        class="checkbox-group">
+                        <checkbox :value="item" v-for="(item, index) in Object.keys(form.typeMap)" :key="index"
+                            :checked="form.targetTypes.includes(item)">{{ item }}
+                        </checkbox>
+                    </checkbox-group>
+
+                    <checkbox-group v-else @change="(e) => changeTarget(form, e)" class="checkbox-group">
+                        <checkbox :value="item" v-for="(item, index) in Object.values(form.skuIdToTypeMap)" :key="index"
+                            :checked="form.targetTypes.includes(item)">{{ item }}
+                        </checkbox>
+                    </checkbox-group>
+                </scroll-view>
                 <button class="btn" type="primary" @click="add">新增</button>
             </div>
         </div>
@@ -344,8 +360,8 @@ export default {
                 this.form.password = res
             }
         },
-        changeTarget(e) {
-            this.editForm.targetTypes = e.detail.value
+        changeTarget(form, e) {
+            form.targetTypes = e.detail.value
         },
         handleSwitchChange(e) {
             this.editForm.hasSuccess = e.detail.value
@@ -417,6 +433,13 @@ export default {
         },
         async add() {
             let data = { ...this.form, isCopy: this.copyActivityId === this.form.activityId, showOrders: this.form.showOrders.replace(/,$/, '') }
+            if (this.platform === 'damai') {
+                data.targetTypes = data.targetTypes.map(name => {
+                    let map = this.platform === 'xiudong' ? data.typeMap : data.skuIdToTypeMap
+                    let ids = Object.keys(map)
+                    return ids.find(id => map[id] === name)
+                })
+            }
 
             let arr = this.isDamai ? ['phone', 'username', 'password', 'activityId', 'port'] : ['phone', 'username', 'activityId', 'port', 'nameIndex']
             if (this.checkForm(data, arr)) {
@@ -444,15 +467,23 @@ export default {
                 direction: 0
             })
         },
-        openCopyDialog({ activityId, port }) {
+        openCopyDialog({ activityId, port, typeMap, skuIdToTypeMap }) {
+
             this.isEdit = false
             this.copyActivityId = activityId
             this.form = {
                 activityId,
                 port,
+                targetTypes: [],
                 showOrders: '0,',
                 nameIndex: 0
             }
+            if (this.platform === 'xiudong') {
+                this.form.typeMap = typeMap
+            } else {
+                this.form.skuIdToTypeMap = skuIdToTypeMap
+            }
+
             this.$refs.popup.open('bottom')
             this.readDataFromClip()
         },
@@ -492,6 +523,8 @@ export default {
                         if (activityRes) {
                             this.form.activityId = activityRes[1]
                             this.form.port = ''
+                            this.form.typeMap = {}
+                            this.form.skuIdToTypeMap = {}
                             setTimeout(() => {
                                 uni.showToast({
                                     title: 'activity改变',
