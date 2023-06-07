@@ -1,7 +1,7 @@
 <template>
     <div class="remote" ref="remote">
 
-        <page-meta :page-style="'overflow:' + (show ? 'hidden' : 'visible')"></page-meta>
+        <page-meta :page-style="'overflow:' + (show||isShowCalc ? 'hidden' : 'visible')"></page-meta>
         <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
@@ -73,11 +73,11 @@
 
                 <div class="switches">
                     <div class="is-success">
-                        <span>是否成功: </span>
+                        <span>是否成功：</span>
                         <switch :checked="editForm.hasSuccess" @change="handleSwitchChange" />
                     </div>
                     <div class="is-success">
-                        <span>重新获取: </span>
+                        <span>重新获取：</span>
                         <switch :checked="editForm.isRefresh" @change="handleRefreshChange" />
                     </div>
 
