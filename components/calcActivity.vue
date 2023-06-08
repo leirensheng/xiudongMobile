@@ -88,6 +88,11 @@ export default {
                         let score = 500
                         score = score - config.orders.length * 50
                         score = score - config.targetTypes.length * 10
+                        if (name.match(/(领导)|(lingdao)|(低)/)) {
+                            score = score - 10
+                        } else if (name.match(/高/)) {
+                            score = score + 10
+                        }
                         if (!config.uid) {
                             score = score - 20
                         }
