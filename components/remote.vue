@@ -107,7 +107,7 @@
                 </div>
 
 
-                <scroll-view class="checkbox-wrap" scroll-y>
+                <scroll-view class="checkbox-wrap2" scroll-y>
                     <checkbox-group v-if="platform === 'xiudong' && form.typeMap" @change="(e) => changeTarget(form, e)"
                         class="checkbox-group">
                         <checkbox :value="item" v-for="(item, index) in Object.keys(form.typeMap)" :key="index"
@@ -881,6 +881,9 @@ input {
 
         .checkbox-wrap {
             max-height: 25vh;
+        }
+        .checkbox-wrap2 {
+            max-height: 15vh;
         }
 
         .checkbox-group {
