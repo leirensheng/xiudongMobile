@@ -1,5 +1,6 @@
 <template>
     <div class="remote" ref="remote">
+        <progress :percent="percent" show-info stroke-width="3"  class="progress" v-if="![0,100].includes(percent)"/>
 
         <page-meta :page-style="'overflow:' + (show || isShowCalc ? 'hidden' : 'visible')"></page-meta>
         <div class="pcs">
@@ -125,7 +126,7 @@
             </div>
         </div>
     </uni-popup>
-    <calc-activity v-model="isShowCalc" :host="host" :activityId="calcActivityId"></calc-activity>
+    <calc-activity v-model="isShowCalc" :host="host" :activityId="calcActivityId" :userConfig="data" @autoStartUsers="autoStartUsers"></calc-activity>
 </template>
 
 <script>
@@ -156,6 +157,7 @@ export default {
 
     data() {
         return {
+            percent:0,
             scrollTopId: '',
             old: {
                 scrollTop: 0
@@ -312,7 +314,23 @@ export default {
     },
 
     methods: {
-
+        async autoStartUsers(users){
+            this.isShowCalc = false
+            let total = users.length
+            let done = 0
+            for(let user of users){
+                let item = this.data.find(one=> one.username === user)
+                
+                try{
+                    await this.start(item, true)
+                }catch(e){
+                    console.log(e)
+                }
+                done++
+                this.percent = Math.ceil((done/total) *100)
+            }
+            await this.getConfig()
+        },
         showCalc(id) {
             this.calcActivityId = id
             this.isShowCalc = true
@@ -589,15 +607,16 @@ export default {
             }
         },
 
-        async start(item) {
+        async start(item, isNoRefresh) {
             this.loading = true
             try {
                 await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd } });
             } catch (e) {
                 console.log(e)
             }
-
-            await this.getConfig()
+            if(!isNoRefresh){
+                await this.getConfig()
+            }
             this.loading = false
         },
         async stop(item) {
@@ -713,8 +732,16 @@ export default {
 
 <style scoped lang="scss">
 .remote {
+    // position: relative;
     // height: 100vh;
     // overflow: auto;
+}
+.progress{
+    position: fixed;
+    top:50vh;
+    z-index: 55;
+    left: 20%;
+    right: 20%;
 }
 
 .pcs {

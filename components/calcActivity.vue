@@ -1,6 +1,13 @@
 <template>
     <uni-popup ref="popup" type="bottom" @change="changePopup">
         <div class="dialog">
+            <div class="top">
+                <button type="primary" size="mini" @click="autoOpen">自动启动</button>
+                <div>
+                    最小启动:
+                    <switch :checked="isMin" @change="changeIsMin" />
+                </div>
+            </div>
             <div v-if="data.length" class="item-wrap" v-for="(item, index) in data" :key="index">
                 <div class="item" :style="getStyle(item.percent)">
                     <div class="text">{{ item.type }}__({{ item.runningLength }}/{{ item.allLength }}) </div>
@@ -17,13 +24,18 @@ import { request } from '@/utils.js'
 export default {
     data() {
         return {
-            data: []
+            data: [],
+            isMin: true
         };
     },
     created() {
 
     },
     props: {
+        userConfig: {
+            type: Array,
+            default: () => []
+        },
         modelValue: {
             type: Boolean,
             default: false
@@ -46,16 +58,68 @@ export default {
                 this.$refs.popup.open('bottom')
                 let data = await request({ url: this.host + "/activityInfo/" + this.activityId });
 
-                this.data = Object.keys(data).map(type => ({ type, allLength: data[type].allLength, runningLength: data[type].runningLength }))
+                this.data = Object.keys(data).map(type => ({ ...data[type], type, allLength: data[type].allLength, runningLength: data[type].runningLength }))
                 let max = Math.max(... this.data.map(one => one.allLength))
                 this.data.forEach(one => {
                     one.percent = Math.floor(one.allLength / max * 100)
                 })
 
+                // console.log(this.data, data)
+            } else {
+                this.$refs.popup.close()
             }
         }
     },
     methods: {
+        changeIsMin(e) {
+            this.isMin = e.detail.value
+        },
+        autoOpen() {
+            // let runningUsers = [...new Set(this.data.map(one => one.running).flat().filter(Boolean))]
+            let runningTypes = this.data.filter(one => one.running.length).map(one => one.type)
+
+            let toStart = []
+            for (let one of this.data) {
+                let { type, all } = one
+                if (all.length && !runningTypes.includes(type)) {
+                    let scores = all.map(name => {
+                        let config = this.userConfig.find(one => one.username === name)
+                        if (config.hasSuccess) return 0
+                        let score = 500
+                        score = score - config.orders.length * 50
+                        score = score - config.targetTypes.length * 10
+                        if (!config.uid) {
+                            score = score - 20
+                        }
+                        return score
+                    })
+                    console.log(type, all, scores)
+                    let max = Math.max(...scores)
+
+                    if (max !== 0) {
+                        let index = scores.indexOf(max)
+                        let maxUser = all[index]
+                        console.log("最大的是", maxUser)
+                        toStart.push(maxUser)
+                        if (!this.isMin) {
+                            runningTypes.push(type)
+                        } else {
+                            if (max < 400) {
+                                runningTypes.push(type)
+                                console.log(type + "没有单个人的")
+                            } else {
+                                let maxOneConfig = this.userConfig.find(one => one.username === maxUser)
+                                runningTypes.push(...maxOneConfig.targetTypes)
+                            }
+                        }
+                    }
+                }
+            }
+            console.log("结果", toStart)
+            if (toStart.length) {
+                this.$emit('autoStartUsers', toStart)
+            }
+        },
         getStyle(percent) {
             return {
                 'background-size': percent + '%'
@@ -79,6 +143,13 @@ export default {
 
     .loading {
         margin: 20px auto;
+    }
+
+    .top {
+        padding: 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
     .item-wrap {
