@@ -7,6 +7,11 @@
                     最小启动:
                     <switch :checked="isMin" @change="changeIsMin" />
                 </div>
+                <div>
+                    单张:
+                    <switch :checked="isSingle" @change="changeIsSingle" />
+                </div>
+
             </div>
             <div v-if="data.length" class="item-wrap" v-for="(item, index) in data" :key="index">
                 <div class="item" :style="getStyle(item.percent)">
@@ -25,7 +30,8 @@ export default {
     data() {
         return {
             data: [],
-            isMin: true
+            isMin: true,
+            isSingle: true
         };
     },
     created() {
@@ -56,23 +62,29 @@ export default {
         async modelValue(val) {
             if (val) {
                 this.$refs.popup.open('bottom')
-                let data = await request({ url: this.host + "/activityInfo/" + this.activityId });
-
-                this.data = Object.keys(data).map(type => ({ ...data[type], type, allLength: data[type].allLength, runningLength: data[type].runningLength }))
-                let max = Math.max(... this.data.map(one => one.allLength))
-                this.data.forEach(one => {
-                    one.percent = Math.floor(one.allLength / max * 100)
-                })
-
-                // console.log(this.data, data)
+                this.getCalc()
             } else {
                 this.$refs.popup.close()
             }
         }
     },
     methods: {
+        async getCalc() {
+            let data = await request({ url: this.host + "/activityInfo/" + this.activityId + '?isSingle=' + (this.isSingle ? 1 : 0) });
+
+            this.data = Object.keys(data).map(type => ({ ...data[type], type, allLength: data[type].allLength, runningLength: data[type].runningLength }))
+            let max = Math.max(... this.data.map(one => one.allLength))
+            this.data.forEach(one => {
+                one.percent = Math.floor(one.allLength / max * 100)
+            })
+            // console.log(this.data, data)
+        },
         changeIsMin(e) {
             this.isMin = e.detail.value
+        },
+        changeIsSingle(e) {
+            this.isSingle = e.detail.value
+            this.getCalc()
         },
         autoOpen() {
             // let runningUsers = [...new Set(this.data.map(one => one.running).flat().filter(Boolean))]
