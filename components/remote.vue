@@ -65,27 +65,31 @@
 
     <uni-popup ref="popup" type="bottom" @touchmove.stop @change="changePopup">
         <div class="dialog" @touchmove.stop>
+            <image mode="widthFix" src="../static/open.svg" @click="toggleForm" :class="isShowAll ? 'toggle' : 'toggle rotate'">
+            </image>
             <div class="form" v-if="isEdit">
-                <div v-for="(field, index) in inputFields" :key="index" class="input-wrap">
-                    <span>{{ field }}</span>
-                    <my-input type="text" v-model="editForm[field]" :placeholder="field"
-                        @change="(val) => changeEditForm(val, field)" />
+                <template class="basic-form" v-if="isShowAll">
+                    <div v-for="(field, index) in inputFields" :key="index" class="input-wrap">
+                        <span>{{ field }}</span>
+                        <my-input type="text" v-model="editForm[field]" :placeholder="field"
+                            @change="(val) => changeEditForm(val, field)" />
 
-                </div>
-
-                <div class="switches">
-                    <div class="is-success">
-                        <span>是否成功：</span>
-                        <switch :checked="editForm.hasSuccess" @change="handleSwitchChange" />
-                    </div>
-                    <div class="is-success">
-                        <span>重新获取：</span>
-                        <switch :checked="editForm.isRefresh" @change="handleRefreshChange" />
                     </div>
 
-                </div>
+                    <div class="switches">
+                        <div class="is-success">
+                            <span>是否成功：</span>
+                            <switch :checked="editForm.hasSuccess" @change="handleSwitchChange" />
+                        </div>
+                        <div class="is-success">
+                            <span>重新获取：</span>
+                            <switch :checked="editForm.isRefresh" @change="handleRefreshChange" />
+                        </div>
+                    </div>
+                </template>
 
-                <scroll-view class="checkbox-wrap" scroll-y>
+
+                <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
                     <checkbox-group v-if="platform === 'xiudong' && editForm.typeMap"
                         @change="(e) => changeTarget(editForm, e)" class="checkbox-group">
                         <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
@@ -103,13 +107,15 @@
                 <button class="btn" type="primary" @click="confirmEdit">确定修改</button>
             </div>
             <div class="form" v-else>
-                <div v-for="(item, index) in addItems" :key="index" class="add-form-item">
-                    <span :style="{ color: item.isSpecial ? 'red' : 'black' }">{{ item.name }}:</span>
-                    <my-input type="text" v-model="form[item.id]" :placeholder="item.id" @blur="handleBlur(item.id)" />
-                </div>
+                <template class="basic-form" v-if="isShowAll">
+                    <div v-for="(item, index) in addItems" :key="index" class="add-form-item">
+                        <span :style="{ color: item.isSpecial ? 'red' : 'black' }">{{ item.name }}:</span>
+                        <my-input type="text" v-model="form[item.id]" :placeholder="item.id" @blur="handleBlur(item.id)" />
+                    </div>
+                </template>
 
 
-                <scroll-view class="checkbox-wrap2" scroll-y>
+                <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
                     <checkbox-group v-if="platform === 'xiudong' && form.typeMap" @change="(e) => changeTarget(form, e)"
                         class="checkbox-group">
                         <checkbox :value="item" v-for="(item, index) in Object.keys(form.typeMap)" :key="index"
@@ -159,7 +165,8 @@ export default {
 
     data() {
         return {
-            percent: 0,
+            percent:0,
+            isShowAll: true,
             scrollTopId: '',
             old: {
                 scrollTop: 0
@@ -240,7 +247,11 @@ export default {
 
     },
     computed: {
-
+        scrollStyle() {
+            return {
+                height: this.isShowAll ? this.isEdit ? '25vh' : '15vh' : 'auto'
+            }
+        },
         pcs() {
             return [
                 {
@@ -317,7 +328,10 @@ export default {
 
     methods: {
         getTagColor,
-        async autoStartUsers(users) {
+        toggleForm() {
+            this.isShowAll = !this.isShowAll
+        },
+        async autoStartUsers(users){
             this.isShowCalc = false
             let total = users.length
             let done = 0
@@ -349,6 +363,9 @@ export default {
         },
         changePopup(e) {
             this.show = e.show
+            if(!this.show){
+                this.isShowAll = true
+            }
         },
         bindPickerChange(e) {
             this.selectedActivityIndex = e.detail.value
@@ -833,8 +850,7 @@ export default {
             color: white;
             border-radius: 12px;
             text-align: center;
-            line-height: 1.4
-        }
+            line-height: 1.7;        }
     }
 
     .remark {
@@ -872,6 +888,17 @@ input {
 .dialog {
     background-color: white;
     padding: 10px 20px;
+
+    .toggle {
+        width: 20px;
+        height: 20px;
+        float: right;
+        transition: 0.3s;
+
+        &.rotate {
+            transform: rotate(180deg);
+        }
+    }
 
     .form {
         display: flex;
@@ -916,12 +943,10 @@ input {
         }
 
         .checkbox-wrap {
-            max-height: 25vh;
+            max-height: 90vh;
         }
+  
 
-        .checkbox-wrap2 {
-            max-height: 15vh;
-        }
 
         .checkbox-group {
             padding: 10px 0;
