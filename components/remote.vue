@@ -894,6 +894,7 @@ input {
         height: 20px;
         float: right;
         transition: 0.3s;
+        z-index: 999;
 
         &.rotate {
             transform: rotate(180deg);
