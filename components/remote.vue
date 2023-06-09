@@ -40,7 +40,7 @@
                         </div>
 
                         <div class="targetTypes">
-                            <div class="target-type" v-for="(item, index) in item.targetTypes" :key="index">{{ item }}</div>
+                            <div class="target-type" v-for="(targetType, index) in item.targetTypes" :key="index" :style="{background: getTagColor(targetType)}">{{ targetType }}</div>
                         </div>
 
 
@@ -135,7 +135,7 @@ let platformMap = {
     xiudong: '4000',
     damai: '5000'
 }
-import { request } from '@/utils.js'
+import { request,getTagColor } from '@/utils.js'
 export default {
     components: {
         calcActivity
@@ -314,6 +314,7 @@ export default {
     },
 
     methods: {
+        getTagColor,
         async autoStartUsers(users){
             this.isShowCalc = false
             let total = users.length
@@ -823,6 +824,10 @@ export default {
 
 
         .target-type {
+            margin: 2px 0;
+            // font-weight: bold;
+            color: white;
+            border-radius: 12px;
             text-align: center;
             line-height: 2;
         }

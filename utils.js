@@ -1,14 +1,14 @@
-let urlToRequest = {}
+let urlToRequest = {};
 let request = (options) =>
   new Promise((resolve, reject) => {
-    let path  = options.url.split('/').pop()
-    let pre = urlToRequest[path]
-    if(pre && options.cancelPre){
-      pre.abort()
+    let path = options.url.split("/").pop();
+    let pre = urlToRequest[path];
+    if (pre && options.cancelPre) {
+      pre.abort();
     }
-     urlToRequest[path]= uni.request({
+    urlToRequest[path] = uni.request({
       ...options,
-      timeout: options.timeout|| 20000,
+      timeout: options.timeout || 20000,
       success: (res) => {
         console.log(res);
         let { code, data, msg } = res.data;
@@ -32,9 +32,24 @@ let request = (options) =>
       fail: (e) => {
         reject(e);
       },
-      complete:()=>{
-        urlToRequest[path] = null
-      }
+      complete: () => {
+        urlToRequest[path] = null;
+      },
     });
   });
-export { request };
+
+let random = (min, max) => Math.floor(Math.random() * (max - min)) + min;
+let tagList = []
+
+let getTagColor = (tag) => {
+  if (!tagList[tag]) {
+    tagList[tag] = `rgb(${random(0, 255)}, ${random(0, 255)}, ${random(
+      0,
+      255
+    )})`;
+    // localStorage.tagList = JSON.stringify(tagList);
+  }
+  return tagList[tag];
+};
+
+export { request, getTagColor };
