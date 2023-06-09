@@ -86,6 +86,24 @@ export default {
             this.isSingle = e.detail.value
             this.getCalc()
         },
+        getScore(name, allConfig) {
+            let config = allConfig.find((one) => one.username === name);
+            if (config.hasSuccess || config.remark.match(/(频繁)|(密码不正确)/)) return 0;
+            let score = 500;
+            score = score - config.orders.length * 50;
+            score = score - config.targetTypes.length * 10;
+            if (name.match(/(领导)|(lingdao)/) || config.remark.match(/低/)) {
+                score = score - 20;
+            } else if (config.remark.match(/高/)) {
+                score = score + 20;
+            } else if (config.remark) {
+                score = score - 10;
+            }
+            if (!config.uid) {
+                score = score - 30;
+            }
+            return score;
+        },
         autoOpen() {
             // let runningUsers = [...new Set(this.data.map(one => one.running).flat().filter(Boolean))]
             let runningTypes = this.data.filter(one => one.running.length).map(one => one.type)
@@ -94,22 +112,7 @@ export default {
             for (let one of this.data) {
                 let { type, all } = one
                 if (all.length && !runningTypes.includes(type)) {
-                    let scores = all.map(name => {
-                        let config = this.userConfig.find(one => one.username === name)
-                        if (config.hasSuccess) return 0
-                        let score = 500
-                        score = score - config.orders.length * 50
-                        score = score - config.targetTypes.length * 10
-                        if (name.match(/(领导)|(lingdao)|(低)/)) {
-                            score = score - 10
-                        } else if (name.match(/高/)) {
-                            score = score + 10
-                        }
-                        if (!config.uid) {
-                            score = score - 20
-                        }
-                        return score
-                    })
+                    let scores = all.map(name => this.getScore(name, this.userConfig))
                     console.log(type, all, scores)
                     let max = Math.max(...scores)
 
