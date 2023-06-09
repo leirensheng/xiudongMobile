@@ -1,6 +1,6 @@
 <template>
     <div class="remote" ref="remote">
-        <progress :percent="percent" show-info stroke-width="3"  class="progress" v-if="![0,100].includes(percent)"/>
+        <progress :percent="percent" show-info stroke-width="3" class="progress" v-if="![0, 100].includes(percent)" />
 
         <page-meta :page-style="'overflow:' + (show || isShowCalc ? 'hidden' : 'visible')"></page-meta>
         <div class="pcs">
@@ -40,7 +40,8 @@
                         </div>
 
                         <div class="targetTypes">
-                            <div class="target-type" v-for="(targetType, index) in item.targetTypes" :key="index" :style="{background: getTagColor(targetType)}">{{ targetType }}</div>
+                            <div class="target-type" v-for="(targetType, index) in item.targetTypes" :key="index"
+                                :style="{ background: getTagColor(targetType) }">{{ targetType }}</div>
                         </div>
 
 
@@ -126,7 +127,8 @@
             </div>
         </div>
     </uni-popup>
-    <calc-activity v-model="isShowCalc" :host="host" :activityId="calcActivityId" :userConfig="data" @autoStartUsers="autoStartUsers"></calc-activity>
+    <calc-activity v-model="isShowCalc" :host="host" :activityId="calcActivityId" :userConfig="data"
+        @autoStartUsers="autoStartUsers"></calc-activity>
 </template>
 
 <script>
@@ -135,7 +137,7 @@ let platformMap = {
     xiudong: '4000',
     damai: '5000'
 }
-import { request,getTagColor } from '@/utils.js'
+import { request, getTagColor } from '@/utils.js'
 export default {
     components: {
         calcActivity
@@ -157,7 +159,7 @@ export default {
 
     data() {
         return {
-            percent:0,
+            percent: 0,
             scrollTopId: '',
             old: {
                 scrollTop: 0
@@ -315,20 +317,20 @@ export default {
 
     methods: {
         getTagColor,
-        async autoStartUsers(users){
+        async autoStartUsers(users) {
             this.isShowCalc = false
             let total = users.length
             let done = 0
-            for(let user of users){
-                let item = this.data.find(one=> one.username === user)
-                
-                try{
+            for (let user of users) {
+                let item = this.data.find(one => one.username === user)
+
+                try {
                     await this.start(item, true)
-                }catch(e){
+                } catch (e) {
                     console.log(e)
                 }
                 done++
-                this.percent = Math.ceil((done/total) *100)
+                this.percent = Math.ceil((done / total) * 100)
             }
             await this.getConfig()
         },
@@ -615,7 +617,7 @@ export default {
             } catch (e) {
                 console.log(e)
             }
-            if(!isNoRefresh){
+            if (!isNoRefresh) {
                 await this.getConfig()
             }
             this.loading = false
@@ -737,12 +739,13 @@ export default {
     // height: 100vh;
     // overflow: auto;
 }
-.progress{
+
+.progress {
     position: fixed;
-    top: 60vh;
-    z-index: 55;
-    left: 20%;
-    right: 20%;
+    top: 36vh;
+    z-index: 56666665;
+    left: 32%;
+    right: 32%;
 }
 
 .pcs {
@@ -825,12 +828,13 @@ export default {
 
         .target-type {
             margin: 5px 0;
-            padding: 8px;
+            padding: 2px;
             // font-weight: bold;
             color: white;
             border-radius: 12px;
             text-align: center;
-            line-height: 1.7;        }
+            line-height: 1.4
+        }
     }
 
     .remark {
@@ -914,6 +918,7 @@ input {
         .checkbox-wrap {
             max-height: 25vh;
         }
+
         .checkbox-wrap2 {
             max-height: 15vh;
         }
