@@ -739,7 +739,7 @@ export default {
 }
 .progress{
     position: fixed;
-    top:50vh;
+    top: 60vh;
     z-index: 55;
     left: 20%;
     right: 20%;
@@ -824,13 +824,13 @@ export default {
 
 
         .target-type {
-            margin: 2px 0;
+            margin: 5px 0;
+            padding: 8px;
             // font-weight: bold;
             color: white;
             border-radius: 12px;
             text-align: center;
-            line-height: 2;
-        }
+            line-height: 1.7;        }
     }
 
     .remark {
