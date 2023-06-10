@@ -15,7 +15,9 @@
 
             <picker v-show="activities.length" @change="bindPickerChange" :value="selectedActivityIndex"
                 :range="activities">
-                <image style="width: 16px;height:16px" src="/static/filter.svg" />
+                <image style="width: 16px;height:16px" src="/static/filter.svg" v-if="selectedActivityIndex === -1" />
+                <image v-else style="width: 16px;height:16px" src="/static/filterSelected.svg" />
+
             </picker>
         </div>
 
@@ -65,7 +67,8 @@
 
     <uni-popup ref="popup" type="bottom" @touchmove.stop @change="changePopup">
         <div class="dialog" @touchmove.stop>
-            <image mode="widthFix" src="../static/open.svg" @click="toggleForm" :class="isShowAll ? 'toggle' : 'toggle rotate'">
+            <image mode="widthFix" src="../static/open.svg" @click="toggleForm"
+                :class="isShowAll ? 'toggle' : 'toggle rotate'">
             </image>
             <div class="form" v-if="isEdit">
                 <template class="basic-form" v-if="isShowAll">
@@ -165,7 +168,7 @@ export default {
 
     data() {
         return {
-            percent:0,
+            percent: 0,
             isShowAll: true,
             scrollTopId: '',
             old: {
@@ -331,7 +334,7 @@ export default {
         toggleForm() {
             this.isShowAll = !this.isShowAll
         },
-        async autoStartUsers(users){
+        async autoStartUsers(users) {
             this.isShowCalc = false
             let total = users.length
             let done = 0
@@ -363,7 +366,7 @@ export default {
         },
         changePopup(e) {
             this.show = e.show
-            if(!this.show){
+            if (!this.show) {
                 this.isShowAll = true
             }
         },
@@ -850,7 +853,8 @@ export default {
             color: white;
             border-radius: 12px;
             text-align: center;
-            line-height: 1.7;        }
+            line-height: 1.7;
+        }
     }
 
     .remark {
@@ -946,7 +950,7 @@ input {
         .checkbox-wrap {
             max-height: 90vh;
         }
-  
+
 
 
         .checkbox-group {
