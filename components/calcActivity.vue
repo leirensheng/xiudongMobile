@@ -2,7 +2,8 @@
     <uni-popup ref="popup" type="bottom" @change="changePopup">
         <div class="dialog">
             <div class="top">
-                <button type="primary" size="mini"  v-if="data.length" @click="autoOpen">自动启动</button>
+                <div>启动中: {{ allRunningLength }}</div>
+                <button type="primary" size="mini" v-if="data.length" @click="autoOpen">自动启动</button>
                 <div>
                     最小启动:
                     <switch :checked="isMin" @change="changeIsMin" />
@@ -31,6 +32,7 @@ export default {
         return {
             data: [],
             isMin: true,
+            allRunningLength: 0,
             isSingle: true
         };
     },
@@ -71,6 +73,9 @@ export default {
     methods: {
         async getCalc() {
             let data = await request({ url: this.host + "/activityInfo/" + this.activityId + '?isSingle=' + (this.isSingle ? 1 : 0) });
+
+            let allRunning = Object.keys(data).map(type => (data[type].running)).flat()
+            this.allRunningLength = new Set(allRunning).size
 
             this.data = Object.keys(data).map(type => ({ ...data[type], type, allLength: data[type].allLength, runningLength: data[type].runningLength }))
             let max = Math.max(... this.data.map(one => one.allLength))
