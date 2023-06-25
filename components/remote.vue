@@ -34,11 +34,20 @@
 
                     <div class="item" :style="getStyle(item)" :key="item.username + item.phone"
                         :id="item.username + item.phone">
-                        <div class="phone">
-                            <div>{{ item.phone }}</div>
-                            <div>{{ item.username }}</div>
-                            <div v-if="isXiudong">{{ item.nameIndex }}</div>
-                            <div v-if="isDamai">{{ item.showOrders }}</div>
+                        <div class="first">
+                            <div @click="copyPhone(item.phone)">{{ item.phone }}</div>
+                            <div class="name">
+                                {{ item.username }}
+                            </div>
+
+                            <div class="order">
+                                <checkbox-group @change="item.isShow = !item.isShow">
+                                    <checkbox :checked="item.isShow">
+                                        <div v-if="isXiudong">{{ item.nameIndex }}</div>
+                                        <div v-if="isDamai">{{ item.showOrders }}</div>
+                                    </checkbox>
+                                </checkbox-group>
+                            </div>
                         </div>
 
                         <div class="targetTypes">
@@ -219,6 +228,7 @@ export default {
         selected: {
             immediate: true,
             handler() {
+                this.selectedActivityIndex = -1
                 this.getConfig(true)
             }
         },
@@ -331,6 +341,11 @@ export default {
 
     methods: {
         getTagColor,
+        copyPhone(phone) {
+            uni.setClipboardData({
+                data: phone,
+            });
+        },
         toggleForm() {
             this.isShowAll = !this.isShowAll
         },
@@ -531,7 +546,7 @@ export default {
         readDataFromClip() {
             uni.getClipboardData({
                 success: (clip) => {
-                    let clipData = clip.data.replace(/(账号)|(手机)|(账号:)|(手机:)|(账号：)|(手机：)/g, '').trim()
+                    let clipData = clip.data.replaceAll(/(账号:)|(手机:)|(账号：)|(手机：)|(手机号码)|(手机号)|(账号)|(手机)|/g, '').trim()
                     clipData = clipData.replace(/密码/g, ' 密码').trim()
 
                     let handled = false
@@ -633,7 +648,7 @@ export default {
         async start(item, isNoRefresh) {
             this.loading = true
             try {
-                await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd } });
+                await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd + (item.isShow ? ' show' : '') } });
             } catch (e) {
                 console.log(e)
             }
@@ -826,13 +841,14 @@ export default {
 
     }
 
-    .phone {
+    .first {
         width: 110px;
         text-align: center;
 
         >* {
             line-height: 2;
         }
+
 
         // .copy {
         //     position: relative;
