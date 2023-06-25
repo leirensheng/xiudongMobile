@@ -2,7 +2,7 @@
     <uni-popup ref="popup" type="bottom" @change="changePopup">
         <div class="dialog">
             <div class="top">
-                <button type="primary" size="mini" @click="autoOpen">自动启动</button>
+                <button type="primary" size="mini"  v-if="data.length" @click="autoOpen">自动启动</button>
                 <div>
                     最小启动:
                     <switch :checked="isMin" @change="changeIsMin" />
