@@ -546,7 +546,7 @@ export default {
         readDataFromClip() {
             uni.getClipboardData({
                 success: (clip) => {
-                    let clipData = clip.data.replaceAll(/(大麦账号(:)?)|(账号:)|(手机:)|(账号：)|(手机：)|(手机号码)|(手机号)|(账号)|(手机)|/g, '').trim()
+                    let clipData = clip.data.replace(/(大麦账号(:)?)|(账号:)|(手机:)|(账号：)|(手机：)|(手机号码)|(手机号)|(账号)|(手机)|/g, '').trim()
                     clipData = clipData.replace(/密码(:)?(\s)*/g, ' 密码').trim()
 
                     let handled = false
