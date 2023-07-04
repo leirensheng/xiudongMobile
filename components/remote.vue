@@ -36,7 +36,7 @@
                         :id="item.username + item.phone">
                         <div class="first">
                             <div @click="copyPhone(item.phone)">{{ item.phone }}</div>
-                            <div class="name">
+                            <div class="name"  @click="copyUsername(item.username)">
                                 {{ item.username }}
                             </div>
 
@@ -344,6 +344,11 @@ export default {
         copyPhone(phone) {
             uni.setClipboardData({
                 data: phone,
+            });
+        },
+        copyUsername(username) {
+            uni.setClipboardData({
+                data: username,
             });
         },
         toggleForm() {
