@@ -23,6 +23,14 @@
 			}
 		},
 		{
+			"path": "pages/xingqiu/index",
+			"style": {
+				"enablePullDownRefresh": true,
+
+				"navigationBarTitleText": "星球"
+			}
+		},
+		{
 			"path": "pages/damai/ticket",
 			"style": {
 				"enablePullDownRefresh": true,
@@ -43,6 +51,10 @@
 			{
 				"pagePath": "pages/damai/index",
 				"text": "大麦"	
+			},
+			{
+				"pagePath": "pages/xingqiu/index",
+				"text": "星球"	
 			},
 			{
 				"pagePath": "pages/damai/ticket",

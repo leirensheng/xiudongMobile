@@ -35,8 +35,12 @@
                     <div class="item" :style="getStyle(item)" :key="item.username + item.phone"
                         :id="item.username + item.phone">
                         <div class="first">
-                            <div @click="copyPhone(item.phone)">{{ item.phone }}</div>
-                            <div class="name"  @click="copyUsername(item.username)">
+                            <div v-if="item.uid">
+                                <image class="msg-icon" src="/static/msg.svg" @click="openMsg(item.uid)" />
+                            </div>
+
+                            <div @click="callOrCopyPhone(item.phone)">{{ item.phone }}</div>
+                            <div class="name" @click="copyUsername(item.username)">
                                 {{ item.username }}
                             </div>
 
@@ -44,7 +48,7 @@
                                 <checkbox-group @change="item.isShow = !item.isShow">
                                     <checkbox :checked="item.isShow">
                                         <div v-if="isXiudong">{{ item.nameIndex }}</div>
-                                        <div v-if="isDamai">{{ item.showOrders }}</div>
+                                        <div v-else>{{ item.showOrders }}</div>
                                     </checkbox>
                                 </checkbox-group>
                             </div>
@@ -145,6 +149,15 @@
             </div>
         </div>
     </uni-popup>
+
+    <uni-popup ref="msgPopup" type="bottom" @touchmove.stop>
+        <div class="dialog msg-dialog" @touchmove.stop>
+            <textarea type="textarea" v-model="msgToUser" />
+            <div>
+                <button class="btn" type="primary" @click="sendMsgToUser">新增</button>
+            </div>
+        </div>
+    </uni-popup>
     <calc-activity v-model="isShowCalc" :host="host" :activityId="calcActivityId" :userConfig="data"
         @autoStartUsers="autoStartUsers"></calc-activity>
 </template>
@@ -153,7 +166,8 @@
 import calcActivity from './calcActivity.vue'
 let platformMap = {
     xiudong: '4000',
-    damai: '5000'
+    damai: '5000',
+    xingqiu: "6100",
 }
 import { request, getTagColor } from '@/utils.js'
 export default {
@@ -177,6 +191,7 @@ export default {
 
     data() {
         return {
+            msgToUser: '',
             percent: 0,
             isShowAll: true,
             scrollTopId: '',
@@ -292,8 +307,11 @@ export default {
         isXiudong() {
             return this.platform === 'xiudong'
         },
+        isXingqiu() {
+            return this.platform === 'xingqiu'
+        },
         addItems() {
-            let fields = this.isDamai ? ['activityId', 'port', 'showOrders', 'phone', 'password', 'username', 'uid', 'remark'] : ['activityId', 'port', 'nameIndex', 'phone', 'username', 'uid', 'remark']
+            let fields = this.isDamai ? ['activityId', 'port', 'showOrders', 'phone', 'password', 'username', 'uid', 'remark'] : this.isXingqiu ? ['activityId', 'port', 'showOrders', 'phone', 'username', 'uid', 'remark'] : ['activityId', 'port', 'nameIndex', 'phone', 'username', 'uid', 'remark']
             return fields.map(one => ({ name: one, id: one, isSpecial: one === 'showOrders' }))
         },
         selectedActivityId() {
@@ -319,7 +337,7 @@ export default {
                     }
                 }
             ]
-            if (this.isDamai) {
+            if (!this.isXiudong) {
                 options.pop()
             }
             return options
@@ -334,17 +352,45 @@ export default {
             let map = {
                 xiudong: ['activityId', 'port', 'nameIndex', 'remark', 'uid', 'targetTypes', "hasSuccess"],
                 damai: ['activityId', 'port', 'password', 'showOrders', 'remark', 'uid', 'targetTypes', "hasSuccess"],
+                xingqiu: ['activityId', 'port', 'showOrders', 'remark', 'uid', 'targetTypes', "hasSuccess"],
             }
             return map[this.platform]
         }
     },
 
     methods: {
-        getTagColor,
-        copyPhone(phone) {
-            uni.setClipboardData({
-                data: phone,
+        async sendMsgToUser() {
+            let host = `http://${this.selected}:4000`
+            await request({
+                method: 'post', url: host + "/sendMsgToUser/", data: {
+                    uid: this.curUid,
+                    msg: this.msgToUser
+                }
             });
+            this.$refs.msgPopup.close()
+        },
+        openMsg(uid) {
+            this.curUid = uid
+            this.msgToUser = '你好, 目前需要验证码登录哦, 麻烦收到后退出账号再把验证码发给闲鱼卖家, 谢谢'
+            this.$refs.msgPopup.open('bottom')
+        },
+        getTagColor,
+        callOrCopyPhone(phone) {
+            uni.showActionSheet({
+                itemList: [phone, '呼叫', '复制'],
+                success: (res) => {
+                    if ([0, 1].includes(res.tapIndex)) {
+                        uni.makePhoneCall({
+                            phoneNumber: phone,
+                        })
+                    } else {
+                        uni.setClipboardData({
+                            data: phone,
+                        });
+                    }
+                }
+            })
+
         },
         copyUsername(username) {
             uni.setClipboardData({
@@ -494,7 +540,8 @@ export default {
         },
         async add() {
             let data = { ...this.form, isCopy: this.copyActivityId === this.form.activityId, showOrders: this.form.showOrders.replace(/,$/, '') }
-            if (this.platform === 'damai') {
+            // todo
+            if (this.isDamai || this.isXingqiu) {
                 data.targetTypes = data.targetTypes.map(name => {
                     let map = this.platform === 'xiudong' ? data.typeMap : data.skuIdToTypeMap
                     let ids = Object.keys(map)
@@ -502,7 +549,8 @@ export default {
                 })
             }
 
-            let arr = this.isDamai ? ['phone', 'username', 'password', 'activityId', 'port'] : ['phone', 'username', 'activityId', 'port', 'nameIndex']
+
+            let arr = this.isDamai ? ['phone', 'username', 'password', 'activityId', 'port'] : this.isXingqiu ? ['phone', 'username', 'activityId', 'port'] : ['phone', 'username', 'activityId', 'port', 'nameIndex']
             if (this.checkForm(data, arr)) {
                 this.loading = true
 
@@ -693,7 +741,7 @@ export default {
                 one.hasSuccess = Boolean(one.hasSuccess);
                 one.status = cmds.some(cmd => cmd.replace(/\s+show/, '') === one.cmd) ? 1 : 0;
                 one.pid = cmdToPid[cmd];
-                if (this.isDamai) {
+                if (this.isDamai || this.isXingqiu) {
                     one.showOrders = one.orders.join(',')
                 }
             });
@@ -850,10 +898,14 @@ export default {
         width: 110px;
         text-align: center;
 
-        >* {
+        >:not(:first-child) {
             line-height: 2;
         }
 
+        .msg-icon {
+            width: 26px;
+            height: 26px;
+        }
 
         // .copy {
         //     position: relative;
@@ -908,6 +960,22 @@ input {
     border: 1px solid gainsboro;
     padding: 10px;
     border-radius: 10px;
+}
+
+.msg-dialog {
+    min-height: 280px;
+
+    >* {
+        line-height: 2;
+    }
+
+    textarea {
+        margin: 5px;
+        padding: 5px;
+        width: 100%;
+        height: 100px;
+        border: 1px solid #ccc;
+    }
 }
 
 .dialog {

@@ -89,4 +89,7 @@ export default {
 
 <style>
 /*每个页面公共css */
+text,view,div,span,textarea,button{
+	box-sizing: border-box;
+}
 </style>
