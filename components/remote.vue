@@ -85,6 +85,9 @@
             </image>
             <div class="form" v-if="isEdit">
                 <template class="basic-form" v-if="isShowAll">
+                    <search-input v-if="!isXiudong" placeholder="查询演出" :platform="platform"
+                        v-model:value="searchActivityName" @itemChange="activityChange"></search-input>
+
                     <div v-for="(field, index) in inputFields" :key="index" class="input-wrap">
                         <span>{{ field }}</span>
                         <my-input type="text" v-model="editForm[field]" :placeholder="field"
@@ -124,6 +127,8 @@
             </div>
             <div class="form" v-else>
                 <template class="basic-form" v-if="isShowAll">
+                    <search-input placeholder="查询演出" :platform="platform" v-if="!isXiudong"
+                        v-model:value="searchActivityName" @itemChange="activityChange"></search-input>
                     <div v-for="(item, index) in addItems" :key="index" class="add-form-item">
                         <span :style="{ color: item.isSpecial ? 'red' : 'black' }">{{ item.name }}:</span>
                         <my-input type="text" v-model="form[item.id]" :placeholder="item.id" @blur="handleBlur(item.id)" />
@@ -150,20 +155,24 @@
         </div>
     </uni-popup>
 
-    <uni-popup ref="msgPopup" type="bottom" @touchmove.stop>
+    <my-dialog v-model:value="msgDialogShow">
         <div class="dialog msg-dialog" @touchmove.stop>
             <textarea type="textarea" v-model="msgToUser" />
-            <div>
-                <button class="btn" type="primary" @click="sendMsgToUser">新增</button>
+            <div class="btn-wrap">
+                <button size="medium" @click="msgToUser = ''">清空</button>
+                <button size="medium" class="btn" type="primary" @click="sendMsgToUser">发送</button>
             </div>
         </div>
-    </uni-popup>
+    </my-dialog>
     <calc-activity v-model="isShowCalc" :host="host" :activityId="calcActivityId" :userConfig="data"
         @autoStartUsers="autoStartUsers"></calc-activity>
 </template>
 
 <script>
 import calcActivity from './calcActivity.vue'
+import SearchInput from './search-input/search-input.vue'
+import MyDialog from './my-dialog/my-dialog.vue'
+
 let platformMap = {
     xiudong: '4000',
     damai: '5000',
@@ -172,7 +181,9 @@ let platformMap = {
 import { request, getTagColor } from '@/utils.js'
 export default {
     components: {
-        calcActivity
+        calcActivity,
+        MyDialog,
+        SearchInput
     },
     props: {
         scrollTop: {
@@ -191,6 +202,8 @@ export default {
 
     data() {
         return {
+            msgDialogShow: false,
+            searchActivityName: '',
             msgToUser: '',
             percent: 0,
             isShowAll: true,
@@ -359,6 +372,13 @@ export default {
     },
 
     methods: {
+        activityChange(id) {
+            this.editForm.activityId = id
+            this.editForm.port = ''
+
+            this.form.activityId = id
+            this.form.port = ''
+        },
         async sendMsgToUser() {
             let host = `http://${this.selected}:4000`
             await request({
@@ -367,12 +387,12 @@ export default {
                     msg: this.msgToUser
                 }
             });
-            this.$refs.msgPopup.close()
+            this.msgDialogShow = false
         },
         openMsg(uid) {
             this.curUid = uid
             this.msgToUser = '你好, 目前需要验证码登录哦, 麻烦收到后退出账号再把验证码发给闲鱼卖家, 谢谢'
-            this.$refs.msgPopup.open('bottom')
+            this.msgDialogShow = true
         },
         getTagColor,
         callOrCopyPhone(phone) {
@@ -434,6 +454,7 @@ export default {
             this.show = e.show
             if (!this.show) {
                 this.isShowAll = true
+                this.searchActivityName = ''
             }
         },
         bindPickerChange(e) {
@@ -701,7 +722,7 @@ export default {
         async start(item, isNoRefresh) {
             this.loading = true
             try {
-                await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd + (item.isShow ? ' show' : '') } });
+                await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd + (item.isShow ? ' show' : ''), isStopWhenLogin: isNoRefresh } });
             } catch (e) {
                 console.log(e)
             }
@@ -963,18 +984,29 @@ input {
 }
 
 .msg-dialog {
-    min-height: 280px;
-
     >* {
         line-height: 2;
     }
 
     textarea {
+        border-radius: 12px;
         margin: 5px;
         padding: 5px;
         width: 100%;
         height: 100px;
-        border: 1px solid #ccc;
+        border: 1px solid #ede8e8;
+        margin-bottom: 15px;
+    }
+
+    .btn-wrap {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+
+        button {
+            flex: 1
+        }
     }
 }
 

@@ -11,7 +11,12 @@ let request = (options) =>
       timeout: options.timeout || 20000,
       success: (res) => {
         console.log(res);
-        let { code, data, msg } = res.data;
+        let result = res.data;
+        let { code, data, msg }  = result
+        if(options.noHandleCode){
+          resolve(result)
+          return
+        }
         let tips = msg;
         if (code !== 0) {
           tips = msg || "出错";
