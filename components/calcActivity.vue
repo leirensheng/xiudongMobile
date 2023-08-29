@@ -3,9 +3,9 @@
         <div class="dialog">
             <div class="top">
                 <div>启动中: {{ allRunningLength }}</div>
-                <button type="primary" size="mini" v-if="data.length" @click="autoOpen">自动启动</button>
+                <button type="primary" size="mini" v-if="data.length" @click="autoOpen">启动</button>
                 <div>
-                    最小启动:
+                    最小:
                     <switch :checked="isMin" @change="changeIsMin" />
                 </div>
                 <div>

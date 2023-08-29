@@ -24,7 +24,7 @@ let request = (options) =>
         if (tips) {
           uni.showToast({
             title: tips,
-            icon: "error",
+            icon: "none",
             duration: 3500,
           });
         }

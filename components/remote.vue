@@ -24,9 +24,13 @@
 
         <uni-swipe-action>
             <template v-for="(one, index) in groupData" :key="one.group">
-                <div class="activity" @click="showCalc(one.data[0].activityId)">{{ (one.group || '').slice(0,
-                    24).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})
-                </div>
+                <uni-swipe-action-item :right-options="activityRightOptions" @click="activityClick($event, one.group)">
+                    <div class="activity" @click="showCalc(one.data[0].activityId)">
+
+                        <span>{{ (one.group || '').slice(0,
+                            20).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})</span>
+                    </div>
+                </uni-swipe-action-item>
                 <uni-swipe-action-item v-for="(item) in one.data" :right-options="rightOptions"
                     :key="item.username + item.phone" @click="swipeClick($event, item)" :disabled="!!item.status">
 
@@ -202,6 +206,16 @@ export default {
 
     data() {
         return {
+            fixedTopActivity: uni.getStorageSync('fixedTopActivity'),
+            activityRightOptions: [
+                {
+                    text: '置顶',
+                    style: {
+                        backgroundColor: 'rgb(0,200,0)'
+                    }
+
+                }
+            ],
             msgDialogShow: false,
             searchActivityName: '',
             msgToUser: '',
@@ -278,7 +292,6 @@ export default {
         },
     },
     created() {
-
         let res = uni.getSystemInfoSync()
         console.log(res)
         this.windowHeight = res.windowHeight
@@ -375,7 +388,7 @@ export default {
         activityChange(id) {
             this.editForm.activityId = id
             this.editForm.port = ''
-
+            this.editForm.isRefresh = true
             this.form.activityId = id
             this.form.port = ''
         },
@@ -545,6 +558,13 @@ export default {
             this.isEdit = true
             this.$refs.popup.open('bottom')
             this.readDataFromClip()
+        },
+        activityClick({ index }, groupName) {
+            if (index === 0) {
+                this.fixedTopActivity = groupName
+                uni.setStorageSync('fixedTopActivity',this.fixedTopActivity)
+                this.filterData()
+            }
         },
         async swipeClick({ index }, { username }) {
             if (index === 0) {
@@ -722,7 +742,7 @@ export default {
         async start(item, isNoRefresh) {
             this.loading = true
             try {
-                await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd + (item.isShow ? ' show' : ''), isStopWhenLogin: isNoRefresh } });
+                await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd + (item.isShow ? '1 true' : ''), isStopWhenLogin: isNoRefresh } });
             } catch (e) {
                 console.log(e)
             }
@@ -740,7 +760,7 @@ export default {
 
             let cmdToPid = {};
             Object.entries(this.pidToCmd).forEach(([key, value]) => {
-                cmdToPid[value.replace(' show', '')] = key;
+                cmdToPid[value.split(/\s+/).slice(0,4).join(' ')] = key;
             });
             let data = Object.entries(this.config).map(([username, one]) => ({
                 username,
@@ -755,12 +775,13 @@ export default {
             data.sort((a, b) => Number(b.port) - Number(a.port));
 
 
+
             data.forEach(one => {
                 let cmd = `npm run start ${one.username}`;
                 one.cmd = cmd;
                 one.loading = false;
                 one.hasSuccess = Boolean(one.hasSuccess);
-                one.status = cmds.some(cmd => cmd.replace(/\s+show/, '') === one.cmd) ? 1 : 0;
+                one.status = cmds.some(cmd => cmd.split(/\s+/)[3] === one.username) ? 1 : 0;
                 one.pid = cmdToPid[cmd];
                 if (this.isDamai || this.isXingqiu) {
                     one.showOrders = one.orders.join(',')
@@ -795,11 +816,17 @@ export default {
                     cur.data.push(one)
                 }
             })
-            console.log(res)
-            this.groupData = res
+            if (this.fixedTopActivity) {
+                let i = res.findIndex(one => one.group === this.fixedTopActivity)
+                let target = res.splice(i, 1)
+                this.groupData = [...target, ...res]
+            } else {
+                this.groupData = res
+            }
             if (isFirstGet) {
                 this.groupDataCopy = JSON.parse(JSON.stringify(this.groupData))
             }
+            console.log(res)
         },
         async getConfig(isFirst) {
             let scrollTop = this.scrollTop
