@@ -24,13 +24,14 @@
 
         <uni-swipe-action>
             <template v-for="(one, index) in groupData" :key="one.group">
-                <uni-swipe-action-item :right-options="activityRightOptions" @click="activityClick($event, one.group)">
-                    <div class="activity" @click="showCalc(one.data[0].activityId)">
-
-                        <span>{{ (one.group || '').slice(0,
-                            20).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})</span>
-                    </div>
-                </uni-swipe-action-item>
+                <div class="activity">
+                    <uni-swipe-action-item :right-options="activityRightOptions" @click="activityClick($event, one.group)">
+                        <div  @click="showCalc(one.data[0].activityId)">
+                            <span>{{ (one.group || '').slice(0,
+                                20).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})</span>
+                        </div>
+                    </uni-swipe-action-item>
+                </div>
                 <uni-swipe-action-item v-for="(item) in one.data" :right-options="rightOptions"
                     :key="item.username + item.phone" @click="swipeClick($event, item)" :disabled="!!item.status">
 
