@@ -207,7 +207,7 @@ export default {
 
     data() {
         return {
-            fixedTopActivity: uni.getStorageSync('fixedTopActivity'),
+            fixedTopActivity: uni.getStorageSync(this.platform +'FixedTopActivity'),
             activityRightOptions: [
                 {
                     text: '置顶',
@@ -563,7 +563,7 @@ export default {
         activityClick({ index }, groupName) {
             if (index === 0) {
                 this.fixedTopActivity = groupName
-                uni.setStorageSync('fixedTopActivity',this.fixedTopActivity)
+                uni.setStorageSync(this.platform+'FixedTopActivity',this.fixedTopActivity)
                 this.filterData()
             }
         },
@@ -743,7 +743,7 @@ export default {
         async start(item, isNoRefresh) {
             this.loading = true
             try {
-                await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd + (item.isShow ? ` 1 true` : ''), isStopWhenLogin: isNoRefresh } });
+                await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd + (item.isShow ?  (this.isDamai?` 1 true`:' show') : ''), isStopWhenLogin: isNoRefresh } });
             } catch (e) {
                 console.log(e)
             }
