@@ -96,8 +96,11 @@ export default {
             if (config.hasSuccess || config.remark.match(/(频繁)|(密码不正确)/)) return 0;
             let score = 500;
             score = score - config.orders.length * 50;
-            score = score - config.targetTypes.length * 10;
-            if (name.match(/(领导)|(lingdao)/) || config.remark.match(/低/)) {
+            score = score - config.targetTypes.length * 15;
+            let advPrice = Math.max((config.price || 100) / config.orders.length, 100)
+            console.log(name, "平均价格", advPrice)
+            score = score + advPrice / 100 * 25
+            if (config.remark.match(/低|夏|魔|缘/)) {
                 score = score - 20;
             } else if (config.remark.match(/高/)) {
                 score = score + 20;
@@ -114,9 +117,13 @@ export default {
             let runningTypes = this.data.filter(one => one.running.length).map(one => one.type)
 
             let toStart = []
+            console.log(this.data)
+            console.log(this.userConfig)
             for (let one of this.data) {
                 let { type, all } = one
                 if (all.length && !runningTypes.includes(type)) {
+                    console.group()
+
                     let scores = all.map(name => this.getScore(name, this.userConfig))
                     console.log(type, all, scores)
                     let max = Math.max(...scores)
@@ -126,9 +133,7 @@ export default {
                         let maxUser = all[index]
                         console.log("最大的是", maxUser)
                         toStart.push(maxUser)
-                        if (!this.isMin) {
-                            runningTypes.push(type)
-                        } else {
+                        if (this.isMin) {
                             if (max < 400) {
                                 runningTypes.push(type)
                                 console.log(type + "没有单个人的")
@@ -136,8 +141,12 @@ export default {
                                 let maxOneConfig = this.userConfig.find(one => one.username === maxUser)
                                 runningTypes.push(...maxOneConfig.targetTypes)
                             }
+                        } else {
+                            runningTypes.push(type)
                         }
                     }
+                    console.groupEnd()
+
                 }
             }
             console.log("结果", toStart)

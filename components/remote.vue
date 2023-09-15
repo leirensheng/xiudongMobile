@@ -162,6 +162,11 @@
 
     <my-dialog v-model:value="msgDialogShow">
         <div class="dialog msg-dialog" @touchmove.stop>
+            <div class="msg-template">
+                <button @click="setTestMsg">测试</button>
+                <button @click="setXingqiuMsg">星球</button>
+                <button @click="setDamaiMsg">大麦</button>
+            </div>
             <textarea type="textarea" v-model="msgToUser" />
             <div class="btn-wrap">
                 <button size="medium" @click="msgToUser = ''">清空</button>
@@ -314,9 +319,10 @@ export default {
                     name: '华硕',
                 },
                 {
-                    name: '惠普',
-                    hostname: '100.115.170.87',
+                    name: '联想',
+                    hostname: 'e4097n6449.51vip.biz',
                 },
+           
                 {
                     name: '3',
                     hostname: '100.95.67.33'
@@ -325,7 +331,6 @@ export default {
                     name: '4',
                     hostname: '100.116.129.127',
                 },
-
             ]
         },
         isDamai() {
@@ -386,6 +391,15 @@ export default {
     },
 
     methods: {
+        setXingqiuMsg(){
+            this.msgToUser ='麻烦你直接在这里填写，填完就登录好了，闲鱼不给发链接，谢谢！ 票星球填写这个http://7l235k7324.yicp.fun:7777/#/xingqiu'
+        },
+        setDamaiMsg(){
+            this.msgToUser ='麻烦你直接在这里填写，填完就登录好了，闲鱼不给发链接，谢谢！ 大麦填写这个http://7l235k7324.yicp.fun:7777'
+        },
+        setTestMsg(){
+            this.msgToUser ='测试'
+        },
         activityChange(id) {
             this.editForm.activityId = id
             this.editForm.port = ''
@@ -1012,6 +1026,11 @@ input {
 }
 
 .msg-dialog {
+    .msg-template{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+    }
     >* {
         line-height: 2;
     }
