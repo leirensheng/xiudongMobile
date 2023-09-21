@@ -38,7 +38,7 @@ export default {
 			clearInterval(this.heartTimer)
 			this.connected = false
 			let isLocal = await this.checkIsInLocal()
-			let host = isLocal ? '192.168.2.9' : '7l235k7324.yicp.fun'
+			let host = isLocal ? '192.168.2.9' : 'mticket.ddns.net'
 			globalData.pcHost = host
 			uni.$emit('hostDone', host)
 

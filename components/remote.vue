@@ -24,9 +24,9 @@
 
         <uni-swipe-action>
             <template v-for="(one, index) in groupData" :key="one.group">
-                <div class="activity">
+                <div class="activity"  :style="getTitleStyle(one)">
                     <uni-swipe-action-item :right-options="activityRightOptions" @click="activityClick($event, one.group)">
-                        <div  @click="showCalc(one.data[0].activityId)">
+                        <div @click="showCalc(one.data[0].activityId)">
                             <span>{{ (one.group || '').slice(0,
                                 20).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})</span>
                         </div>
@@ -212,7 +212,7 @@ export default {
 
     data() {
         return {
-            fixedTopActivity: uni.getStorageSync(this.platform +'FixedTopActivity'),
+            fixedTopActivity: uni.getStorageSync(this.platform + 'FixedTopActivity'),
             activityRightOptions: [
                 {
                     text: '置顶',
@@ -322,7 +322,7 @@ export default {
                     name: '联想',
                     hostname: 'e4097n6449.51vip.biz',
                 },
-           
+
                 {
                     name: '3',
                     hostname: '100.95.67.33'
@@ -391,14 +391,19 @@ export default {
     },
 
     methods: {
-        setXingqiuMsg(){
-            this.msgToUser ='麻烦你直接在这里填写，填完就登录好了，闲鱼不给发链接，谢谢！ 票星球填写这个http://7l235k7324.yicp.fun:7777/#/xingqiu'
+        getTitleStyle(one) {
+            return {
+                background: one.isExpired ? 'red' : 'rgb(94, 128, 177)'
+            }
         },
-        setDamaiMsg(){
-            this.msgToUser ='麻烦你直接在这里填写，填完就登录好了，闲鱼不给发链接，谢谢！ 大麦填写这个http://7l235k7324.yicp.fun:7777'
+        setXingqiuMsg() {
+            this.msgToUser = '麻烦你直接在这里填写，填完就登录好了，闲鱼不给发链接，谢谢！ 票星球填写这个http://mticket.ddns.net:7777/#/xingqiu'
         },
-        setTestMsg(){
-            this.msgToUser ='测试'
+        setDamaiMsg() {
+            this.msgToUser = '麻烦你直接在这里填写，填完就登录好了，闲鱼不给发链接，谢谢！ 大麦填写这个http://mticket.ddns.net:7777'
+        },
+        setTestMsg() {
+            this.msgToUser = '测试'
         },
         activityChange(id) {
             this.editForm.activityId = id
@@ -577,7 +582,7 @@ export default {
         activityClick({ index }, groupName) {
             if (index === 0) {
                 this.fixedTopActivity = groupName
-                uni.setStorageSync(this.platform+'FixedTopActivity',this.fixedTopActivity)
+                uni.setStorageSync(this.platform + 'FixedTopActivity', this.fixedTopActivity)
                 this.filterData()
             }
         },
@@ -757,7 +762,7 @@ export default {
         async start(item, isNoRefresh) {
             this.loading = true
             try {
-                await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd + (item.isShow ?  (this.isDamai?` 1 true`:' show') : ''), isStopWhenLogin: isNoRefresh } });
+                await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd + (item.isShow ? (this.isDamai ? ` 1 true` : ' show') : ''), isStopWhenLogin: isNoRefresh } });
             } catch (e) {
                 console.log(e)
             }
@@ -775,7 +780,7 @@ export default {
 
             let cmdToPid = {};
             Object.entries(this.pidToCmd).forEach(([key, value]) => {
-                cmdToPid[value.split(/\s+/).slice(0,4).join(' ')] = key;
+                cmdToPid[value.split(/\s+/).slice(0, 4).join(' ')] = key;
             });
             let data = Object.entries(this.config).map(([username, one]) => ({
                 username,
@@ -813,6 +818,21 @@ export default {
             }
             this.getGroup(data, isFirstGet)
         },
+        checkIsExpired(one) {
+            if (['damai', 'xingqiu'].includes(this.platform)) {
+                let dates = [... new Set(Object.values(one.skuIdToTypeMap).map(one => {
+                    let date = one.split('_')[0];
+                    let arr = date.split(/(\s+)/);
+                    return arr[0] + ' ' + arr.slice(-1)[0];
+                }))];
+
+                let isExpired = dates.every(date => new Date(date) < new Date());
+                return isExpired
+            }
+            console.log(one)
+            return false
+            // let types = one.skuIdToTypeMap
+        },
         getGroup(data, isFirstGet) {
             this.data = data
             let res = []
@@ -824,7 +844,8 @@ export default {
                 if (!cur || cur.group !== one.activityName) {
                     cur = {
                         group: one.activityName,
-                        data: [one]
+                        data: [one],
+                        isExpired: this.checkIsExpired(one)
                     }
                     res.push(cur)
                 } else if (cur.group === one.activityName) {
@@ -1026,11 +1047,12 @@ input {
 }
 
 .msg-dialog {
-    .msg-template{
-        display:flex;
-        justify-content:center;
-        align-items:center;
+    .msg-template {
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
+
     >* {
         line-height: 2;
     }
