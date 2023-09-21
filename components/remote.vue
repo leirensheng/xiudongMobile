@@ -12,6 +12,8 @@
                 :placeholder="item.column" v-model="item.value" />
             <switch @change="changeUnique" />
 
+            <image style="width: 20px; height: 20px; flex-shrink: 0;" src="/static/add2.svg" @click="addActivity" />
+
 
             <picker v-show="activities.length" @change="bindPickerChange" :value="selectedActivityIndex"
                 :range="activities">
@@ -24,7 +26,7 @@
 
         <uni-swipe-action>
             <template v-for="(one, index) in groupData" :key="one.group">
-                <div class="activity"  :style="getTitleStyle(one)">
+                <div class="activity" :style="getTitleStyle(one)">
                     <uni-swipe-action-item :right-options="activityRightOptions" @click="activityClick($event, one.group)">
                         <div @click="showCalc(one.data[0].activityId)">
                             <span>{{ (one.group || '').slice(0,
@@ -132,7 +134,7 @@
             </div>
             <div class="form" v-else>
                 <template class="basic-form" v-if="isShowAll">
-                    <search-input placeholder="查询演出" :platform="platform" v-if="!isXiudong"
+                    <search-input ref="searchInput" placeholder="查询演出" :platform="platform" v-if="!isXiudong"
                         v-model:value="searchActivityName" @itemChange="activityChange"></search-input>
                     <div v-for="(item, index) in addItems" :key="index" class="add-form-item">
                         <span :style="{ color: item.isSpecial ? 'red' : 'black' }">{{ item.name }}:</span>
@@ -391,6 +393,34 @@ export default {
     },
 
     methods: {
+        addActivity() {
+            this.isEdit = false
+            this.copyActivityId = ''
+            this.form = {
+                activityId: '',
+                port: '',
+                targetTypes: [],
+                showOrders: '0,',
+                phone: '15521373109',
+                // password:"hik12345",
+                nameIndex: 0,
+                username: 'me',
+
+            }
+
+            if (this.platform === 'xiudong') {
+                this.form.typeMap = {}
+            } else {
+                this.form.skuIdToTypeMap = {}
+            }
+            if (this.platform === 'damai') {
+                this.form.password = 'hik12345'
+            }
+            this.$refs.popup.open('bottom')
+            setTimeout(() => {
+                this.$refs.searchInput && this.$refs.searchInput.showDialog()
+            }, 200);
+        },
         getTitleStyle(one) {
             return {
                 background: one.isExpired ? 'red' : 'rgb(94, 128, 177)'

@@ -49,7 +49,7 @@ export default {
             default: false
         },
         activityId: {
-            type: String,
+            type: [String,Number],
             default: ''
         },
         host: {
