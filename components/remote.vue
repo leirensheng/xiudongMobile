@@ -27,7 +27,8 @@
         <uni-swipe-action>
             <template v-for="(one, index) in groupData" :key="one.group">
                 <div class="activity" :style="getTitleStyle(one)">
-                    <uni-swipe-action-item :right-options="activityRightOptions" @click="activityClick($event, one.group)">
+                    <uni-swipe-action-item :right-options="activityRightOptions(one)"
+                        @click="activityClick($event, one.group)">
                         <div @click="showCalc(one.data[0].activityId)">
                             <span>{{ (one.group || '').slice(0,
                                 20).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})</span>
@@ -215,15 +216,6 @@ export default {
     data() {
         return {
             fixedTopActivity: uni.getStorageSync(this.platform + 'FixedTopActivity'),
-            activityRightOptions: [
-                {
-                    text: '置顶',
-                    style: {
-                        backgroundColor: 'rgb(0,200,0)'
-                    }
-
-                }
-            ],
             msgDialogShow: false,
             searchActivityName: '',
             msgToUser: '',
@@ -393,6 +385,28 @@ export default {
     },
 
     methods: {
+        activityRightOptions(one) {
+            let arr = [
+                {
+                    text: '置顶',
+                    style: {
+                        backgroundColor: 'rgb(0,200,0)'
+                    }
+
+                },
+                {
+                    text: '删除',
+                    style: {
+                        backgroundColor: 'black'
+                    }
+
+                }
+            ]
+            if (!one.isExpired) {
+                arr.pop()
+            }
+            return arr
+        },
         addActivity() {
             this.isEdit = false
             this.copyActivityId = ''
@@ -609,11 +623,22 @@ export default {
             this.$refs.popup.open('bottom')
             this.readDataFromClip()
         },
-        activityClick({ index }, groupName) {
+        async activityClick({ index }, groupName) {
             if (index === 0) {
                 this.fixedTopActivity = groupName
                 uni.setStorageSync(this.platform + 'FixedTopActivity', this.fixedTopActivity)
                 this.filterData()
+            } else if (index === 1) {
+                console.log("删除全部1")
+                this.loading =true
+                await request({
+                    method: 'post', url: this.host + "/removeOneActivity/", data: {
+                       activityName: groupName,
+                    }
+                });
+                await this.getConfig()
+                this.loading =false
+            
             }
         },
         async swipeClick({ index }, { username }) {
@@ -850,7 +875,7 @@ export default {
         },
         checkIsExpired(one) {
             if (['damai', 'xingqiu'].includes(this.platform)) {
-                let dates = [... new Set(Object.values(one.skuIdToTypeMap).map(one => {
+                let dates = [... new Set(Object.values(one.skuIdToTypeMap||{}).map(one => {
                     let date = one.split('_')[0];
                     let arr = date.split(/(\s+)/);
                     return arr[0] + ' ' + arr.slice(-1)[0];
