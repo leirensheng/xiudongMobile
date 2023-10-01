@@ -126,7 +126,7 @@ export default {
             for (let one of this.data) {
                 let { type, all } = one
                 if (all.length && !runningTypes.includes(type)) {
-                    console.group()
+                    // console.group()
 
                     let scores = all.map(name => this.getScore(name, this.userConfig))
                     console.log(type, all, scores)
@@ -149,7 +149,7 @@ export default {
                             runningTypes.push(type)
                         }
                     }
-                    console.groupEnd()
+                    // console.groupEnd()
 
                 }
             }
