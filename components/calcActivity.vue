@@ -95,9 +95,13 @@ export default {
             let config = allConfig.find((one) => one.username === name);
             if (config.hasSuccess || config.remark.match(/(频繁)|(密码不正确)/)) return 0;
             let score = 500;
+            if(config.price==='undefined'){
+                config.price = ''
+            }
             score = score - config.orders.length * 50;
             score = score - config.targetTypes.length * 15;
             let advPrice = Math.max((config.price || 100) / config.orders.length, 100)
+            console.log(Math.max((config.price || 100) / config.orders.length, 100), config.price,config.orders.length)
             console.log(name, "平均价格", advPrice)
             score = score + advPrice / 100 * 25
             if (config.remark.match(/低|夏|魔|缘/)) {
