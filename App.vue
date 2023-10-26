@@ -66,7 +66,7 @@ export default {
 		},
 		init() {
 			this.connect()
-			uni.onSocketOpen( (res)=> {
+			uni.onSocketOpen((res) => {
 				console.log('WebSocket连接已打开！');
 				this.connected = true
 				this.startHeatBeat()
@@ -89,7 +89,11 @@ export default {
 
 <style>
 /*每个页面公共css */
-text,view,div,span,textarea,button{
+text,
+view,
+div,
+span,
+textarea,
+button {
 	box-sizing: border-box;
-}
-</style>
+}</style>

@@ -3,6 +3,12 @@
         <progress :percent="percent" show-info stroke-width="3" class="progress" v-if="![0, 100].includes(percent)" />
 
         <page-meta :page-style="'overflow:' + (show || isShowCalc ? 'hidden' : 'visible')"></page-meta>
+
+        <div class="fail">
+            <div class="fail-item" v-for="(item, index) in failCmds" :key="index">{{ item }}</div>
+        </div>
+
+        {{ clientid }}
         <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
@@ -10,7 +16,9 @@
         <div class="search">
             <input v-for="(item, index) in queryItems.filter(one => one.column !== 'activityId')" :key="index" type="text"
                 :placeholder="item.column" v-model="item.value" />
-            <switch @change="changeUnique" />
+            <!-- <switch @change="changeUnique" /> -->
+            <image style="width: 20px; height: 20px; flex-shrink: 0;" src="/static/recover.svg" @click="recover"
+                v-if="isShowRecover" />
 
             <image style="width: 20px; height: 20px; flex-shrink: 0;" src="/static/add2.svg" @click="addActivity" />
 
@@ -186,7 +194,7 @@ import calcActivity from './calcActivity.vue'
 import SearchInput from './search-input/search-input.vue'
 import MyDialog from './my-dialog/my-dialog.vue'
 
-let platformMap = {
+let platformToPortMap = {
     xiudong: '4000',
     damai: '5000',
     xingqiu: "6100",
@@ -215,6 +223,8 @@ export default {
 
     data() {
         return {
+            clientid: '',
+            failCmds: [],
             fixedTopActivity: uni.getStorageSync(this.platform + 'FixedTopActivity'),
             msgDialogShow: false,
             searchActivityName: '',
@@ -292,6 +302,9 @@ export default {
         },
     },
     created() {
+        plus.push.getClientInfoAsync((info) => {
+            this.clientid = info["clientid"];
+        });
         let res = uni.getSystemInfoSync()
         console.log(res)
         this.windowHeight = res.windowHeight
@@ -369,7 +382,7 @@ export default {
             return options
         },
         host() {
-            return `http://${this.selected}:${platformMap[this.platform]}`
+            return `http://${this.selected}:${platformToPortMap[this.platform]}`
         },
         inputFields() {
             return this.editFields.filter(one => !['targetTypes', 'hasSuccess'].includes(one))
@@ -385,6 +398,16 @@ export default {
     },
 
     methods: {
+        async recover() {
+            this.loading = true
+            let failCmds = await request({
+                timeout: 2 * 60000,
+                url: this.host + "/recover"
+            });
+            this.failCmds = failCmds || []
+            this.getConfig(true)
+            this.loading = false
+        },
         activityRightOptions(one) {
             let arr = [
                 {
@@ -418,8 +441,7 @@ export default {
                 phone: '15521373109',
                 // password:"hik12345",
                 nameIndex: 0,
-                username: 'me',
-
+                username: 'me' + Math.ceil(Math.random() * 1000),
             }
 
             if (this.platform === 'xiudong') {
@@ -630,15 +652,15 @@ export default {
                 this.filterData()
             } else if (index === 1) {
                 console.log("删除全部1")
-                this.loading =true
+                this.loading = true
                 await request({
                     method: 'post', url: this.host + "/removeOneActivity/", data: {
-                       activityName: groupName,
+                        activityName: groupName,
                     }
                 });
                 await this.getConfig()
-                this.loading =false
-            
+                this.loading = false
+
             }
         },
         async swipeClick({ index }, { username }) {
@@ -875,7 +897,7 @@ export default {
         },
         checkIsExpired(one) {
             if (['damai', 'xingqiu'].includes(this.platform)) {
-                let dates = [... new Set(Object.values(one.skuIdToTypeMap||{}).map(one => {
+                let dates = [... new Set(Object.values(one.skuIdToTypeMap || {}).map(one => {
                     let date = one.split('_')[0];
                     let arr = date.split(/(\s+)/);
                     return arr[0] + ' ' + arr.slice(-1)[0];
@@ -930,6 +952,7 @@ export default {
                 } = await request({ url: this.host + "/getAllUserConfig", cancelPre: true });
                 this.config = config
                 this.pidToCmd = pidToCmd
+                this.isShowRecover = Object.keys(this.pidToCmd).length === 0
                 this.filterData(isFirst)
             } catch (e) {
                 console.log('出错', e)
@@ -973,6 +996,10 @@ export default {
     z-index: 56666665;
     left: 32%;
     right: 32%;
+}
+
+.fail-item {
+    color: red;
 }
 
 .pcs {
