@@ -78,6 +78,7 @@ export default {
 			});
 		}
 	},
+
 	onShow: function () {
 		console.log('App Show')
 	},
@@ -96,4 +97,5 @@ span,
 textarea,
 button {
 	box-sizing: border-box;
-}</style>
+}
+</style>

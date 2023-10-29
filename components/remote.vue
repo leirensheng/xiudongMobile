@@ -302,9 +302,13 @@ export default {
         },
     },
     created() {
+		//#ifdef APP-PLUS
+
         plus.push.getClientInfoAsync((info) => {
             this.clientid = info["clientid"];
         });
+		//#endif 
+
         let res = uni.getSystemInfoSync()
         console.log(res)
         this.windowHeight = res.windowHeight

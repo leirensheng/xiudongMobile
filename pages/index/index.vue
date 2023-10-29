@@ -6,15 +6,17 @@
 		</div>
 		<div class="all-message">
 			<div class="sum" v-if="msgArr.length">共有{{ msgArr.length }}条消息</div>
-			<div class="message" v-for="(item, index) in msgArr" :key="item.phone" @click="call(item.phone, index)">
-				<div>{{ index + 1 }}: {{ item.msg }}</div>
+			<div class="message-wrap" :class="item.type" v-for="(item, index) in msgArr" :key="item.phone"
+				@click="clickMsg(item, index)">
+				<!-- <div class="index">{{index+1}}.</div> -->
+				<div class="message" v-html="item.msg"></div>
+				<!-- <div>{{ index + 1 }}: {{ item.msg }}</div> -->
 			</div>
 		</div>
 
 		<div class="bottom">
 			<button @click="clear" class="clear" type="primary" v-if="msgArr.length">清除</button>
 			<button @click="stop" class="stop" v-if="innerAudioContext" type="success">停止</button>
-
 		</div>
 
 	</view>
@@ -55,6 +57,29 @@ export default {
 			}
 
 		});
+		// #ifdef APP-PLUS
+		var info = plus.push.getClientInfo()
+		// 使用5+App的方式进行监听消息推送
+		plus.push.addEventListener("click", ({ payload }) => {
+			// console.log("click:" + JSON.stringify(msg));
+			uni.showToast({
+				title: 'click' + JSON.stringify(payload),
+				icon: "none",
+				duration: 3500,
+			})
+			this.msgArr.push(payload)
+		}, false);
+		// 监听在线消息事件    
+		plus.push.addEventListener("receive", ({ payload }) => {
+			this.msgArr.push(payload)
+			uni.showToast({
+				title: 'receive' + JSON.stringify(payload),
+				icon: "none",
+				duration: 3500,
+			})
+
+		}, false);
+		// #endif
 	},
 	watch: {
 		msgArr: {
@@ -67,6 +92,12 @@ export default {
 		}
 	},
 	methods: {
+
+		clickMsg(item, index) {
+			if (item.phone) {
+				this.call(item.phone, index)
+			}
+		},
 		playSong(isTips) {
 			this.innerAudioContext = uni.createInnerAudioContext();
 			this.innerAudioContext.autoplay = true;
@@ -139,17 +170,38 @@ export default {
 	margin: 20px;
 	flex: 1;
 	overflow: auto;
+	width: 100%;
 
 	.sum {
 		text-align: center;
 	}
 
-	.message {
+	.message-wrap {
 		padding: 10px;
 		margin: 10px;
 		display: flex;
 		justify-content: center;
 		align-items: center;
+
+		&.success {
+			color: green;
+		}
+
+		&.error {
+			color: red;
+		}
+
+		&.info {
+			color: black;
+		}
+
+		.message {
+			width: 100%;
+			word-break: break-all;
+			border-bottom: 2px solid rgb(233, 239, 233);
+			padding-bottom: 15px;
+			margin-bottom: 15px;
+		}
 	}
 }
 
@@ -159,5 +211,4 @@ export default {
 	align-items: center;
 	gap: 20px;
 	padding-bottom: 20px;
-}
-</style>
+}</style>
