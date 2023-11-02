@@ -1,17 +1,29 @@
 <template>
 	<view class="content" :style="style">
-		<div class="status">
+		<!-- <div class="status">
 			<div>连接状态: </div>
 			<div class="dot" :style="{ background: connected ? '#49e749' : 'red' }"> </div>
+		</div> -->
+		<div class="status">
+			<div style="margin-right: 10px;">勿扰: </div>
+			<switch :checked="isNoSound" @change="handleNOSoundChange" />
 		</div>
+
 		<div class="all-message">
-			<div class="sum" v-if="msgArr.length">共有{{ msgArr.length }}条消息</div>
-			<div class="message-wrap" :class="item.type" v-for="(item, index) in msgArr" :key="item.phone"
-				@click="clickMsg(item, index)">
-				<!-- <div class="index">{{index+1}}.</div> -->
-				<div class="message" v-html="item.msg"></div>
-				<!-- <div>{{ index + 1 }}: {{ item.msg }}</div> -->
-			</div>
+			<div class="sum" v-if="msgArr.length">共有{{ msgArr.length }}条消息<span v-if="successLength">，{{ successLength
+			}}条成功</span></div>
+
+			<uni-swipe-action>
+				<template v-for="(item, index) in msgArr" :key="index+item.msg">
+					<uni-swipe-action-item :right-options="activityRightOptions" @click="activityClick($event, item)">
+						<div class="message-wrap" :class="item.type" @click="clickMsg(item, index)">
+							<!-- <div class="index">{{index+1}}.</div> -->
+							<div class="message" v-html="item.msg"></div>
+							<!-- <div>{{ index + 1 }}: {{ item.msg }}</div> -->
+						</div>
+					</uni-swipe-action-item>
+				</template>
+			</uni-swipe-action>
 		</div>
 
 		<div class="bottom">
@@ -23,9 +35,21 @@
 </template>
 
 <script>
+import { request } from '@/utils.js'
 export default {
 	data() {
 		return {
+			isNoSound: !!uni.getStorageSync('isNoSound'),
+			activityRightOptions: [
+				{
+					text: '删除',
+					style: {
+						backgroundColor: '#dd524d'
+					}
+
+				}
+			],
+			loading: false,
 			connected: false,
 			innerAudioContext: null,
 			title: 'Hello',
@@ -33,55 +57,47 @@ export default {
 		}
 	},
 	computed: {
-		style() {
-			return {
-				// background: this.msgArr.some(one => one.msg.includes('成功')) ? 'green' : 'white'
-			}
+		successLength() {
+			return this.msgArr.filter(one => one.msg.includes('成功')).length
 		},
 	},
 	onLoad() {
-		uni.$on('connectedChange', val => {
-			this.connected = val
-		})
-		uni.onSocketMessage((res) => {
-			console.log('收到服务器内容：' + res.data);
-			let { type, msg, phone } = JSON.parse(res.data)
+		this.loadAllMsg()
 
-			console.log(type)
-			if (type === 'ticketSuccess') {
-				this.msgArr.push({ msg, phone })
-				this.playSong()
-			} else if (type === 'tips') {
-				this.msgArr.push({ msg, phone })
-				this.playSong(true)
-			}
-
-		});
 		// #ifdef APP-PLUS
-		var info = plus.push.getClientInfo()
-		// 使用5+App的方式进行监听消息推送
-		plus.push.addEventListener("click", ({ payload }) => {
-			// console.log("click:" + JSON.stringify(msg));
-			uni.showToast({
-				title: 'click' + JSON.stringify(payload),
-				icon: "none",
-				duration: 3500,
-			})
-			this.msgArr.push(payload)
-		}, false);
 		// 监听在线消息事件    
-		plus.push.addEventListener("receive", ({ payload }) => {
+		plus.push.addEventListener("receive", ({ title, content, payload }) => {
+			let routes = getCurrentPages();
+			let curRoute = routes[routes.length - 1].route
+			if (curRoute !== 'pages/index/index') {
+				uni.showToast({
+					icon: "none",
+					title: JSON.stringify(payload),
+					duration: 2000,
+				})
+			}
+			let hasAdd = this.msgArr.find(one => one.id === payload.id)
+			if (hasAdd) return
 			this.msgArr.push(payload)
-			uni.showToast({
-				title: 'receive' + JSON.stringify(payload),
-				icon: "none",
-				duration: 3500,
-			})
 
+			if (payload.type === 'success') {
+				this.playSong()
+			} else if (!this.isNoSound) {
+				this.sound(payload.type, payload.msg)
+			}
 		}, false);
 		// #endif
 	},
 	watch: {
+		loading(val) {
+			if (val) {
+				uni.showLoading({
+					title: '加载中'
+				});
+			} else {
+				uni.hideLoading();
+			}
+		},
 		msgArr: {
 			deep: true,
 			handler(val) {
@@ -92,7 +108,51 @@ export default {
 		}
 	},
 	methods: {
+		handleNOSoundChange(e) {
+			this.isNoSound = e.detail.value
+			if (this.isNoSound) {
+				uni.setStorageSync('isNoSound', '1')
+			} else {
+				uni.removeStorageSync('isNoSound')
+			}
+		},
+		sound(type, msg) {
+			let src = ''
+			if (type === 'error') {
+				src = '/static/wrong.wav'
+			} else if (msg.includes('有票')) {
+				src = '/static/hasTicket.mp3'
+			} else {
+				src = '/static/info.wav'
+			}
 
+			let innerAudioContext = uni.createInnerAudioContext();
+			innerAudioContext.autoplay = true;
+			innerAudioContext.loop = false
+			innerAudioContext.src = src  
+		},
+		async activityClick({ index }, { id }) {
+			if (index === 0) {
+				this.loading = true
+				let host = `http://mticket.ddns.net:4000/removeAppMsg`
+				await request({
+					method: 'post', url: host,
+					data: {
+						id
+					}
+				});
+				let i = this.msgArr.findIndex(one => one.id === id)
+				this.msgArr.splice(i, 1)
+				this.loading = false
+			}
+		},
+
+		async loadAllMsg() {
+			let host = `http://mticket.ddns.net:4000/getAllAppMsg`
+			this.msgArr = await request({
+				method: 'get', url: host
+			});
+		},
 		clickMsg(item, index) {
 			if (item.phone) {
 				this.call(item.phone, index)
@@ -112,18 +172,27 @@ export default {
 				this.innerAudioContext = null
 			});
 		},
-		clear() {
+		async clear() {
+			this.loading = true
 			this.msgArr = []
+			let host = `http://mticket.ddns.net:4000/removeAllAppMsg`
+			await request({
+				method: 'get', url: host
+			});
+			this.loading = false
 		},
 		call(phoneNumber, i) {
 			uni.showActionSheet({
-				itemList: [phoneNumber, '呼叫'],
+				itemList: [phoneNumber, '呼叫', "复制"],
 				success: (res) => {
 					if ([0, 1].includes(res.tapIndex)) {
-						this.msgArr.splice(i, 1)
 						uni.makePhoneCall({
 							phoneNumber,
 						})
+					} else {
+						uni.setClipboardData({
+							data: phoneNumber,
+						});
 					}
 				}
 			})
@@ -133,12 +202,7 @@ export default {
 			this.innerAudioContext.destroy()
 			this.innerAudioContext = null
 		},
-		sendMsg(msg) {
-			uni.sendSocketMessage({
-				data: msg
-			});
 
-		}
 	}
 }
 </script>
@@ -198,9 +262,8 @@ export default {
 		.message {
 			width: 100%;
 			word-break: break-all;
-			border-bottom: 2px solid rgb(233, 239, 233);
-			padding-bottom: 15px;
-			margin-bottom: 15px;
+			// border-bottom: 2px solid rgb(233, 239, 233);
+			// padding-bottom: 15px;
 		}
 	}
 }
@@ -211,4 +274,5 @@ export default {
 	align-items: center;
 	gap: 20px;
 	padding-bottom: 20px;
-}</style>
+}
+</style>

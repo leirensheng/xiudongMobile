@@ -8,7 +8,7 @@
             <div class="fail-item" v-for="(item, index) in failCmds" :key="index">{{ item }}</div>
         </div>
 
-        {{ clientid }}
+        <!-- {{ clientid }} -->
         <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
