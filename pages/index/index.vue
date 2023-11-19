@@ -7,6 +7,10 @@
 		<div class="status">
 			<div style="margin-right: 10px;">勿扰: </div>
 			<switch :checked="isNoSound" @change="handleNOSoundChange" />
+
+			<div style="margin-right: 10px;">仅成功: </div>
+			<switch :checked="isOnlySuccess" @change="handleOnlySuccessChange" />
+			<my-input class="keyword" type="text" v-model="keyword" placeholder="筛选" />
 		</div>
 
 		<div class="all-message">
@@ -14,7 +18,7 @@
 			}}条成功</span></div>
 
 			<uni-swipe-action>
-				<template v-for="(item, index) in msgArr" :key="index+item.msg">
+				<template v-for="(item, index) in showArr" :key="index+item.msg">
 					<uni-swipe-action-item :right-options="activityRightOptions" @click="activityClick($event, item)">
 						<div class="message-wrap" :class="item.type" @click="clickMsg(item, index)">
 							<!-- <div class="index">{{index+1}}.</div> -->
@@ -40,6 +44,8 @@ export default {
 	data() {
 		return {
 			isNoSound: !!uni.getStorageSync('isNoSound'),
+			isOnlySuccess: !!uni.getStorageSync('isNoSound'),
+
 			activityRightOptions: [
 				{
 					text: '删除',
@@ -51,6 +57,7 @@ export default {
 			],
 			loading: false,
 			connected: false,
+			keyword: '',
 			innerAudioContext: null,
 			title: 'Hello',
 			msgArr: []
@@ -59,6 +66,10 @@ export default {
 	computed: {
 		successLength() {
 			return this.msgArr.filter(one => one.msg.includes('成功')).length
+		},
+		showArr() {
+			let arr = this.isOnlySuccess ? this.msgArr.filter(one => one.msg.includes('成功')) : this.msgArr
+			return arr.filter(one => one.msg.includes(this.keyword))
 		},
 	},
 	onLoad() {
@@ -78,7 +89,7 @@ export default {
 			}
 			let hasAdd = this.msgArr.find(one => one.id === payload.id)
 			if (hasAdd) return
-			this.msgArr.push(payload)
+			this.msgArr.unshift(payload)
 
 			if (payload.type === 'success') {
 				this.playSong()
@@ -107,6 +118,9 @@ export default {
 			}
 		}
 	},
+	onPullDownRefresh() {
+		this.loadAllMsg()
+	},
 	methods: {
 		handleNOSoundChange(e) {
 			this.isNoSound = e.detail.value
@@ -114,6 +128,14 @@ export default {
 				uni.setStorageSync('isNoSound', '1')
 			} else {
 				uni.removeStorageSync('isNoSound')
+			}
+		},
+		handleOnlySuccessChange(e) {
+			this.isOnlySuccess = e.detail.value
+			if (this.isOnlySuccess) {
+				uni.setStorageSync('isOnlySuccess', '1')
+			} else {
+				uni.removeStorageSync('isOnlySuccess')
 			}
 		},
 		sound(type, msg) {
@@ -129,7 +151,7 @@ export default {
 			let innerAudioContext = uni.createInnerAudioContext();
 			innerAudioContext.autoplay = true;
 			innerAudioContext.loop = false
-			innerAudioContext.src = src  
+			innerAudioContext.src = src
 		},
 		async activityClick({ index }, { id }) {
 			if (index === 0) {
@@ -155,7 +177,7 @@ export default {
 		},
 		clickMsg(item, index) {
 			if (item.phone) {
-				this.call(item.phone, index)
+				this.call(item.phone, item)
 			}
 		},
 		playSong(isTips) {
@@ -181,18 +203,21 @@ export default {
 			});
 			this.loading = false
 		},
-		call(phoneNumber, i) {
+		call(phoneNumber, item) {
 			uni.showActionSheet({
-				itemList: [phoneNumber, '呼叫', "复制"],
+				itemList: [phoneNumber, '呼叫', "复制","已读"],
 				success: (res) => {
 					if ([0, 1].includes(res.tapIndex)) {
+						item.type = 'success-call'
 						uni.makePhoneCall({
 							phoneNumber,
 						})
-					} else {
+					} else if(res.tapIndex===2){
 						uni.setClipboardData({
 							data: phoneNumber,
 						});
+					}else{
+						item.type = 'success-call'
 					}
 				}
 			})
@@ -228,6 +253,9 @@ export default {
 		height: 15px;
 		border-radius: 50%;
 	}
+	.keyword{
+		width: 20vw;
+	}
 }
 
 .all-message {
@@ -250,6 +278,10 @@ export default {
 		&.success {
 			color: green;
 		}
+		&.success-call {
+			color: rgb(164, 207, 164);
+		}
+
 
 		&.error {
 			color: red;

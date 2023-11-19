@@ -104,9 +104,13 @@ export default {
             console.log(Math.max((config.price || 100) / config.orders.length, 100), config.price,config.orders.length)
             console.log(name, "平均价格", advPrice)
             score = score + advPrice / 100 * 25
-            if (config.remark.match(/低|夏|魔|缘/)) {
+            if (config.remark.match(/假/)) {
+                score = score - 100;
+            }else if (config.remark.match(/低|夏|魔|缘|火/)) {
                 score = score - 20;
-            } else if (config.remark.match(/高/)) {
+            }else if (config.remark.match(/高/)) { //高雅优先级低
+                score = score - 50;
+            } else if (config.remark.match(/优先/)) {
                 score = score + 20;
             } else if (config.remark) {
                 score = score - 10;

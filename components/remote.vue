@@ -9,10 +9,10 @@
         </div>
 
         <!-- {{ clientid }} -->
-        <div class="pcs">
+        <!-- <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
-        </div>
+        </div> -->
         <div class="search">
             <input v-for="(item, index) in queryItems.filter(one => one.column !== 'activityId')" :key="index" type="text"
                 :placeholder="item.column" v-model="item.value" />
@@ -259,6 +259,10 @@ export default {
                     value: ''
                 },
                 {
+                    column: 'remark',
+                    value: ''
+                },
+                {
                     column: "activityId",
                     value: ''
                 }
@@ -302,12 +306,12 @@ export default {
         },
     },
     created() {
-		//#ifdef APP-PLUS
+        //#ifdef APP-PLUS
 
         plus.push.getClientInfoAsync((info) => {
             this.clientid = info["clientid"];
         });
-		//#endif 
+        //#endif 
 
         let res = uni.getSystemInfoSync()
         console.log(res)
@@ -475,9 +479,18 @@ export default {
         setTestMsg() {
             this.msgToUser = '测试'
         },
+        getValidPort() {
+            let allPorts = this.groupData.map(one => Number(one.data[0].port)).sort((a, b) => a - b)
+            uni.showToast({
+                title: 'allPorts'+allPorts.join(","),
+                icon: "none",
+                duration: 3500,
+            });
+            return allPorts.pop() + 1
+        },
         activityChange(id) {
             this.editForm.activityId = id
-            this.editForm.port = ''
+            this.editForm.port = this.getValidPort()
             this.editForm.isRefresh = true
             this.form.activityId = id
             this.form.port = ''
@@ -702,7 +715,8 @@ export default {
                 await request({ method: 'post', url: this.host + "/addInfo/", data, timeout: 120000 });
                 this.$refs.popup.close()
                 this.isUnique = false
-                await this.getConfig()
+                this.reset()
+                await this.getConfig(true)
                 this.loading = false
                 let target = this.data.find(one => one.username === data.username)
                 this.start(target)
@@ -871,7 +885,7 @@ export default {
 
             let items = this.queryItems.filter(item => item.value);
             data = data.filter(one => {
-                return items.every(({ value, column }) => String(one[column]).indexOf(value) !== -1);
+                return items.every(({ value, column }) => String(one[column]).toLowerCase().indexOf(String(value).toLowerCase()) !== -1);
             });
             data.sort((a, b) => Number(b.port) - Number(a.port));
 
@@ -933,6 +947,9 @@ export default {
                     cur.data.push(one)
                 }
             })
+
+            res.sort((a, b) => (a.group? a.group[1]:'').charCodeAt() - (b.group? b.group[1]:'').charCodeAt())
+
             if (this.fixedTopActivity) {
                 let i = res.findIndex(one => one.group === this.fixedTopActivity)
                 let target = res.splice(i, 1)
