@@ -118,9 +118,7 @@ export default {
 			}
 		}
 	},
-	onPullDownRefresh() {
-		this.loadAllMsg()
-	},
+
 	methods: {
 		handleNOSoundChange(e) {
 			this.isNoSound = e.detail.value
@@ -180,7 +178,16 @@ export default {
 				this.call(item.phone, item)
 			}
 		},
+		startVibrate() {
+			this.timer = setInterval(() => {
+				uni.vibrateLong()
+			}, 2000)
+		},
 		playSong(isTips) {
+			//#ifdef APP-PLUS
+			this.startVibrate()
+			//#endif 
+
 			this.innerAudioContext = uni.createInnerAudioContext();
 			this.innerAudioContext.autoplay = true;
 			this.innerAudioContext.loop = true
@@ -205,18 +212,18 @@ export default {
 		},
 		call(phoneNumber, item) {
 			uni.showActionSheet({
-				itemList: [phoneNumber, '呼叫', "复制","已读"],
+				itemList: [phoneNumber, '呼叫', "复制", "已读"],
 				success: (res) => {
 					if ([0, 1].includes(res.tapIndex)) {
 						item.type = 'success-call'
 						uni.makePhoneCall({
 							phoneNumber,
 						})
-					} else if(res.tapIndex===2){
+					} else if (res.tapIndex === 2) {
 						uni.setClipboardData({
 							data: phoneNumber,
 						});
-					}else{
+					} else {
 						item.type = 'success-call'
 					}
 				}
@@ -226,6 +233,7 @@ export default {
 		stop() {
 			this.innerAudioContext.destroy()
 			this.innerAudioContext = null
+			clearInterval(this.timer)
 		},
 
 	}
@@ -253,7 +261,8 @@ export default {
 		height: 15px;
 		border-radius: 50%;
 	}
-	.keyword{
+
+	.keyword {
 		width: 20vw;
 	}
 }
@@ -278,6 +287,7 @@ export default {
 		&.success {
 			color: green;
 		}
+
 		&.success-call {
 			color: rgb(164, 207, 164);
 		}

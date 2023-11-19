@@ -14,8 +14,9 @@
                 </div>
 
             </div>
-            <div v-if="data.length" class="item-wrap" v-for="(item, index) in data" :key="index">
-                <div class="item" :style="getStyle(item.percent)">
+            <div v-if="data.length" class="item-wrap" v-for="(item, index) in data" :key="index"
+                :style="getStyle(item.percent)">
+                <div class="item" :style="getStyle(item.runningPercent)">
                     <div class="text">{{ item.type }}__({{ item.runningLength }}/{{ item.allLength }}) </div>
                 </div>
             </div>
@@ -49,7 +50,7 @@ export default {
             default: false
         },
         activityId: {
-            type: [String,Number],
+            type: [String, Number],
             default: ''
         },
         host: {
@@ -77,10 +78,11 @@ export default {
             let allRunning = Object.keys(data).map(type => (data[type].running)).flat()
             this.allRunningLength = new Set(allRunning).size
 
-            this.data = Object.keys(data).map(type => ({ ...data[type], type, allLength: data[type].allLength, runningLength: data[type].runningLength }))
+            this.data = Object.keys(data).map(type => ({ ...data[type], type }))
             let max = Math.max(... this.data.map(one => one.allLength))
             this.data.forEach(one => {
                 one.percent = Math.floor(one.allLength / max * 100)
+                one.runningPercent = one.runningLength / one.allLength * one.percent
             })
             // console.log(this.data, data)
         },
@@ -95,29 +97,30 @@ export default {
             let config = allConfig.find((one) => one.username === name);
             if (config.hasSuccess || config.remark.match(/(频繁)|(密码不正确)/)) return 0;
             let score = 500;
-            if(config.price==='undefined'){
+            if (config.price === 'undefined') {
                 config.price = ''
             }
             score = score - config.orders.length * 50;
             score = score - config.targetTypes.length * 15;
             let advPrice = Math.max((config.price || 100) / config.orders.length, 100)
-            console.log(Math.max((config.price || 100) / config.orders.length, 100), config.price,config.orders.length)
+            console.log(Math.max((config.price || 100) / config.orders.length, 100), config.price, config.orders.length)
             console.log(name, "平均价格", advPrice)
             score = score + advPrice / 100 * 25
             if (config.remark.match(/假/)) {
                 score = score - 100;
-            }else if (config.remark.match(/低|夏|魔|缘|火/)) {
+            } else if (config.remark.match(/低|夏|魔|缘|火/)) {
                 score = score - 20;
-            }else if (config.remark.match(/高/)) { //高雅优先级低
+            } else if (config.remark.match(/高/)) { //高雅优先级低
                 score = score - 50;
             } else if (config.remark.match(/优先/)) {
                 score = score + 20;
             } else if (config.remark) {
                 score = score - 10;
             }
-            if (!config.uid) {
-                score = score - 30;
-            }
+            // 没有uid暂时不做处理
+            // if (!config.uid) {
+            //     score = score - 30;
+            // }
             return score;
         },
         autoOpen() {
@@ -197,11 +200,13 @@ export default {
     .item-wrap {
         line-height: 2.5;
         position: relative;
+        background-image: linear-gradient(rgb(155, 243, 177), rgb(178, 249, 177));
+        background-repeat: no-repeat;
 
         .item {
             z-index: 3;
             background: transparent;
-            background-image: linear-gradient(rgb(155, 243, 177), rgb(178, 249, 177));
+            background-image: linear-gradient(rgb(114, 231, 143), rgb(38, 228, 35));
             background-repeat: no-repeat;
 
             .text {

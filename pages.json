@@ -3,8 +3,7 @@
 		{
 			"path": "pages/index/index",
 			"style": {
-				"navigationBarTitleText": "消息",
-				"enablePullDownRefresh": true
+				"navigationBarTitleText": "消息"
 
 			}
 		},
