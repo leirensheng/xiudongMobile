@@ -82,9 +82,9 @@ export default {
             let max = Math.max(... this.data.map(one => one.allLength))
             this.data.forEach(one => {
                 one.percent = Math.floor(one.allLength / max * 100)
-                one.runningPercent = one.runningLength / one.allLength * one.percent
+                one.runningPercent = one.allLength ? one.runningLength / one.allLength * one.percent : 0
             })
-            // console.log(this.data, data)
+            console.log(this.data)
         },
         changeIsMin(e) {
             this.isMin = e.detail.value
