@@ -657,7 +657,7 @@ export default {
 
 
         async openEditDialog(item) {
-            this.editForm = { ...item }
+            this.editForm = {targetTypes:[], ...item }
             this.isEdit = true
             this.$refs.popup.open('bottom')
             this.readDataFromClip()
