@@ -265,6 +265,10 @@ export default {
                 {
                     column: "activityId",
                     value: ''
+                },
+                {
+                    column: "activityName",
+                    value: ''
                 }
             ],
             selected: this.pcHost,
