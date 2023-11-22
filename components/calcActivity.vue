@@ -162,7 +162,14 @@ export default {
             }
             console.log("结果", toStart)
             if (toStart.length) {
-                this.$emit('autoStartUsers', toStart)
+                uni.showToast({
+                    icon: "none",
+                    title: toStart.join(','),
+                    duration: 2000,
+                })
+                setTimeout(() => {
+                    this.$emit('autoStartUsers', toStart)
+                }, 2000);
             }
         },
         getStyle(percent) {

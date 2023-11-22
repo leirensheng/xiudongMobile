@@ -231,6 +231,7 @@ export default {
             msgToUser: '',
             percent: 0,
             isShowAll: true,
+            isShowRecover:false,
             scrollTopId: '',
             old: {
                 scrollTop: 0
@@ -485,19 +486,18 @@ export default {
         },
         getValidPort() {
             let allPorts = this.groupData.map(one => Number(one.data[0].port)).sort((a, b) => a - b)
-            uni.showToast({
-                title: 'allPorts'+allPorts.join(","),
-                icon: "none",
-                duration: 3500,
-            });
-            return allPorts.pop() + 1
+            console.log(allPorts)
+            return Number(allPorts.pop()) + 1
         },
         activityChange(id) {
             this.editForm.activityId = id
-            this.editForm.port = this.getValidPort()
-            this.editForm.isRefresh = true
             this.form.activityId = id
-            this.form.port = ''
+
+            let port= this.getValidPort()
+            this.editForm.port = port
+            this.form.port = port
+
+            this.editForm.isRefresh = true
         },
         async sendMsgToUser() {
             let host = `http://${this.selected}:4000`
