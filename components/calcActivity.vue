@@ -16,11 +16,26 @@
             </div>
             <div v-if="data.length" class="item-wrap" v-for="(item, index) in data" :key="index"
                 :style="getStyle(item.percent)">
-                <div class="item" :style="getStyle(item.runningPercent)">
+                <div class="item" :style="getStyle(item.runningPercent)" @click="showInfo(item)">
                     <div class="text">{{ item.type }}__({{ item.runningLength }}/{{ item.allLength }}) </div>
                 </div>
             </div>
             <div v-else class="loading">加载中...</div>
+        </div>
+    </uni-popup>
+
+    <uni-popup ref="oneType" type="top">
+        <div class="one-type">
+            <div class="cur-type">{{ curType }}</div>
+            <div class="user-list">
+
+                <div class="user" :class="curTypeRunningUsers.includes(item.name) ? 'running' : ''"
+                    v-for="(item, index) in curTypeUsers" :key="index"
+                    @click="stopOrStart(item, curTypeRunningUsers.includes(item.name))">
+                    <div class="name">{{ item.name }}</div>
+                    <div class="score">{{ item.score }}</div>
+                </div>
+            </div>
         </div>
     </uni-popup>
 </template>
@@ -31,6 +46,9 @@ import { request } from '@/utils.js'
 export default {
     data() {
         return {
+            curType: '',
+            curTypeUsers: [],
+            curTypeRunningUsers: [],
             data: [],
             isMin: true,
             allRunningLength: 0,
@@ -40,6 +58,7 @@ export default {
     created() {
 
     },
+    emits: ['startOne', 'stopOne', 'autoStartUsers', 'update:modelValue'],
     props: {
         userConfig: {
             type: Array,
@@ -72,6 +91,20 @@ export default {
         }
     },
     methods: {
+        async refreshDialog() {
+            await this.getCalc()
+            let item = this.data.find(one => one.type === this.curType)
+            this.curTypeRunningUsers = item.running
+        },
+        showInfo(item) {
+            this.curType = item.type
+            this.curTypeUsers = item.all.map(one => ({
+                name: one,
+                score: this.getScore(one, this.userConfig)
+            })).sort((a, b) => b.score - a.score)
+            this.curTypeRunningUsers = item.running
+            this.$refs.oneType.open('top')
+        },
         async getCalc() {
             let data = await request({ url: this.host + "/activityInfo/" + this.activityId + '?isSingle=' + (this.isSingle ? 1 : 0) });
 
@@ -143,7 +176,9 @@ export default {
                         let index = scores.indexOf(max)
                         let maxUser = all[index]
                         console.log("最大的是", maxUser)
-                        toStart.push(maxUser)
+                        if (!toStart.includes(maxUser)) {
+                            toStart.push(maxUser)
+                        }
                         if (this.isMin) {
                             if (max < 400) {
                                 runningTypes.push(type)
@@ -180,6 +215,39 @@ export default {
         changePopup(e) {
             this.data = []
             this.$emit('update:modelValue', e.show)
+        },
+        stopOrStart(item, running) {
+            if (running) {
+                uni.showModal({
+                    title:`确定停止${item.name}？`,
+                    success: (res) => {
+                        if (res.confirm) {
+                            this.$emit('stopOne', item.name)
+                        } else if (res.cancel) {
+                            console.log('用户取消操作');
+                        }
+                    }
+                });
+            } else {
+                uni.showModal({
+                    title: `确定启动【${item.name}】？`,
+                    success: (res) => {
+                        if (res.confirm) {
+                            setTimeout(() => {
+                                uni.showModal({
+                                    title: `是否打开浏览器？`,
+                                    success: (res) => {
+                                        this.$emit('startOne', item.name, res.confirm)
+                                    }
+                                });
+
+                            }, 200);
+                        } else if (res.cancel) {
+                            console.log('用户取消操作');
+                        }
+                    }
+                });
+            }
         },
     }
 };
@@ -223,5 +291,52 @@ export default {
 
 
     }
+
+}
+
+.one-type {
+    background: white;
+    padding: 15px;
+
+    .cur-type {
+        text-align: center;
+        font-weight: bold;
+        font-weight: 18px;
+        margin-bottom: 20px;
+    }
+
+    .user-list {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+
+        .user {
+
+            // display: inline-block;
+            margin-right: 10px;
+            color: white;
+            background: purple;
+            border-radius: 4px;
+            padding: 10px;
+            position: relative;
+
+            &.running {
+                background: rgb(52, 228, 55);
+
+            }
+
+            .score {
+                padding: 5px;
+                border-radius: 50%;
+                position: absolute;
+                top: 0;
+                right: 0;
+                background-color: green;
+                transform: translate(50%, -50%);
+            }
+        }
+    }
+
+    // justify-content: space-between;
 }
 </style>

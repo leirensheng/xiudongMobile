@@ -166,7 +166,12 @@
                         </checkbox>
                     </checkbox-group>
                 </scroll-view>
-                <button class="btn" type="primary" @click="add">新增</button>
+
+                <div style="display: flex;">
+                    <button class="btn" @click="checkIsCanBuy">测试</button>
+                    <button class="btn" type="primary" @click="add">新增</button>
+                </div>
+
             </div>
         </div>
     </uni-popup>
@@ -185,8 +190,8 @@
             </div>
         </div>
     </my-dialog>
-    <calc-activity v-model="isShowCalc" :host="host" :activityId="calcActivityId" :userConfig="data"
-        @autoStartUsers="autoStartUsers"></calc-activity>
+    <calc-activity ref="calc" v-model="isShowCalc" :host="host" :activityId="calcActivityId" :userConfig="data"
+        @startOne="startOne" @stopOne="stopOne" @autoStartUsers="autoStartUsers"></calc-activity>
 </template>
 
 <script>
@@ -231,7 +236,7 @@ export default {
             msgToUser: '',
             percent: 0,
             isShowAll: true,
-            isShowRecover:false,
+            isShowRecover: false,
             scrollTopId: '',
             old: {
                 scrollTop: 0
@@ -411,6 +416,16 @@ export default {
     },
 
     methods: {
+        async checkIsCanBuy() {
+            let res = await request({
+                url: this.host + "/checkIsCanBuy?activityId=" + this.form.activityId
+            });
+            uni.showToast({
+                icon: "none",
+                title: res || '不支持',
+                duration: 2000,
+            })
+        },
         async recover() {
             this.loading = true
             let failCmds = await request({
@@ -493,7 +508,7 @@ export default {
             this.editForm.activityId = id
             this.form.activityId = id
 
-            let port= this.getValidPort()
+            let port = this.getValidPort()
             this.editForm.port = port
             this.form.port = port
 
@@ -539,6 +554,21 @@ export default {
         },
         toggleForm() {
             this.isShowAll = !this.isShowAll
+        },
+        async startOne(user, isShow) {
+            let item = this.data.find(one => one.username === user)
+            item.isShow = isShow
+            try {
+                await this.start(item)
+                this.$refs.calc.refreshDialog()
+            } catch (e) {
+                console.log(e)
+            }
+        },
+        async stopOne(user) {
+            let item = this.data.find(one => one.username === user)
+            await this.stop(item)
+            this.$refs.calc.refreshDialog()
         },
         async autoStartUsers(users) {
             this.isShowCalc = false
@@ -661,7 +691,7 @@ export default {
 
 
         async openEditDialog(item) {
-            this.editForm = {targetTypes:[], ...item }
+            this.editForm = { targetTypes: [], ...item }
             this.isEdit = true
             this.$refs.popup.open('bottom')
             this.readDataFromClip()
@@ -952,7 +982,7 @@ export default {
                 }
             })
 
-            res.sort((a, b) => (a.group? a.group[1]:'').charCodeAt() - (b.group? b.group[1]:'').charCodeAt())
+            res.sort((a, b) => (a.group ? a.group[1] : '').charCodeAt() - (b.group ? b.group[1] : '').charCodeAt())
 
             if (this.fixedTopActivity) {
                 let i = res.findIndex(one => one.group === this.fixedTopActivity)
