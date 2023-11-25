@@ -16,7 +16,6 @@
         <div class="search">
             <input v-for="(item, index) in queryItems.filter(one => one.column !== 'activityId')" :key="index" type="text"
                 :placeholder="item.column" v-model="item.value" />
-            <!-- <switch @change="changeUnique" /> -->
             <image style="width: 20px; height: 20px; flex-shrink: 0;" src="/static/recover.svg" @click="recover"
                 v-if="isShowRecover" />
 
@@ -190,7 +189,7 @@
             </div>
         </div>
     </my-dialog>
-    <calc-activity ref="calc" v-model="isShowCalc" :host="host" :activityId="calcActivityId" :userConfig="data"
+    <calc-activity ref="calc" v-model="isShowCalc" :host="host" :activityId="calcActivityId" :userConfig="dataWithoutFilter"
         @startOne="startOne" @stopOne="stopOne" @autoStartUsers="autoStartUsers"></calc-activity>
 </template>
 
@@ -228,6 +227,7 @@ export default {
 
     data() {
         return {
+            dataWithoutFilter: [],
             clientid: '',
             failCmds: [],
             fixedTopActivity: uni.getStorageSync(this.platform + 'FixedTopActivity'),
@@ -252,7 +252,6 @@ export default {
             isEdit: false,
             selectedActivityIndex: -1,
             data: [],
-            isUnique: false,
             loading: false,
             form: {},
             queryItems: [
@@ -284,9 +283,6 @@ export default {
     },
 
     watch: {
-        isUnique() {
-            this.filterData()
-        },
         selectedActivityId(val) {
             this.queryItems.find(one => one.column === 'activityId').value = val
             this.filterData()
@@ -727,7 +723,31 @@ export default {
                 this.loading = false
             }
         },
+        confirmAction(title) {
+            return new Promise((resolve, reject) => {
+                uni.showModal({
+                    title,
+                    success: (res) => {
+                        if (res.confirm) {
+                            resolve()
+                        } else if (res.cancel) {
+                            reject()
+                        }
+                    }
+                });
+            })
+        },
         async add() {
+            let isTwo = false
+            try {
+                await this.confirmAction(`是否连坐？`)
+                isTwo = true
+            } catch (e) {
+                isTwo = false
+            }
+            if (isTwo) {
+                this.form.showOrders = '0,1'
+            }
             let data = { ...this.form, isCopy: this.copyActivityId === this.form.activityId, showOrders: this.form.showOrders.replace(/,$/, '') }
             // todo
             if (this.isDamai || this.isXingqiu) {
@@ -748,7 +768,6 @@ export default {
                 }
                 await request({ method: 'post', url: this.host + "/addInfo/", data, timeout: 120000 });
                 this.$refs.popup.close()
-                this.isUnique = false
                 this.reset()
                 await this.getConfig(true)
                 this.loading = false
@@ -857,9 +876,7 @@ export default {
                 }
             });
         },
-        changeUnique(e) {
-            this.isUnique = e.detail.value
-        },
+
         getStyle(item) {
             let arr = [
                 {
@@ -917,10 +934,7 @@ export default {
                 config: one,
             }));
 
-            let items = this.queryItems.filter(item => item.value);
-            data = data.filter(one => {
-                return items.every(({ value, column }) => String(one[column]).toLowerCase().indexOf(String(value).toLowerCase()) !== -1);
-            });
+
             data.sort((a, b) => Number(b.port) - Number(a.port));
 
 
@@ -937,15 +951,14 @@ export default {
                 }
             });
 
-            if (this.isUnique) {
-                let activityIds = [...new Set(data.map(one => Number(one.activityId)))];
-                data = activityIds.map(activityId =>
-                    data.find(one => Number(one.activityId) === activityId),
-                );
-            } else {
-                data = data;
-            }
-            this.getGroup(data, isFirstGet)
+
+            let items = this.queryItems.filter(item => item.value);
+            this.dataWithoutFilter = data
+            let filteredData = data.filter(one => {
+                return items.every(({ value, column }) => String(one[column]).toLowerCase().indexOf(String(value).toLowerCase()) !== -1);
+            });
+
+            this.getGroup(filteredData, isFirstGet)
         },
         checkIsExpired(one) {
             if (['damai', 'xingqiu'].includes(this.platform)) {
