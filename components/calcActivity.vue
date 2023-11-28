@@ -147,7 +147,9 @@ export default {
                 score = score - 50;
             } else if (config.remark.match(/优先/)) {
                 score = score + 20;
-            } else if (config.remark) {
+            } else if (config.remark.includes('空')) {
+                score = 0;
+            }else if (config.remark) {
                 score = score - 10;
             }
             // 没有uid暂时不做处理
@@ -236,6 +238,7 @@ export default {
                             setTimeout(() => {
                                 uni.showModal({
                                     title: `是否打开浏览器？`,
+                                    cancelText:'否',
                                     success: (res) => {
                                         this.$emit('startOne', item.name, res.confirm)
                                     }

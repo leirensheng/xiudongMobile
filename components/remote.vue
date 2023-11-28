@@ -54,7 +54,7 @@
                                 <image class="msg-icon" src="/static/msg.svg" @click="openMsg(item.uid)" />
                             </div>
 
-                            <div @click="callOrCopyPhone(item.phone)">{{ item.phone }}</div>
+                            <div @click="callOrCopyPhone(item.phone,item.payCode)">{{ item.phone }}</div>
                             <div class="name" @click="copyUsername(item.username)">
                                 {{ item.username }}
                             </div>
@@ -526,17 +526,25 @@ export default {
             this.msgDialogShow = true
         },
         getTagColor,
-        callOrCopyPhone(phone) {
+        callOrCopyPhone(phone,payCode) {
+            let itemList = [phone, '呼叫', '复制']
+            if(payCode){
+                itemList.push('复制口令')
+            }
             uni.showActionSheet({
-                itemList: [phone, '呼叫', '复制'],
+                itemList,
                 success: (res) => {
                     if ([0, 1].includes(res.tapIndex)) {
                         uni.makePhoneCall({
                             phoneNumber: phone,
                         })
-                    } else {
+                    } else if(res.tapIndex===2){
                         uni.setClipboardData({
                             data: phone,
+                        });
+                    }else{
+                        uni.setClipboardData({
+                            data: payCode,
                         });
                     }
                 }
@@ -727,6 +735,7 @@ export default {
             return new Promise((resolve, reject) => {
                 uni.showModal({
                     title,
+                    cancelText:'否',
                     success: (res) => {
                         if (res.confirm) {
                             resolve()
