@@ -211,8 +211,12 @@ export default {
 			this.loading = false
 		},
 		call(phoneNumber, item) {
+			let itemList = [phoneNumber, '呼叫', "复制", "已读"]
+			if (item.payCode) {
+				itemList.push('复制口令')
+			}
 			uni.showActionSheet({
-				itemList: [phoneNumber, '呼叫', "复制", "已读"],
+				itemList,
 				success: (res) => {
 					if ([0, 1].includes(res.tapIndex)) {
 						item.type = 'success-call'
@@ -223,8 +227,12 @@ export default {
 						uni.setClipboardData({
 							data: phoneNumber,
 						});
-					} else {
+					} else if (res.tapIndex === 3) {
 						item.type = 'success-call'
+					} else {
+						uni.setClipboardData({
+							data: item.payCode,
+						});
 					}
 				}
 			})
@@ -290,6 +298,10 @@ export default {
 
 		&.success-call {
 			color: rgb(164, 207, 164);
+		}
+
+		&.pay {
+			color: rgb(218, 126, 39);
 		}
 
 

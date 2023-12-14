@@ -32,7 +32,7 @@
 
 
         <uni-swipe-action>
-            <template v-for="(one, index) in groupData" :key="one.group">
+            <template v-for="(one, index) in groupData" :key="one.group+index">
                 <div class="activity" :style="getTitleStyle(one)">
                     <uni-swipe-action-item :right-options="activityRightOptions(one)"
                         @click="activityClick($event, one.group)">
@@ -54,7 +54,7 @@
                                 <image class="msg-icon" src="/static/msg.svg" @click="openMsg(item.uid)" />
                             </div>
 
-                            <div @click="callOrCopyPhone(item.phone,item.payCode)">{{ item.phone }}</div>
+                            <div @click="callOrCopyPhone(item.phone)">{{ item.phone }}</div>
                             <div class="name" @click="copyUsername(item.username)">
                                 {{ item.username }}
                             </div>
@@ -66,6 +66,11 @@
                                         <div v-else>{{ item.showOrders }}</div>
                                     </checkbox>
                                 </checkbox-group>
+                            </div>
+
+                            <div class="audience-list">
+                                <div class="audience" v-for="(audience,audienceIndex) in item.audienceList" :key="audience"  :class="item.orders.includes(audienceIndex)?'active':''" 
+                                @click="toggleAudience(audienceIndex,item.orders)">{{audience}}</div>
                             </div>
                         </div>
 
@@ -412,6 +417,13 @@ export default {
     },
 
     methods: {
+        toggleAudience(audienceIndex,orders){
+            console.log('点击了')
+            if(orders.includes(audienceIndex)){
+                
+            }
+
+        },
         async checkIsCanBuy() {
             let res = await request({
                 url: this.host + "/checkIsCanBuy?activityId=" + this.form.activityId
@@ -526,11 +538,8 @@ export default {
             this.msgDialogShow = true
         },
         getTagColor,
-        callOrCopyPhone(phone,payCode) {
+        callOrCopyPhone(phone) {
             let itemList = [phone, '呼叫', '复制']
-            if(payCode){
-                itemList.push('复制口令')
-            }
             uni.showActionSheet({
                 itemList,
                 success: (res) => {
@@ -541,10 +550,6 @@ export default {
                     } else if(res.tapIndex===2){
                         uni.setClipboardData({
                             data: phone,
-                        });
-                    }else{
-                        uni.setClipboardData({
-                            data: payCode,
                         });
                     }
                 }
@@ -781,6 +786,7 @@ export default {
                 await this.getConfig(true)
                 this.loading = false
                 let target = this.data.find(one => one.username === data.username)
+                target.isShow = true
                 this.start(target)
 
 
@@ -956,6 +962,7 @@ export default {
                 one.status = cmds.some(cmd => cmd.split(/\s+/)[3] === one.username) ? 1 : 0;
                 one.pid = cmdToPid[cmd];
                 if (this.isDamai || this.isXingqiu) {
+                    one.orders = one.orders.map(one=> Number(one))
                     one.showOrders = one.orders.join(',')
                 }
             });
@@ -1143,6 +1150,18 @@ export default {
 
         >:not(:first-child) {
             line-height: 2;
+        }
+        .audience-list{
+            .audience{
+                font-family: 楷体;
+                // font-weight: bold;
+                border-radius: 12px;
+                margin: 2px 10px;
+                &.active{
+                    background: rgb(154, 7, 190);
+                    color: white;
+                }
+            }
         }
 
         .msg-icon {
