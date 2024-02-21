@@ -1052,6 +1052,15 @@ export default {
 
             data.sort((a, b) => Number(b.port) - Number(a.port));
 
+            let notOkData =data.filter(one=> one.port==='null').map(one=> one)
+            if(notOkData.length){
+                uni.showToast({
+                    icon: "none",
+                    title: notOkData.map(one=> one.username).join(',')+'端口为null',
+                    duration: 2000,
+                })
+            }
+
 
 
             data.forEach(one => {
@@ -1093,6 +1102,7 @@ export default {
         },
         getGroup(data, isFirstGet) {
             this.data = data
+            console.log(1111,this.data.map(one=> one.activityName))
             let res = []
             if (!data.length) {
                 this.getGroupData = []
@@ -1120,6 +1130,7 @@ export default {
             } else {
                 this.groupData = res
             }
+            console.log('组合数据',this.groupData)
             if (isFirstGet) {
                 this.groupDataCopy = JSON.parse(JSON.stringify(this.groupData))
             }
