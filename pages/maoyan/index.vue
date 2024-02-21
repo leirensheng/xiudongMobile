@@ -1,5 +1,5 @@
 <template>
-    <remote-config v-if="isReady" platform="damai" ref="remote" :pcHost="pcHost" :scrollTop="scrollTop"></remote-config>
+    <remote-config v-if="isReady" platform="maoyan" ref="remote" :pcHost="pcHost" :scrollTop="scrollTop"></remote-config>
 </template>
 
 <script>
@@ -22,15 +22,10 @@ export default {
     created() {
         if (globalData.pcHost) {
             this.isReady = true
-            if (globalData.pcHost.includes('192')) {
-                this.pcHost = '192.168.2.10'
-            } else {
-                this.pcHost = globalData.pcHost
-            }
-
+            this.pcHost = globalData.pcHost
         } else {
             uni.$on('hostDone', val => {
-                this.pcHost = val.includes('192') ? '192.168.2.10' : val
+                this.pcHost = val
                 this.isReady = true
             })
         }

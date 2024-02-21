@@ -4,7 +4,13 @@
 			<div>连接状态: </div>
 			<div class="dot" :style="{ background: connected ? '#49e749' : 'red' }"> </div>
 		</div> -->
+		<div class="actions">
+			<button @click="toAudience" size="small" class="audience">观演人</button>
+
+		</div>
 		<div class="status">
+
+
 			<div style="margin-right: 10px;">勿扰: </div>
 			<switch :checked="isNoSound" @change="handleNOSoundChange" />
 
@@ -14,8 +20,9 @@
 		</div>
 
 		<div class="all-message">
-			<div class="sum" v-if="msgArr.length">共有{{ msgArr.length }}条消息<span v-if="successLength">，{{ successLength
-			}}条成功</span></div>
+			<div class="sum" v-if="msgArr.length">共有{{ msgArr.length }}条消息， 当前条件{{ showArr.length }}条<span
+					v-if="successLength">，{{ successLength
+					}}条成功</span></div>
 
 			<uni-swipe-action>
 				<template v-for="(item, index) in showArr" :key="index+item.msg">
@@ -32,6 +39,7 @@
 
 		<div class="bottom">
 			<button @click="clear" class="clear" type="primary" v-if="msgArr.length">清除</button>
+			<button @click="clearCurrent" class="clear clear-current" type="primary" v-if="showArr.length">清除当前</button>
 			<button @click="stop" class="stop" v-if="innerAudioContext" type="success">停止</button>
 		</div>
 
@@ -44,7 +52,7 @@ export default {
 	data() {
 		return {
 			isNoSound: !!uni.getStorageSync('isNoSound'),
-			isOnlySuccess: !!uni.getStorageSync('isNoSound'),
+			isOnlySuccess: !!uni.getStorageSync('isOnlySuccess'),
 
 			activityRightOptions: [
 				{
@@ -65,11 +73,11 @@ export default {
 	},
 	computed: {
 		successLength() {
-			return this.msgArr.filter(one => one.msg.includes('成功')).length
+			return this.msgArr.filter(one => one.type === '成功').length
 		},
 		showArr() {
-			let arr = this.isOnlySuccess ? this.msgArr.filter(one => one.msg.includes('成功')) : this.msgArr
-			return arr.filter(one => one.msg.includes(this.keyword))
+			let arr = this.isOnlySuccess ? this.msgArr.filter(one => one.type === '成功') : this.msgArr
+			return arr.filter(one => one.msg.replace(/\s{2}/, " ").includes(this.keyword))
 		},
 	},
 	onLoad() {
@@ -120,6 +128,14 @@ export default {
 	},
 
 	methods: {
+		clearCurrent() {
+			this.showArr.map(one => this.removeOneMsg(one.id))
+		},
+		toAudience() {
+			uni.navigateTo({
+				url: "/pages/audience/index",
+			})
+		},
 		handleNOSoundChange(e) {
 			this.isNoSound = e.detail.value
 			if (this.isNoSound) {
@@ -151,19 +167,22 @@ export default {
 			innerAudioContext.loop = false
 			innerAudioContext.src = src
 		},
+		async removeOneMsg(id) {
+			this.loading = true
+			let host = `http://mticket.ddns.net:4000/removeAppMsg`
+			await request({
+				method: 'post', url: host,
+				data: {
+					id
+				}
+			});
+			let i = this.msgArr.findIndex(one => one.id === id)
+			this.msgArr.splice(i, 1)
+			this.loading = false
+		},
 		async activityClick({ index }, { id }) {
 			if (index === 0) {
-				this.loading = true
-				let host = `http://mticket.ddns.net:4000/removeAppMsg`
-				await request({
-					method: 'post', url: host,
-					data: {
-						id
-					}
-				});
-				let i = this.msgArr.findIndex(one => one.id === id)
-				this.msgArr.splice(i, 1)
-				this.loading = false
+				await this.removeOneMsg(id)
 			}
 		},
 
@@ -173,9 +192,21 @@ export default {
 				method: 'get', url: host
 			});
 		},
-		clickMsg(item, index) {
+		async clickMsg(item, index) {
 			if (item.phone) {
 				this.call(item.phone, item)
+			} else if (item.canStart) {
+				uni.showLoading({
+					title: '启动中'
+				});
+				try {
+					await request({ method: 'post', url: "http://mticket.ddns.net:5000/startUserFromRemote/", data: { cmd: `npm run start ${item.canStart} 1 true` } });
+				} catch (e) {
+					console.log(e)
+				}
+
+				uni.hideLoading()
+				this.removeOneMsg(item.id)
 			}
 		},
 		startVibrate() {
@@ -250,6 +281,7 @@ export default {
 
 <style lang="scss" scoped>
 .content {
+	padding-top: 10px;
 	height: 100vh;
 	display: flex;
 	flex-direction: column;
@@ -257,6 +289,13 @@ export default {
 	align-items: center;
 	// padding: 15px;
 }
+
+.audience {
+	line-height: 1.8 !important;
+	background: rgb(0, 122, 255) !important;
+	color: white !important;
+}
+
 
 .status {
 	display: flex;
@@ -280,6 +319,7 @@ export default {
 	flex: 1;
 	overflow: auto;
 	width: 100%;
+	user-select: text;
 
 	.sum {
 		text-align: center;
@@ -328,5 +368,9 @@ export default {
 	align-items: center;
 	gap: 20px;
 	padding-bottom: 20px;
+
+	.clear-current {
+		background: rgb(179, 102, 179);
+	}
 }
 </style>

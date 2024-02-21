@@ -1,6 +1,7 @@
 <template>
     <uni-popup ref="popup" type="bottom" @change="changePopup">
         <div class="dialog">
+            <div class="activityName" @click="openCheck">{{ activityName }}</div>
             <div class="top">
                 <div>启动中: {{ allRunningLength }}</div>
                 <button type="primary" size="mini" v-if="data.length" @click="autoOpen">启动</button>
@@ -38,6 +39,29 @@
             </div>
         </div>
     </uni-popup>
+
+
+    <uni-popup ref="check" type="top">
+        <div class="check">
+            <div class="target-types">
+                <checkbox-group v-if="checkConfig.skuIdToTypeMap" @change="(e) => changeTarget(checkConfig, e)"
+                    class="checkbox-group">
+                    <checkbox :value="item" v-for="(item, index) in Object.values(checkConfig.skuIdToTypeMap)" :key="index"
+                        :checked="checkConfig.onlyMonitorType.includes(item)">{{ item }}
+                    </checkbox>
+                </checkbox-group>
+            </div>
+
+            <my-input class="start-time" type="text" v-model="checkConfig.waitForTime" placeholder="开抢时间" />
+
+            <div class="actions">
+
+                <button class="btn update" @click="updateConfig">修改</button>
+                <button v-if="!isRunning" class="btn start" @click="start" type="success">启动</button>
+                <button v-else class="btn stop" @click="stop" type="danger">停止</button>
+            </div>
+        </div>
+    </uni-popup>
 </template>
 
 <script>
@@ -52,12 +76,17 @@ export default {
             data: [],
             isMin: true,
             allRunningLength: 0,
-            isSingle: true
+            isSingle: true,
+            isRunning: false,
+            loading: false,
+            checkConfig: {}
         };
     },
     created() {
 
     },
+
+
     emits: ['startOne', 'stopOne', 'autoStartUsers', 'update:modelValue'],
     props: {
         userConfig: {
@@ -67,6 +96,14 @@ export default {
         modelValue: {
             type: Boolean,
             default: false
+        },
+        port: {
+            type: [String, Number],
+            default: ''
+        },
+        activityName: {
+            type: String,
+            default: ''
         },
         activityId: {
             type: [String, Number],
@@ -81,6 +118,17 @@ export default {
 
     },
     watch: {
+        loading(val) {
+            if (val) {
+                uni.showLoading(
+                    {
+                        title: '加载中'
+                    }
+                )
+            } else {
+                uni.hideLoading()
+            }
+        },
         async modelValue(val) {
             if (val) {
                 this.$refs.popup.open('bottom')
@@ -91,6 +139,46 @@ export default {
         }
     },
     methods: {
+        async stop() {
+            this.loading = true
+            await request({ url: this.host + "/stopCheck/" + this.port });
+            await this.checkIsRunning()
+            this.loading = false
+
+        },
+        async start() {
+            this.loading = true
+            await request({ url: this.host + "/startCheck/" + this.port });
+            await this.checkIsRunning()
+            this.loading = false
+
+        },
+        async updateConfig() {
+            console.log(this.checkConfig)
+            this.loading = true
+            await request({ url: this.host + "/updateCheckConfig/", method: 'post', data: this.checkConfig });
+            this.loading = false
+            uni.showToast({
+                icon: "success",
+                title: '修改成功',
+                duration: 1000,
+            })
+        },
+        changeTarget(form, e) {
+            form.onlyMonitorType = e.detail.value
+        },
+        openCheck() {
+            this.$refs.check.open('top')
+            this.getCheckConfig()
+            this.checkIsRunning()
+
+        },
+        async checkIsRunning() {
+            this.isRunning = await request({ url: this.host + "/checkIsRunningCheck/" + this.port });
+        },
+        async getCheckConfig() {
+            this.checkConfig = await request({ url: this.host + "/getCheckConfig/" + this.activityId });
+        },
         async refreshDialog() {
             await this.getCalc()
             let item = this.data.find(one => one.type === this.curType)
@@ -117,7 +205,7 @@ export default {
                 one.percent = Math.floor(one.allLength / max * 100)
                 one.runningPercent = one.allLength ? one.runningLength / one.allLength * one.percent : 0
             })
-            console.log(this.data)
+            // console.log(this.data)
         },
         changeIsMin(e) {
             this.isMin = e.detail.value
@@ -149,7 +237,7 @@ export default {
                 score = score + 20;
             } else if (config.remark.includes('空')) {
                 score = 0;
-            }else if (config.remark) {
+            } else if (config.remark) {
                 score = score - 10;
             }
             // 没有uid暂时不做处理
@@ -163,8 +251,8 @@ export default {
             let runningTypes = this.data.filter(one => one.running.length).map(one => one.type)
 
             let toStart = []
-            console.log(this.data)
-            console.log(this.userConfig)
+            // console.log(this.data)
+            // console.log(this.userConfig)
             for (let one of this.data) {
                 let { type, all } = one
                 if (all.length && !runningTypes.includes(type)) {
@@ -221,7 +309,7 @@ export default {
         stopOrStart(item, running) {
             if (running) {
                 uni.showModal({
-                    title:`确定停止${item.name}？`,
+                    title: `确定停止${item.name}？`,
                     success: (res) => {
                         if (res.confirm) {
                             this.$emit('stopOne', item.name)
@@ -238,7 +326,7 @@ export default {
                             setTimeout(() => {
                                 uni.showModal({
                                     title: `是否打开浏览器？`,
-                                    cancelText:'否',
+                                    cancelText: '否',
                                     success: (res) => {
                                         this.$emit('startOne', item.name, res.confirm)
                                     }
@@ -263,6 +351,13 @@ export default {
     background-color: white;
     max-height: 80vh;
     overflow: auto;
+
+    .activityName {
+        text-align: center;
+        line-height: 2;
+        background: rgb(31, 56, 164);
+        color: white;
+    }
 
     .loading {
         margin: 20px auto;
@@ -291,10 +386,49 @@ export default {
                 margin-left: 15px;
             }
         }
+    }
+}
 
+.check {
+    background: white;
+    padding: 15px;
 
+    .checkbox-group {
+        >* {
+            display: block;
+            line-height: 2;
+        }
     }
 
+    .start-time {
+        margin: 20px 0;
+    }
+
+    .actions {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+
+        .btn {
+            font-size: 14px;
+            line-height: 2;
+            color: white;
+
+            &.update {
+                background: rgb(46, 80, 192);
+            }
+
+            &.start {
+                background: rgb(32, 167, 122);
+
+            }
+
+            &.stop {
+                background: rgb(195, 84, 20);
+
+            }
+        }
+    }
 }
 
 .one-type {

@@ -36,7 +36,7 @@
                 <div class="activity" :style="getTitleStyle(one)">
                     <uni-swipe-action-item :right-options="activityRightOptions(one)"
                         @click="activityClick($event, one.group)">
-                        <div @click="showCalc(one.data[0].activityId)">
+                        <div @click="showCalc(one.data[0].activityId, one.group, one.data[0].port)">
                             <span>{{ (one.group || '').slice(0,
                                 20).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})</span>
                         </div>
@@ -69,8 +69,9 @@
                             </div>
 
                             <div class="audience-list">
-                                <div class="audience" v-for="(audience,audienceIndex) in item.audienceList" :key="audience"  :class="item.orders.includes(audienceIndex)?'active':''" 
-                                @click="toggleAudience(audienceIndex,item.orders)">{{audience}}</div>
+                                <div class="audience" v-for="(audience, audienceIndex) in item.audienceList" :key="audience"
+                                    :class="item.orders.includes(audienceIndex) ? 'active' : ''"
+                                    @click="clickAudience(item, audience, audienceIndex)">{{ audience }}</div>
                             </div>
                         </div>
 
@@ -87,7 +88,8 @@
                         <div class="btns">
                             <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" />
                             <button class="btn" size="mini" type="warn" v-if="item.status" @click="stop(item)">停止</button>
-                            <button class="btn" size="mini" type="primary" v-else @click="start(item)">启动</button>
+                            <button class="btn" size="mini" type="primary" v-else @click="start(item)"
+                                :disabled="loading">启动</button>
                             <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item)" />
                         </div>
                     </div>
@@ -103,80 +105,90 @@
             <image mode="widthFix" src="../static/open.svg" @click="toggleForm"
                 :class="isShowAll ? 'toggle' : 'toggle rotate'">
             </image>
-            <div class="form" v-if="isEdit">
-                <template class="basic-form" v-if="isShowAll">
-                    <search-input v-if="!isXiudong" placeholder="查询演出" :platform="platform"
-                        v-model:value="searchActivityName" @itemChange="activityChange"></search-input>
+            <scroll-view scroll-y style="max-height: 85vh;">
+                <div class="form" v-if="isEdit">
+                    <template class="basic-form" v-if="isShowAll">
+                        <search-input v-if="!isXiudong" placeholder="查询演出" :platform="platform"
+                            v-model:value="searchActivityName" @itemChange="activityChange"></search-input>
 
-                    <div v-for="(field, index) in inputFields" :key="index" class="input-wrap">
-                        <span>{{ field }}</span>
-                        <my-input type="text" v-model="editForm[field]" :placeholder="field"
-                            @change="(val) => changeEditForm(val, field)" />
+                        <div v-for="(field, index) in inputFields" :key="index" class="input-wrap">
+                            <span>{{ field }}</span>
+                            <my-input type="text" v-model="editForm[field]" :placeholder="field"
+                                @change="(val) => changeEditForm(val, field)" />
 
-                    </div>
-
-                    <div class="switches">
-                        <div class="is-success">
-                            <span>是否成功：</span>
-                            <switch :checked="editForm.hasSuccess" @change="handleSwitchChange" />
                         </div>
-                        <div class="is-success">
-                            <span>重新获取：</span>
-                            <switch :checked="editForm.isRefresh" @change="handleRefreshChange" />
+
+                        <div class="switches">
+                            <div class="is-success">
+                                <span>是否成功：</span>
+                                <switch :checked="editForm.hasSuccess" @change="handleSwitchChange" />
+                            </div>
+                            <div class="is-success">
+                                <span>重新获取：</span>
+                                <switch :checked="editForm.isRefresh" @change="handleRefreshChange" />
+                            </div>
                         </div>
-                    </div>
-                </template>
+                    </template>
 
 
-                <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
-                    <checkbox-group v-if="platform === 'xiudong' && editForm.typeMap"
-                        @change="(e) => changeTarget(editForm, e)" class="checkbox-group">
-                        <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
-                            :checked="editForm.targetTypes.includes(item)">{{ item }}
-                        </checkbox>
-                    </checkbox-group>
+                    <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
+                        <checkbox-group v-if="platform === 'xiudong' && editForm.typeMap"
+                            @change="(e) => changeTarget(editForm, e)" class="checkbox-group">
+                            <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
+                                :checked="editForm.targetTypes.includes(item)">{{ item }}
+                            </checkbox>
+                        </checkbox-group>
 
-                    <checkbox-group v-else @change="(e) => changeTarget(editForm, e)" class="checkbox-group">
-                        <checkbox :value="item" v-for="(item, index) in Object.values(editForm.skuIdToTypeMap)" :key="index"
-                            :checked="editForm.targetTypes.includes(item)">{{ item }}
-                        </checkbox>
-                    </checkbox-group>
-                </scroll-view>
+                        <checkbox-group v-else @change="(e) => changeTarget(editForm, e)" class="checkbox-group">
+                            <checkbox :value="item" v-for="(item, index) in Object.values(editForm.skuIdToTypeMap)"
+                                :key="index" :checked="editForm.targetTypes.includes(item)">{{ item }}
+                            </checkbox>
+                        </checkbox-group>
+                    </scroll-view>
 
-                <button class="btn" type="primary" @click="confirmEdit">确定修改</button>
-            </div>
-            <div class="form" v-else>
-                <template class="basic-form" v-if="isShowAll">
-                    <search-input ref="searchInput" placeholder="查询演出" :platform="platform" v-if="!isXiudong"
-                        v-model:value="searchActivityName" @itemChange="activityChange"></search-input>
-                    <div v-for="(item, index) in addItems" :key="index" class="add-form-item">
-                        <span :style="{ color: item.isSpecial ? 'red' : 'black' }">{{ item.name }}:</span>
-                        <my-input type="text" v-model="form[item.id]" :placeholder="item.id" @blur="handleBlur(item.id)" />
-                    </div>
-                </template>
-
-
-                <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
-                    <checkbox-group v-if="platform === 'xiudong' && form.typeMap" @change="(e) => changeTarget(form, e)"
-                        class="checkbox-group">
-                        <checkbox :value="item" v-for="(item, index) in Object.keys(form.typeMap)" :key="index"
-                            :checked="form.targetTypes.includes(item)">{{ item }}
-                        </checkbox>
-                    </checkbox-group>
-
-                    <checkbox-group v-else @change="(e) => changeTarget(form, e)" class="checkbox-group">
-                        <checkbox :value="item" v-for="(item, index) in Object.values(form.skuIdToTypeMap)" :key="index"
-                            :checked="form.targetTypes.includes(item)">{{ item }}
-                        </checkbox>
-                    </checkbox-group>
-                </scroll-view>
-
-                <div style="display: flex;">
-                    <button class="btn" @click="checkIsCanBuy">测试</button>
-                    <button class="btn" type="primary" @click="add">新增</button>
+                    <button class="btn" type="primary" @click="confirmEdit">确定修改</button>
                 </div>
+                <div class="form" v-else>
+                    <template class="basic-form" v-if="isShowAll">
+                        <search-input ref="searchInput" placeholder="查询演出" :platform="platform" v-if="!isXiudong"
+                            v-model:value="searchActivityName" @itemChange="activityChange"></search-input>
+                        <div v-for="(item, index) in addItems" :key="index" class="add-form-item">
+                            <span :style="{ color: item.isSpecial ? 'red' : 'black' }">{{ item.name }}:</span>
+                            <radio-group v-if="item.name === 'myUsers'" @change="(e) => changeMyUser(e)">
+                                <radio v-for="(user, index) in 
+                            item.radioOptions" :value="user" :key="index">
+                                    {{ user }}
+                                </radio>
+                            </radio-group>
 
-            </div>
+                            <my-input v-else type="text" v-model="form[item.id]" :placeholder="item.id"
+                                @blur="handleBlur(item.id)" />
+                        </div>
+                    </template>
+
+
+                    <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
+                        <checkbox-group v-if="platform === 'xiudong' && form.typeMap" @change="(e) => changeTarget(form, e)"
+                            class="checkbox-group">
+                            <checkbox :value="item" v-for="(item, index) in Object.keys(form.typeMap)" :key="index"
+                                :checked="form.targetTypes.includes(item)">{{ item }}
+                            </checkbox>
+                        </checkbox-group>
+
+                        <checkbox-group v-else @change="(e) => changeTarget(form, e)" class="checkbox-group">
+                            <checkbox :value="item" v-for="(item, index) in Object.values(form.skuIdToTypeMap)" :key="index"
+                                :checked="form.targetTypes.includes(item)">{{ item }}
+                            </checkbox>
+                        </checkbox-group>
+                    </scroll-view>
+
+                    <div style="display: flex;">
+                        <button class="btn" @click="checkIsCanBuy">测试</button>
+                        <button class="btn" type="primary" @click="add">新增</button>
+                    </div>
+
+                </div>
+            </scroll-view>
         </div>
     </uni-popup>
 
@@ -194,8 +206,9 @@
             </div>
         </div>
     </my-dialog>
-    <calc-activity ref="calc" v-model="isShowCalc" :host="host" :activityId="calcActivityId" :userConfig="dataWithoutFilter"
-        @startOne="startOne" @stopOne="stopOne" @autoStartUsers="autoStartUsers"></calc-activity>
+    <calc-activity ref="calc" v-model="isShowCalc" :host="host" :port="calcPort" :activityName="calcActivityName"
+        :activityId="calcActivityId" :userConfig="dataWithoutFilter" @startOne="startOne" @stopOne="stopOne"
+        @autoStartUsers="autoStartUsers"></calc-activity>
 </template>
 
 <script>
@@ -207,6 +220,7 @@ let platformToPortMap = {
     xiudong: '4000',
     damai: '5000',
     xingqiu: "6100",
+    maoyan: '7000'
 }
 import { request, getTagColor } from '@/utils.js'
 export default {
@@ -247,6 +261,8 @@ export default {
                 scrollTop: 0
             },
             calcActivityId: '',
+            calcActivityName: '',
+            calcPort: '',
             isShowCalc: false,
             show: false,
             windowHeight: 0,
@@ -362,6 +378,9 @@ export default {
         isDamai() {
             return this.platform === 'damai'
         },
+        isMaoyan() {
+            return this.platform === 'maoyan'
+        },
         isXiudong() {
             return this.platform === 'xiudong'
         },
@@ -369,8 +388,8 @@ export default {
             return this.platform === 'xingqiu'
         },
         addItems() {
-            let fields = this.isDamai ? ['activityId', 'port', 'showOrders', 'phone', 'password', 'username', 'uid', 'remark'] : this.isXingqiu ? ['activityId', 'port', 'showOrders', 'phone', 'username', 'uid', 'remark'] : ['activityId', 'port', 'nameIndex', 'phone', 'username', 'uid', 'remark']
-            return fields.map(one => ({ name: one, id: one, isSpecial: one === 'showOrders' }))
+            let fields = this.isDamai ? ['activityId', 'port', 'showOrders', "myUsers", 'phone', 'password', 'username', 'uid', 'remark'] : this.isXingqiu || this.isMaoyan ? ['activityId', 'port', 'showOrders', 'phone', 'username', 'uid', 'remark'] : ['activityId', 'port', 'nameIndex', 'phone', 'username', 'uid', 'remark']
+            return fields.map(one => ({ name: one, id: one, isSpecial: one === 'showOrders', radioOptions: one === 'myUsers' ? ['134', '191', '155', '181'] : [] }))
         },
         selectedActivityId() {
             return this.selectedActivityIndex !== -1 ? this.activityInfo[this.selectedActivityIndex].activityId : ''
@@ -411,17 +430,91 @@ export default {
                 xiudong: ['activityId', 'port', 'nameIndex', 'remark', 'uid', 'targetTypes', "hasSuccess"],
                 damai: ['activityId', 'port', 'password', 'showOrders', 'remark', 'uid', 'targetTypes', "hasSuccess"],
                 xingqiu: ['activityId', 'port', 'showOrders', 'remark', 'uid', 'targetTypes', "hasSuccess"],
+                maoyan: ['activityId', 'port', 'showOrders', 'remark', 'uid', 'targetTypes', "hasSuccess"],
             }
             return map[this.platform]
         }
     },
 
     methods: {
-        toggleAudience(audienceIndex,orders){
-            console.log('点击了')
-            if(orders.includes(audienceIndex)){
-                
+        changeMyUser(e) {
+            let map = {
+                "155": {
+                    phone: '15521373109',
+                    password: "hik12345",
+                },
+                "181": {
+                    phone: '18124935302',
+                    password: "hik12345",
+                },
+                "191": {
+                    phone: '19128713692',
+                    password: "open5461203",
+                },
+                "134": {
+                    phone: '13422580347',
+                    password: "open5461203",
+                }
             }
+            let { phone, password } = map[e.detail.value]
+            this.form.phone = phone
+            this.form.password = password
+            this.form.username = 'me' + Math.ceil(Math.random() * 10000)
+        },
+        clickAudience(item, audience, index) {
+            let itemList = ['删除', '复制', "切换"]
+            uni.showActionSheet({
+                itemList,
+                success: async (res) => {
+                    if ([0].includes(res.tapIndex)) {
+                        let data = {
+                            audience,
+                            phone: item.phone
+                        }
+
+                        await this.confirmAction(`确定删除【${audience}】？`)
+                        this.loading = true
+                        await request({
+                            url: this.host + "/removeAudience",
+                            data,
+                            method: 'post'
+                        });
+                        uni.showToast({
+                            icon: "none",
+                            title: '删除成功',
+                            duration: 2000,
+                        })
+                        this.loading = false
+                        this.getConfig(true)
+
+                    } else if (res.tapIndex === 1) {
+                        uni.setClipboardData({
+                            data: audience,
+                        });
+                    } else {
+                        let isSelected = item.orders.some(one => Number(one) === index)
+                        let orders = item.orders.map(one => Number(one))
+                        if (isSelected) {
+                            let i = item.orders.indexOf(index)
+                            orders.splice(i, 1)
+                        } else {
+                            orders.push(index)
+                        }
+                        this.loading = true
+                        await request({
+                            method: 'post', url: this.host + "/editConfig/", data: {
+                                username: item.username,
+                                config: {
+                                    orders
+                                }
+                            }
+                        });
+                        this.loading = false
+                        this.getConfig(true)
+
+                    }
+                }
+            })
 
         },
         async checkIsCanBuy() {
@@ -547,7 +640,7 @@ export default {
                         uni.makePhoneCall({
                             phoneNumber: phone,
                         })
-                    } else if(res.tapIndex===2){
+                    } else if (res.tapIndex === 2) {
                         uni.setClipboardData({
                             data: phone,
                         });
@@ -596,8 +689,10 @@ export default {
             }
             await this.getConfig()
         },
-        showCalc(id) {
+        showCalc(id, activityName, port) {
             this.calcActivityId = id
+            this.calcActivityName = activityName
+            this.calcPort = port
             this.isShowCalc = true
         },
         handleBlur(id) {
@@ -740,7 +835,7 @@ export default {
             return new Promise((resolve, reject) => {
                 uni.showModal({
                     title,
-                    cancelText:'否',
+                    cancelText: '否',
                     success: (res) => {
                         if (res.confirm) {
                             resolve()
@@ -764,7 +859,7 @@ export default {
             }
             let data = { ...this.form, isCopy: this.copyActivityId === this.form.activityId, showOrders: this.form.showOrders.replace(/,$/, '') }
             // todo
-            if (this.isDamai || this.isXingqiu) {
+            if (this.isDamai || this.isXingqiu || this.isMaoyan) {
                 data.targetTypes = data.targetTypes.map(name => {
                     let map = this.platform === 'xiudong' ? data.typeMap : data.skuIdToTypeMap
                     let ids = Object.keys(map)
@@ -773,7 +868,7 @@ export default {
             }
 
 
-            let arr = this.isDamai ? ['phone', 'username', 'password', 'activityId', 'port'] : this.isXingqiu ? ['phone', 'username', 'activityId', 'port'] : ['phone', 'username', 'activityId', 'port', 'nameIndex']
+            let arr = this.isDamai ? ['phone', 'username', 'password', 'activityId', 'port'] : this.isXingqiu || this.isMaoyan ? ['phone', 'username', 'activityId', 'port'] : ['phone', 'username', 'activityId', 'port', 'nameIndex']
             if (this.checkForm(data, arr)) {
                 this.loading = true
 
@@ -828,8 +923,13 @@ export default {
 
                     let handled = false
 
-                    let reg = this.isDamai ? /itemId=(\d{12})/ : /activityId=(\d{6})/
-                    let activityRes = clipData.match(reg)
+                    let regMap = {
+                        damai: /itemId=(\d{12})/,
+                        xingqiu: /activityId=(\d{6})/,
+                        xiudong: /detail\/(\d{6})/
+                    }
+                    let reg = regMap[this.platform]
+                    let activityRes = reg && clipData.match(reg)
                     if (this.isEdit) {
                         if (!this.editForm.uid && clipData.includes('UID')) {
                             this.editForm.uid = clipData
@@ -961,8 +1061,8 @@ export default {
                 one.hasSuccess = Boolean(one.hasSuccess);
                 one.status = cmds.some(cmd => cmd.split(/\s+/)[3] === one.username) ? 1 : 0;
                 one.pid = cmdToPid[cmd];
-                if (this.isDamai || this.isXingqiu) {
-                    one.orders = one.orders.map(one=> Number(one))
+                if (this.isDamai || this.isXingqiu || this.isMaoyan) {
+                    one.orders = one.orders.map(one => Number(one))
                     one.showOrders = one.orders.join(',')
                 }
             });
@@ -977,7 +1077,7 @@ export default {
             this.getGroup(filteredData, isFirstGet)
         },
         checkIsExpired(one) {
-            if (['damai', 'xingqiu'].includes(this.platform)) {
+            if (['damai', 'xingqiu', 'maoyan'].includes(this.platform)) {
                 let dates = [... new Set(Object.values(one.skuIdToTypeMap || {}).map(one => {
                     let date = one.split('_')[0];
                     let arr = date.split(/(\s+)/);
@@ -1151,13 +1251,15 @@ export default {
         >:not(:first-child) {
             line-height: 2;
         }
-        .audience-list{
-            .audience{
+
+        .audience-list {
+            .audience {
                 font-family: 楷体;
                 // font-weight: bold;
                 border-radius: 12px;
                 margin: 2px 10px;
-                &.active{
+
+                &.active {
                     background: rgb(154, 7, 190);
                     color: white;
                 }
@@ -1260,6 +1362,7 @@ input {
 .dialog {
     background-color: white;
     padding: 10px 20px;
+    padding-right: 0;
 
     .toggle {
         width: 20px;

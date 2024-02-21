@@ -16,6 +16,21 @@
 			}
 		},
 		{
+			"path": "pages/maoyan/index",
+			"style": {
+				"navigationBarTitleText": "猫眼",
+				"enablePullDownRefresh": true
+
+			}
+		},
+		{
+			"path": "pages/audience/index",
+			"style": {
+				"navigationBarTitleText": "观演人"
+
+			}
+		},
+		{
 			"path": "pages/damai/index",
 			"style": {
 				"enablePullDownRefresh": true,
@@ -48,6 +63,10 @@
 			{
 				"pagePath": "pages/xiudong/index",
 				"text": "秀动"	
+			},
+			{
+				"pagePath": "pages/maoyan/index",
+				"text": "猫眼"	
 			},
 			{
 				"pagePath": "pages/damai/index",
