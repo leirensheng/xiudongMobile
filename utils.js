@@ -57,4 +57,23 @@ let getTagColor = (tag) => {
   return tagList[tag];
 };
 
-export { request, getTagColor };
+
+let formatNumber = (val) => (val < 10 ? "0" + val : val);
+let getTime = (date) => {
+  if (!date) {
+    date = new Date();
+  }
+  let year = date.getFullYear();
+
+  let month = date.getMonth()+1
+  let day = date.getDate();
+  let hour = date.getHours();
+  let minute = date.getMinutes();
+  let second = date.getSeconds();
+
+  return `${year}-${formatNumber(month)}-${formatNumber(day)} ${formatNumber(hour)}:${formatNumber(minute)}:${formatNumber(
+    second
+  )}`;
+};
+
+export { request, getTagColor,getTime };

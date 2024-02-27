@@ -44,7 +44,7 @@
     <uni-popup ref="check" type="top">
         <div class="check">
             <div class="target-types">
-                <checkbox-group v-if="checkConfig.skuIdToTypeMap" @change="(e) => changeTarget(checkConfig, e)"
+                <checkbox-group v-if="checkConfig&&checkConfig.skuIdToTypeMap" @change="(e) => changeTarget(checkConfig, e)"
                     class="checkbox-group">
                     <checkbox :value="item" v-for="(item, index) in Object.values(checkConfig.skuIdToTypeMap)" :key="index"
                         :checked="checkConfig.onlyMonitorType.includes(item)">{{ item }}
@@ -52,7 +52,14 @@
                 </checkbox-group>
             </div>
 
-            <my-input class="start-time" type="text" v-model="checkConfig.waitForTime" placeholder="开抢时间" />
+            <div class="time-wrap">
+
+                <my-input class="start-time" type="text" v-if="checkConfig" v-model="checkConfig.waitForTime" placeholder="开抢时间" />
+    
+                <button class="btn start" @click="setTime" type="success">当前时间</button>
+            </div>
+
+
 
             <div class="actions">
 
@@ -65,7 +72,7 @@
 </template>
 
 <script>
-import { request } from '@/utils.js'
+import { request,getTime } from '@/utils.js'
 
 export default {
     data() {
@@ -141,6 +148,7 @@ export default {
     methods: {
         async stop() {
             this.loading = true
+            this.isRunning = false
             await request({ url: this.host + "/stopCheck/" + this.port });
             await this.checkIsRunning()
             this.loading = false
@@ -148,7 +156,8 @@ export default {
         },
         async start() {
             this.loading = true
-            await request({ url: this.host + "/startCheck/" + this.port });
+            this.isRunning = true
+            await request({ url: this.host + "/startCheck/" + this.port, timeout: 60000 });
             await this.checkIsRunning()
             this.loading = false
 
@@ -302,6 +311,9 @@ export default {
                 'background-size': percent + '%'
             }
         },
+        setTime(){
+            this.checkConfig.waitForTime = getTime()
+        },
         changePopup(e) {
             this.data = []
             this.$emit('update:modelValue', e.show)
@@ -400,18 +412,19 @@ export default {
         }
     }
 
+    .time-wrap{
+        display:flex;
+        align-items:center;
+    }
     .start-time {
         margin: 20px 0;
+        flex:1;
+        margin-right: 10px;
     }
 
-    .actions {
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-
-        .btn {
+    .btn {
             font-size: 14px;
-            line-height: 2;
+            line-height: 2.3;
             color: white;
 
             &.update {
@@ -428,6 +441,12 @@ export default {
 
             }
         }
+    .actions {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+
+ 
     }
 }
 
