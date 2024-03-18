@@ -77,7 +77,16 @@ export default {
 		},
 		showArr() {
 			let arr = this.isOnlySuccess ? this.msgArr.filter(one => one.type === '成功') : this.msgArr
-			return arr.filter(one => one.msg.replace(/\s{2}/, " ").includes(this.keyword))
+			if (this.keyword) {
+				return arr.filter(one => one.msg.replace(/\s{2}/, " ").includes(this.keyword))
+
+			} else {
+				if (arr.length > 900) {
+					return arr.slice(0, 900)
+				} else {
+					return arr
+				}
+			}
 		},
 	},
 	onLoad() {

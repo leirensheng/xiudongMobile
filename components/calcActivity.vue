@@ -404,6 +404,8 @@ export default {
 .check {
     background: white;
     padding: 15px;
+    overflow: auto;
+    max-height: 75vh;
 
     .checkbox-group {
         >* {

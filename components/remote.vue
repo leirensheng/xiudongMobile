@@ -275,6 +275,32 @@ export default {
             data: [],
             loading: false,
             form: {},
+            userMap:  {
+                "我": {
+                    phone: '15521373109',
+                    password: "hik12345",
+                },
+                "广": {
+                    phone: '18124935302',
+                    password: "hik12345",
+                },
+                "姐": {
+                    phone: '13422580347',
+                    password: "open5461203",
+                },
+                "姐司": {
+                    phone: '19128713692',
+                    password: "open5461203",
+                },
+                "江": {
+                    phone: '18027645865',
+                    password: "hik12345",
+                },
+                "仁": {
+                    phone: '18029400937',
+                    password: "hik12345",
+                }
+            },
             queryItems: [
                 {
                     column: 'username',
@@ -389,7 +415,7 @@ export default {
         },
         addItems() {
             let fields = this.isDamai ? ['activityId', 'port', 'showOrders', "myUsers", 'phone', 'password', 'username', 'uid', 'remark'] : this.isXingqiu || this.isMaoyan ? ['activityId', 'port', 'showOrders', 'phone', 'username', 'uid', 'remark'] : ['activityId', 'port', 'nameIndex', 'phone', 'username', 'uid', 'remark']
-            return fields.map(one => ({ name: one, id: one, isSpecial: one === 'showOrders', radioOptions: one === 'myUsers' ? ['134', '191', '155', '181'] : [] }))
+            return fields.map(one => ({ name: one, id: one, isSpecial: one === 'showOrders', radioOptions: one === 'myUsers' ? Object.keys(this.userMap) : [] }))
         },
         selectedActivityId() {
             return this.selectedActivityIndex !== -1 ? this.activityInfo[this.selectedActivityIndex].activityId : ''
@@ -438,25 +464,8 @@ export default {
 
     methods: {
         changeMyUser(e) {
-            let map = {
-                "155": {
-                    phone: '15521373109',
-                    password: "hik12345",
-                },
-                "181": {
-                    phone: '18124935302',
-                    password: "hik12345",
-                },
-                "191": {
-                    phone: '19128713692',
-                    password: "open5461203",
-                },
-                "134": {
-                    phone: '13422580347',
-                    password: "open5461203",
-                }
-            }
-            let { phone, password } = map[e.detail.value]
+           
+            let { phone, password } = this.userMap[e.detail.value]
             this.form.phone = phone
             this.form.password = password
             this.form.username = 'me' + Math.ceil(Math.random() * 10000)
