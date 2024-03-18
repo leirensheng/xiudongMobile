@@ -9,8 +9,6 @@
 
 		</div>
 		<div class="status">
-
-
 			<div style="margin-right: 10px;">勿扰: </div>
 			<switch :checked="isNoSound" @change="handleNOSoundChange" />
 

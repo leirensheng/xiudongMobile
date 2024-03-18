@@ -14,8 +14,8 @@
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
         </div> -->
         <div class="search">
-            <input v-for="(item, index) in queryItems.filter(one => one.column !== 'activityId')" :key="index" type="text"
-                :placeholder="item.column" v-model="item.value" />
+            <input v-for="(item, index) in queryItems.filter(one => one.column !== 'activityId')" :key="index"
+                type="text" :placeholder="item.column" v-model="item.value" />
             <image style="width: 20px; height: 20px; flex-shrink: 0;" src="/static/recover.svg" @click="recover"
                 v-if="isShowRecover" />
 
@@ -38,7 +38,7 @@
                         @click="activityClick($event, one.group)">
                         <div @click="showCalc(one.data[0].activityId, one.group, one.data[0].port)">
                             <span>{{ (one.group || '').slice(0,
-                                20).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})</span>
+            20).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})</span>
                         </div>
                     </uni-swipe-action-item>
                 </div>
@@ -69,9 +69,10 @@
                             </div>
 
                             <div class="audience-list">
-                                <div class="audience" v-for="(audience, audienceIndex) in item.audienceList" :key="audience"
-                                    :class="item.orders.includes(audienceIndex) ? 'active' : ''"
-                                    @click="clickAudience(item, audience, audienceIndex)">{{ audience }}</div>
+                                <div class="audience" v-for="(audience, audienceIndex) in item.audienceList"
+                                    :key="audience" :class="item.orders.includes(audienceIndex) ? 'active' : ''"
+                                    @click="clickAudience(item, audience, audienceIndex, item.phone)">{{ audience }}
+                                </div>
                             </div>
                         </div>
 
@@ -87,7 +88,8 @@
 
                         <div class="btns">
                             <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" />
-                            <button class="btn" size="mini" type="warn" v-if="item.status" @click="stop(item)">停止</button>
+                            <button class="btn" size="mini" type="warn" v-if="item.status"
+                                @click="stop(item)">停止</button>
                             <button class="btn" size="mini" type="primary" v-else @click="start(item)"
                                 :disabled="loading">启动</button>
                             <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item)" />
@@ -168,16 +170,16 @@
 
 
                     <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
-                        <checkbox-group v-if="platform === 'xiudong' && form.typeMap" @change="(e) => changeTarget(form, e)"
-                            class="checkbox-group">
+                        <checkbox-group v-if="platform === 'xiudong' && form.typeMap"
+                            @change="(e) => changeTarget(form, e)" class="checkbox-group">
                             <checkbox :value="item" v-for="(item, index) in Object.keys(form.typeMap)" :key="index"
                                 :checked="form.targetTypes.includes(item)">{{ item }}
                             </checkbox>
                         </checkbox-group>
 
                         <checkbox-group v-else @change="(e) => changeTarget(form, e)" class="checkbox-group">
-                            <checkbox :value="item" v-for="(item, index) in Object.values(form.skuIdToTypeMap)" :key="index"
-                                :checked="form.targetTypes.includes(item)">{{ item }}
+                            <checkbox :value="item" v-for="(item, index) in Object.values(form.skuIdToTypeMap)"
+                                :key="index" :checked="form.targetTypes.includes(item)">{{ item }}
                             </checkbox>
                         </checkbox-group>
                     </scroll-view>
@@ -275,7 +277,7 @@ export default {
             data: [],
             loading: false,
             form: {},
-            userMap:  {
+            userMap: {
                 "我": {
                     phone: '15521373109',
                     password: "hik12345",
@@ -464,14 +466,14 @@ export default {
 
     methods: {
         changeMyUser(e) {
-           
+
             let { phone, password } = this.userMap[e.detail.value]
             this.form.phone = phone
             this.form.password = password
             this.form.username = 'me' + Math.ceil(Math.random() * 10000)
         },
-        clickAudience(item, audience, index) {
-            let itemList = ['删除', '复制', "切换"]
+        clickAudience(item, audience, index, phone) {
+            let itemList = ['删除', '复制', "切换", "检测"]
             uni.showActionSheet({
                 itemList,
                 success: async (res) => {
@@ -500,7 +502,7 @@ export default {
                         uni.setClipboardData({
                             data: audience,
                         });
-                    } else {
+                    } else if (res.tabIndex === 2) {
                         let isSelected = item.orders.some(one => Number(one) === index)
                         let orders = item.orders.map(one => Number(one))
                         if (isSelected) {
@@ -521,6 +523,15 @@ export default {
                         this.loading = false
                         this.getConfig(true)
 
+                    } else {
+                        let isNeedToDelete = await request({
+                            url: this.host + `/checkAudience?phone=${phone}&audienceIndex=${index}`
+                        });
+                        uni.showToast({
+                            icon: "none",
+                            title: isNeedToDelete ? "可以删除" : '不可删除',
+                            duration: 2000,
+                        })
                     }
                 }
             })
@@ -1061,11 +1072,11 @@ export default {
 
             data.sort((a, b) => Number(b.port) - Number(a.port));
 
-            let notOkData =data.filter(one=> one.port==='null').map(one=> one)
-            if(notOkData.length){
+            let notOkData = data.filter(one => one.port === 'null').map(one => one)
+            if (notOkData.length) {
                 uni.showToast({
                     icon: "none",
-                    title: notOkData.map(one=> one.username).join(',')+'端口为null',
+                    title: notOkData.map(one => one.username).join(',') + '端口为null',
                     duration: 2000,
                 })
             }
@@ -1111,7 +1122,7 @@ export default {
         },
         getGroup(data, isFirstGet) {
             this.data = data
-            console.log(1111,this.data.map(one=> one.activityName))
+            console.log(1111, this.data.map(one => one.activityName))
             let res = []
             if (!data.length) {
                 this.getGroupData = []
@@ -1139,7 +1150,7 @@ export default {
             } else {
                 this.groupData = res
             }
-            console.log('组合数据',this.groupData)
+            console.log('组合数据', this.groupData)
             if (isFirstGet) {
                 this.groupDataCopy = JSON.parse(JSON.stringify(this.groupData))
             }
