@@ -560,6 +560,12 @@ export default {
         activityRightOptions(one) {
             let arr = [
                 {
+                    text: '刷新',
+                    style: {
+                        backgroundColor: 'rgb(0, 122, 255)'
+                    }
+                },
+                {
                     text: '置顶',
                     style: {
                         backgroundColor: 'rgb(0,200,0)'
@@ -822,10 +828,12 @@ export default {
         },
         async activityClick({ index }, groupName) {
             if (index === 0) {
+                this.getConfig(true)
+            } else if (index === 1) {
                 this.fixedTopActivity = groupName
                 uni.setStorageSync(this.platform + 'FixedTopActivity', this.fixedTopActivity)
                 this.filterData()
-            } else if (index === 1) {
+            } else if (index === 2) {
                 console.log("删除全部1")
                 this.loading = true
                 await request({
