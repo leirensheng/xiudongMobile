@@ -14,8 +14,8 @@
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
         </div> -->
         <div class="search">
-            <input v-for="(item, index) in queryItems.filter(one => one.column !== 'activityId')" :key="index"
-                type="text" :placeholder="item.column" v-model="item.value" />
+            <input v-for="(item, index) in queryItems.filter(one => one.column !== 'activityId')" :key="index" type="text"
+                :placeholder="item.column" v-model="item.value" />
             <image style="width: 20px; height: 20px; flex-shrink: 0;" src="/static/recover.svg" @click="recover"
                 v-if="isShowRecover" />
 
@@ -37,8 +37,7 @@
                     <uni-swipe-action-item :right-options="activityRightOptions(one)"
                         @click="activityClick($event, one.group)">
                         <div @click="showCalc(one.data[0].activityId, one.group, one.data[0].port)">
-                            <span>{{ (one.group || '').slice(0,
-            20).replace(/(\s+)|」|「/g, '') }}({{ one.data.length }})</span>
+                            <span>{{ getShowActivityName(one.group) }}({{ one.data.length }})</span>
                         </div>
                     </uni-swipe-action-item>
                 </div>
@@ -69,9 +68,10 @@
                             </div>
 
                             <div class="audience-list">
-                                <div class="audience" v-for="(audience, audienceIndex) in item.audienceList"
-                                    :key="audience" :class="item.orders.includes(audienceIndex) ? 'active' : ''"
-                                    @click="clickAudience(item, audience, audienceIndex, item.phone)">{{ audience }}
+                                <div class="audience" v-for="(audience, audienceIndex) in item.audienceList" :key="audience"
+                                    :class="item.orders.includes(audienceIndex) ? 'active' : ''"
+                                    @click="clickAudience(item, audience, audienceIndex, item.phone)">{{
+                                        audienceIndex === item.audienceList.length - 1 ? `${audience}(${audienceIndex + 1})` : audience }}
                                 </div>
                             </div>
                         </div>
@@ -88,8 +88,7 @@
 
                         <div class="btns">
                             <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" />
-                            <button class="btn" size="mini" type="warn" v-if="item.status"
-                                @click="stop(item)">停止</button>
+                            <button class="btn" size="mini" type="warn" v-if="item.status" @click="stop(item)">停止</button>
                             <button class="btn" size="mini" type="primary" v-else @click="start(item)"
                                 :disabled="loading">启动</button>
                             <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item)" />
@@ -170,16 +169,16 @@
 
 
                     <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
-                        <checkbox-group v-if="platform === 'xiudong' && form.typeMap"
-                            @change="(e) => changeTarget(form, e)" class="checkbox-group">
+                        <checkbox-group v-if="platform === 'xiudong' && form.typeMap" @change="(e) => changeTarget(form, e)"
+                            class="checkbox-group">
                             <checkbox :value="item" v-for="(item, index) in Object.keys(form.typeMap)" :key="index"
                                 :checked="form.targetTypes.includes(item)">{{ item }}
                             </checkbox>
                         </checkbox-group>
 
                         <checkbox-group v-else @change="(e) => changeTarget(form, e)" class="checkbox-group">
-                            <checkbox :value="item" v-for="(item, index) in Object.values(form.skuIdToTypeMap)"
-                                :key="index" :checked="form.targetTypes.includes(item)">{{ item }}
+                            <checkbox :value="item" v-for="(item, index) in Object.values(form.skuIdToTypeMap)" :key="index"
+                                :checked="form.targetTypes.includes(item)">{{ item }}
                             </checkbox>
                         </checkbox-group>
                     </scroll-view>
@@ -465,6 +464,21 @@ export default {
     },
 
     methods: {
+        getShowActivityName(name) {
+            let str = (name || '').replace(/(\s+)|」|「|(巡回)|(演唱会)|(Ugly)|(Beauty)|(FINALE)|(世界)/g, '')
+            let result = []
+            let length = 0
+            for (let one of str) {
+                if (length >= 20) break;
+                if (one.match(/[a-zA-Z]/)) {
+                    length += 0.5
+                } else {
+                    length += 1
+                }
+                result.push(one)
+            }
+            return result.join('')
+        },
         changeMyUser(e) {
 
             let { phone, password } = this.userMap[e.detail.value]
@@ -472,37 +486,40 @@ export default {
             this.form.password = password
             this.form.username = 'me' + Math.ceil(Math.random() * 10000)
         },
+        async removeOneAudience(audience, phone) {
+            let data = {
+                audience,
+                phone
+            }
+            await this.confirmAction(`确定删除【${audience}】？`)
+            this.loading = true
+            await request({
+                url: this.host + "/removeAudience",
+                data,
+                method: 'post'
+            });
+            uni.showToast({
+                icon: "none",
+                title: '删除成功',
+                duration: 2000,
+            })
+            this.loading = false
+            this.getConfig(true)
+        },
         clickAudience(item, audience, index, phone) {
             let itemList = ['删除', '复制', "切换", "检测"]
             uni.showActionSheet({
                 itemList,
                 success: async (res) => {
                     if ([0].includes(res.tapIndex)) {
-                        let data = {
-                            audience,
-                            phone: item.phone
-                        }
 
-                        await this.confirmAction(`确定删除【${audience}】？`)
-                        this.loading = true
-                        await request({
-                            url: this.host + "/removeAudience",
-                            data,
-                            method: 'post'
-                        });
-                        uni.showToast({
-                            icon: "none",
-                            title: '删除成功',
-                            duration: 2000,
-                        })
-                        this.loading = false
-                        this.getConfig(true)
+                        this.removeOneAudience(audience, item.phone)
 
                     } else if (res.tapIndex === 1) {
                         uni.setClipboardData({
                             data: audience,
                         });
-                    } else if (res.tabIndex === 2) {
+                    } else if (res.tapIndex === 2) {
                         let isSelected = item.orders.some(one => Number(one) === index)
                         let orders = item.orders.map(one => Number(one))
                         if (isSelected) {
@@ -527,11 +544,15 @@ export default {
                         let isNeedToDelete = await request({
                             url: this.host + `/checkAudience?phone=${phone}&audienceIndex=${index}`
                         });
+                        let name = item.audienceList[index]
                         uni.showToast({
                             icon: "none",
-                            title: isNeedToDelete ? "可以删除" : '不可删除',
+                            title: `【${name}】` + (isNeedToDelete ? `可以删除` : '不可删除'),
                             duration: 2000,
                         })
+                        if (isNeedToDelete) {
+                            await this.removeOneAudience(name, phone)
+                        }
                     }
                 }
             })
@@ -635,7 +656,11 @@ export default {
             this.editForm.activityId = id
             this.form.activityId = id
 
-            let port = this.getValidPort()
+
+            let existActivity = this.groupData.find(one => String(one.activityId) === String(id))
+
+
+            let port = existActivity.port || this.getValidPort()
             this.editForm.port = port
             this.form.port = port
 
@@ -684,7 +709,7 @@ export default {
             this.isShowAll = !this.isShowAll
         },
         async startOne(user, isShow) {
-            let item = this.data.find(one => one.username === user)
+            let item = this.dataWithoutFilter.find(one => one.username === user)
             item.isShow = isShow
             try {
                 await this.start(item)
@@ -694,7 +719,7 @@ export default {
             }
         },
         async stopOne(user) {
-            let item = this.data.find(one => one.username === user)
+            let item = this.dataWithoutFilter.find(one => one.username === user)
             await this.stop(item)
             this.$refs.calc.refreshDialog()
         },
@@ -703,7 +728,7 @@ export default {
             let total = users.length
             let done = 0
             for (let user of users) {
-                let item = this.data.find(one => one.username === user)
+                let item = this.dataWithoutFilter.find(one => one.username === user)
 
                 try {
                     await this.start(item, true)
@@ -908,7 +933,7 @@ export default {
                 this.reset()
                 await this.getConfig(true)
                 this.loading = false
-                let target = this.data.find(one => one.username === data.username)
+                let target = this.dataWithoutFilter.find(one => one.username === data.username)
                 target.isShow = true
                 this.start(target)
 

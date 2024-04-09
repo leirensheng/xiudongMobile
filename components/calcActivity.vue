@@ -44,7 +44,7 @@
     <uni-popup ref="check" type="top">
         <div class="check">
             <div class="target-types">
-                <checkbox-group v-if="checkConfig&&checkConfig.skuIdToTypeMap" @change="(e) => changeTarget(checkConfig, e)"
+                <checkbox-group v-if="checkConfig && checkConfig.skuIdToTypeMap" @change="(e) => changeTarget(checkConfig, e)"
                     class="checkbox-group">
                     <checkbox :value="item" v-for="(item, index) in Object.values(checkConfig.skuIdToTypeMap)" :key="index"
                         :checked="checkConfig.onlyMonitorType.includes(item)">{{ item }}
@@ -54,8 +54,9 @@
 
             <div class="time-wrap">
 
-                <my-input class="start-time" type="text" v-if="checkConfig" v-model="checkConfig.waitForTime" placeholder="开抢时间" />
-    
+                <my-input class="start-time" type="text" v-if="checkConfig" v-model="checkConfig.waitForTime"
+                    placeholder="开抢时间" />
+
                 <button class="btn start" @click="setTime" type="success">当前时间</button>
             </div>
 
@@ -72,7 +73,7 @@
 </template>
 
 <script>
-import { request,getTime } from '@/utils.js'
+import { request, getTime } from '@/utils.js'
 
 export default {
     data() {
@@ -211,7 +212,7 @@ export default {
             this.data = Object.keys(data).map(type => ({ ...data[type], type }))
             let max = Math.max(... this.data.map(one => one.allLength))
             this.data.forEach(one => {
-                one.percent = Math.floor(one.allLength / max * 100)
+                one.percent = max ? Math.floor(one.allLength / max * 100) : 0
                 one.runningPercent = one.allLength ? one.runningLength / one.allLength * one.percent : 0
             })
             // console.log(this.data)
@@ -311,7 +312,7 @@ export default {
                 'background-size': percent + '%'
             }
         },
-        setTime(){
+        setTime() {
             this.checkConfig.waitForTime = getTime()
         },
         changePopup(e) {
@@ -414,41 +415,43 @@ export default {
         }
     }
 
-    .time-wrap{
-        display:flex;
-        align-items:center;
+    .time-wrap {
+        display: flex;
+        align-items: center;
     }
+
     .start-time {
         margin: 20px 0;
-        flex:1;
+        flex: 1;
         margin-right: 10px;
     }
 
     .btn {
-            font-size: 14px;
-            line-height: 2.3;
-            color: white;
+        font-size: 14px;
+        line-height: 2.3;
+        color: white;
 
-            &.update {
-                background: rgb(46, 80, 192);
-            }
-
-            &.start {
-                background: rgb(32, 167, 122);
-
-            }
-
-            &.stop {
-                background: rgb(195, 84, 20);
-
-            }
+        &.update {
+            background: rgb(46, 80, 192);
         }
+
+        &.start {
+            background: rgb(32, 167, 122);
+
+        }
+
+        &.stop {
+            background: rgb(195, 84, 20);
+
+        }
+    }
+
     .actions {
         display: flex;
         justify-content: space-around;
         align-items: center;
 
- 
+
     }
 }
 
@@ -496,5 +499,4 @@ export default {
     }
 
     // justify-content: space-between;
-}
-</style>
+}</style>

@@ -71,16 +71,16 @@ export default {
 	},
 	computed: {
 		successLength() {
-			return this.msgArr.filter(one => one.type === '成功').length
+			return this.msgArr.filter(one => one.type === 'success').length
 		},
 		showArr() {
-			let arr = this.isOnlySuccess ? this.msgArr.filter(one => one.type === '成功') : this.msgArr
+			let arr = this.isOnlySuccess ? this.msgArr.filter(one => one.type === 'success') : this.msgArr
 			if (this.keyword) {
 				return arr.filter(one => one.msg.replace(/\s{2}/, " ").includes(this.keyword))
 
 			} else {
 				if (arr.length > 900) {
-					return arr.slice(0, 900)
+					return arr.slice(0, 400)
 				} else {
 					return arr
 				}

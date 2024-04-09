@@ -89,11 +89,13 @@ export default {
             let map = {
                 'xingqiu': 'showId',
                 'damai': 'projectid',
+                'maoyan':'id',
             }
             return map[this.platform]
         },
         showField() {
             let map = {
+                'maoyan':'name',
                 'xingqiu': 'activityName',
                 'damai': 'nameNoHtml'
             }
@@ -164,6 +166,19 @@ export default {
                     records: searchData,
                     total: searchData.length
                 }
+            } if (this.platform === 'maoyan') {
+                let { data: { performanceVOList } } = await request({
+                    noHandleCode: true,
+                    url: "https://show.maoyan.com/maoyansh/myshow/ajax/search/0;st=0;p=1;s=20;tft=0?k=" + encodeURIComponent(this.showValue),
+                })
+                performanceVOList.forEach(one => {
+                    one.activityName = one.name
+                    one.id = one.shareLink.match(/id=(\d{6})/)[1]
+                })
+                res = {
+                    records: performanceVOList,
+                    total: performanceVOList.length
+                }
             } else if (this.platform === 'damai') {
                 let test = await request({
                     noHandleCode: true,
@@ -179,7 +194,7 @@ export default {
                     records: resultData,
                     total: resultData.length
                 }
-            } 
+            }
 
 
             let { records: list, total } = res
