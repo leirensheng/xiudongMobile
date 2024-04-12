@@ -338,7 +338,7 @@ export default {
                         if (res.confirm) {
                             setTimeout(() => {
                                 uni.showModal({
-                                    title: `是否打开浏览器？`,
+                                    title: `是否循环点击/打开浏览器？`,
                                     cancelText: '否',
                                     success: (res) => {
                                         this.$emit('startOne', item.name, res.confirm)

@@ -207,7 +207,7 @@ export default {
 					title: '启动中'
 				});
 				try {
-					await request({ method: 'post', url: "http://mticket.ddns.net:5000/startUserFromRemote/", data: { cmd: `npm run start ${item.canStart} 1 true` } });
+					await request({ method: 'post', url: "http://mticket.ddns.net:5000/startUserFromRemote/", data: { cmd: `npm run start ${item.canStart} 1` } });
 				} catch (e) {
 					console.log(e)
 				}

@@ -1076,7 +1076,7 @@ export default {
         async start(item, isNoRefresh) {
             this.loading = true
             try {
-                await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd + (item.isShow ? (this.isDamai ? ` 1 true` : ' show') : ''), isStopWhenLogin: isNoRefresh } });
+                await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd + (item.isShow ? (this.isDamai ? ` 1 loop` : ' show') : ''), isStopWhenLogin: isNoRefresh } });
             } catch (e) {
                 console.log(e)
             }
