@@ -11,7 +11,7 @@ export default {
     },
     data() {
         return {
-            src:"http://mticket.ddns.net:7777/#/audience?agent=me&platform=damai"
+            src:"http://mticket.ddns.net:7777/#/audience?agent=me&platform=damai&t="+Date.now()
         };
     },
     created() {

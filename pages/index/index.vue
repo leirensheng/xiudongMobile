@@ -11,7 +11,11 @@
 		<div class="status">
 			<div style="margin-right: 10px;">勿扰: </div>
 			<switch :checked="isNoSound" @change="handleNOSoundChange" />
+<!-- 
+			<div style="margin-right: 10px;">勿扰: </div>
+			<switch :checked="isNoSound" @change="handleNOSoundChange" />
 
+ -->
 			<div style="margin-right: 10px;">仅成功: </div>
 			<switch :checked="isOnlySuccess" @change="handleOnlySuccessChange" />
 			<my-input class="keyword" type="text" v-model="keyword" placeholder="筛选" />
@@ -165,7 +169,7 @@ export default {
 				src = '/static/wrong.wav'
 			} else if (msg.includes('有票')) {
 				src = '/static/hasTicket.mp3'
-			} else {
+			} else if(type === 'addAudience'){
 				src = '/static/info.wav'
 			}
 

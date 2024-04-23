@@ -656,9 +656,7 @@ export default {
             this.editForm.activityId = id
             this.form.activityId = id
 
-
-            let existActivity = this.groupData.find(one => String(one.activityId) === String(id))
-
+            let existActivity = this.dataWithoutFilter.find(one => String(one.activityId) === String(id))
 
             let port = existActivity.port || this.getValidPort()
             this.editForm.port = port
