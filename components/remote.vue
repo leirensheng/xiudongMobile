@@ -106,7 +106,7 @@
             <image mode="widthFix" src="../static/open.svg" @click="toggleForm"
                 :class="isShowAll ? 'toggle' : 'toggle rotate'">
             </image>
-            <scroll-view scroll-y style="max-height: 85vh;">
+            <scroll-view scroll-y style="max-height: 90vh;">
                 <div class="form" v-if="isEdit">
                     <template class="basic-form" v-if="isShowAll">
                         <search-input v-if="!isXiudong" placeholder="查询演出" :platform="platform"
@@ -932,7 +932,6 @@ export default {
                 await this.getConfig(true)
                 this.loading = false
                 let target = this.dataWithoutFilter.find(one => one.username === data.username)
-                target.isShow = true
                 this.start(target)
 
 
