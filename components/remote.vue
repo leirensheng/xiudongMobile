@@ -1,1509 +1,1897 @@
 <template>
-    <div class="remote" ref="remote">
-        <progress :percent="percent" show-info stroke-width="3" class="progress" v-if="![0, 100].includes(percent)" />
+  <div class="remote" ref="remote">
+    <progress
+      :percent="percent"
+      show-info
+      stroke-width="3"
+      class="progress"
+      v-if="![0, 100].includes(percent)"
+    />
 
-        <page-meta :page-style="'overflow:' + (show || isShowCalc ? 'hidden' : 'visible')"></page-meta>
+    <page-meta
+      :page-style="'overflow:' + (show || isShowCalc ? 'hidden' : 'visible')"
+    ></page-meta>
 
-        <div class="fail">
-            <div class="fail-item" v-for="(item, index) in failCmds" :key="index">{{ item }}</div>
-        </div>
+    <div class="fail">
+      <div class="fail-item" v-for="(item, index) in failCmds" :key="index">
+        {{ item }}
+      </div>
+    </div>
 
-        <!-- {{ clientid }} -->
-        <!-- <div class="pcs">
+    <!-- {{ clientid }} -->
+    <!-- <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
         </div> -->
-        <div class="search">
-            <input v-for="(item, index) in queryItems.filter(one => one.column !== 'activityId')" :key="index" type="text"
-                :placeholder="item.column" v-model="item.value" />
-            <image style="width: 20px; height: 20px; flex-shrink: 0;" src="/static/recover.svg" @click="recover"
-                v-if="isShowRecover" />
+    <div class="search">
+      <input
+        v-for="(item, index) in queryItems.filter(
+          (one) => one.column !== 'activityId'
+        )"
+        :key="index"
+        type="text"
+        :placeholder="item.column"
+        v-model="item.value"
+      />
+      <image
+        style="width: 20px; height: 20px; flex-shrink: 0"
+        src="/static/recover.svg"
+        @click="recover"
+        v-if="isShowRecover"
+      />
 
-            <image style="width: 20px; height: 20px; flex-shrink: 0;" src="/static/add2.svg" @click="addActivity" />
+      <image
+        style="width: 20px; height: 20px; flex-shrink: 0"
+        src="/static/add2.svg"
+        @click="addActivity"
+      />
 
-
-            <picker v-show="activities.length" @change="bindPickerChange" :value="selectedActivityIndex"
-                :range="activities">
-                <image style="width: 16px;height:16px" src="/static/filter.svg" v-if="selectedActivityIndex === -1" />
-                <image v-else style="width: 16px;height:16px" src="/static/filterSelected.svg" />
-
-            </picker>
-        </div>
-
-
-        <uni-swipe-action>
-            <template v-for="(one, index) in groupData" :key="one.group+index">
-                <div class="activity" :style="getTitleStyle(one)">
-                    <uni-swipe-action-item :right-options="activityRightOptions(one)"
-                        @click="activityClick($event, one.group)">
-                        <div @click="showCalc(one.data[0].activityId, one.group, one.data[0].port)">
-                            <span>{{ getShowActivityName(one.group) }}({{ one.data.length }})</span>
-                        </div>
-                    </uni-swipe-action-item>
-                </div>
-                <uni-swipe-action-item v-for="(item) in one.data" :right-options="rightOptions"
-                    :key="item.username + item.phone" @click="swipeClick($event, item)" :disabled="!!item.status">
-
-                    <!-- <div class="activity" v-if="index===0|| (item.activityName!== data[index-1].activityName )">{{item.activityName}}</div> -->
-
-                    <div class="item" :style="getStyle(item)" :key="item.username + item.phone"
-                        :id="item.username + item.phone">
-                        <div class="first">
-                            <div v-if="item.uid">
-                                <image class="msg-icon" src="/static/msg.svg" @click="openMsg(item.uid)" />
-                            </div>
-
-                            <div @click="callOrCopyPhone(item.phone)">{{ item.phone }}</div>
-                            <div class="name" @click="copyUsername(item.username)">
-                                {{ item.username }}
-                            </div>
-
-                            <div class="order">
-                                <checkbox-group @change="item.isShow = !item.isShow">
-                                    <checkbox :checked="item.isShow">
-                                        <div v-if="isXiudong">{{ item.nameIndex }}</div>
-                                        <div v-else>{{ item.showOrders }}</div>
-                                    </checkbox>
-                                </checkbox-group>
-                            </div>
-
-                            <div class="audience-list">
-                                <div class="audience" v-for="(audience, audienceIndex) in item.audienceList" :key="audience"
-                                    :class="item.orders.includes(audienceIndex) ? 'active' : ''"
-                                    @click="clickAudience(item, audience, audienceIndex, item.phone)">{{
-                                        audienceIndex === item.audienceList.length - 1 ? `${audience}(${audienceIndex + 1})` : audience }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="targetTypes">
-                            <div class="target-type" v-for="(targetType, index) in item.targetTypes" :key="index"
-                                :style="{ background: getTagColor(targetType) }">{{ targetType }}</div>
-                        </div>
-
-
-                        <div class="remark">
-                            {{ item.remark }}
-                        </div>
-
-                        <div class="btns">
-                            <image class="copy" src="/static/edit.svg" @click="openEditDialog(item)" />
-                            <button class="btn" size="mini" type="warn" v-if="item.status" @click="stop(item)">停止</button>
-                            <button class="btn" size="mini" type="primary" v-else @click="start(item)"
-                                :disabled="loading">启动</button>
-                            <image class="copy" src="/static/copy.svg" @click="openCopyDialog(item)" />
-                        </div>
-                    </div>
-                </uni-swipe-action-item>
-            </template>
-        </uni-swipe-action>
+      <picker
+        v-show="activities.length"
+        @change="bindPickerChange"
+        :value="selectedActivityIndex"
+        :range="activities"
+      >
+        <image
+          style="width: 16px; height: 16px"
+          src="/static/filter.svg"
+          v-if="selectedActivityIndex === -1"
+        />
+        <image
+          v-else
+          style="width: 16px; height: 16px"
+          src="/static/filterSelected.svg"
+        />
+      </picker>
     </div>
-    <!-- <page-meta :page-style="'overflow:' + (show ? 'hidden' : 'visible')"></page-meta> -->
 
-
-    <uni-popup ref="popup" type="bottom" @touchmove.stop @change="changePopup">
-        <div class="dialog" @touchmove.stop>
-            <image mode="widthFix" src="../static/open.svg" @click="toggleForm"
-                :class="isShowAll ? 'toggle' : 'toggle rotate'">
-            </image>
-            <scroll-view scroll-y style="max-height: 90vh;">
-                <div class="form" v-if="isEdit">
-                    <template class="basic-form" v-if="isShowAll">
-                        <search-input v-if="!isXiudong" placeholder="查询演出" :platform="platform"
-                            v-model:value="searchActivityName" @itemChange="activityChange"></search-input>
-
-                        <div v-for="(field, index) in inputFields" :key="index" class="input-wrap">
-                            <span>{{ field }}</span>
-                            <my-input type="text" v-model="editForm[field]" :placeholder="field"
-                                @change="(val) => changeEditForm(val, field)" />
-
-                        </div>
-
-                        <div class="switches">
-                            <div class="is-success">
-                                <span>是否成功：</span>
-                                <switch :checked="editForm.hasSuccess" @change="handleSwitchChange" />
-                            </div>
-                            <div class="is-success">
-                                <span>重新获取：</span>
-                                <switch :checked="editForm.isRefresh" @change="handleRefreshChange" />
-                            </div>
-                        </div>
-                    </template>
-
-
-                    <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
-                        <checkbox-group v-if="platform === 'xiudong' && editForm.typeMap"
-                            @change="(e) => changeTarget(editForm, e)" class="checkbox-group">
-                            <checkbox :value="item" v-for="(item, index) in Object.keys(editForm.typeMap)" :key="index"
-                                :checked="editForm.targetTypes.includes(item)">{{ item }}
-                            </checkbox>
-                        </checkbox-group>
-
-                        <checkbox-group v-else @change="(e) => changeTarget(editForm, e)" class="checkbox-group">
-                            <checkbox :value="item" v-for="(item, index) in Object.values(editForm.skuIdToTypeMap)"
-                                :key="index" :checked="editForm.targetTypes.includes(item)">{{ item }}
-                            </checkbox>
-                        </checkbox-group>
-                    </scroll-view>
-
-                    <button class="btn" type="primary" @click="confirmEdit">确定修改</button>
-                </div>
-                <div class="form" v-else>
-                    <template class="basic-form" v-if="isShowAll">
-                        <search-input ref="searchInput" placeholder="查询演出" :platform="platform" v-if="!isXiudong"
-                            v-model:value="searchActivityName" @itemChange="activityChange"></search-input>
-                        <div v-for="(item, index) in addItems" :key="index" class="add-form-item">
-                            <span :style="{ color: item.isSpecial ? 'red' : 'black' }">{{ item.name }}:</span>
-                            <radio-group v-if="item.name === 'myUsers'" @change="(e) => changeMyUser(e)">
-                                <radio v-for="(user, index) in 
-                            item.radioOptions" :value="user" :key="index">
-                                    {{ user }}
-                                </radio>
-                            </radio-group>
-
-                            <my-input v-else type="text" v-model="form[item.id]" :placeholder="item.id"
-                                @blur="handleBlur(item.id)" />
-                        </div>
-                    </template>
-
-
-                    <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
-                        <checkbox-group v-if="platform === 'xiudong' && form.typeMap" @change="(e) => changeTarget(form, e)"
-                            class="checkbox-group">
-                            <checkbox :value="item" v-for="(item, index) in Object.keys(form.typeMap)" :key="index"
-                                :checked="form.targetTypes.includes(item)">{{ item }}
-                            </checkbox>
-                        </checkbox-group>
-
-                        <checkbox-group v-else @change="(e) => changeTarget(form, e)" class="checkbox-group">
-                            <checkbox :value="item" v-for="(item, index) in Object.values(form.skuIdToTypeMap)" :key="index"
-                                :checked="form.targetTypes.includes(item)">{{ item }}
-                            </checkbox>
-                        </checkbox-group>
-                    </scroll-view>
-
-                    <div style="display: flex;">
-                        <button class="btn" @click="checkIsCanBuy">测试</button>
-                        <button class="btn" type="primary" @click="add">新增</button>
-                    </div>
-
-                </div>
-            </scroll-view>
-        </div>
-    </uni-popup>
-
-    <my-dialog v-model:value="msgDialogShow">
-        <div class="dialog msg-dialog" @touchmove.stop>
-            <div class="msg-template">
-                <button @click="setTestMsg">测试</button>
-                <button @click="setXingqiuMsg">星球</button>
-                <button @click="setDamaiMsg">大麦</button>
+    <uni-swipe-action>
+      <template v-for="(one, index) in groupData" :key="one.group + index">
+        <div class="activity" :style="getTitleStyle(one)">
+          <uni-swipe-action-item
+            :right-options="activityRightOptions(one)"
+            @click="activityClick($event, one.group)"
+          >
+            <div
+              @click="
+                showCalc(one.data[0].activityId, one.group, one.data[0].port)
+              "
+            >
+              <span
+                >{{ getShowActivityName(one.group) }}({{
+                  one.data.length
+                }})</span
+              >
             </div>
-            <textarea type="textarea" v-model="msgToUser" />
-            <div class="btn-wrap">
-                <button size="medium" @click="msgToUser = ''">清空</button>
-                <button size="medium" class="btn" type="primary" @click="sendMsgToUser">发送</button>
-            </div>
+          </uni-swipe-action-item>
         </div>
-    </my-dialog>
-    <calc-activity ref="calc" v-model="isShowCalc" :host="host" :port="calcPort" :activityName="calcActivityName"
-        :activityId="calcActivityId" :userConfig="dataWithoutFilter" @startOne="startOne" @stopOne="stopOne"
-        @autoStartUsers="autoStartUsers"></calc-activity>
+        <uni-swipe-action-item
+          v-for="item in one.data"
+          :right-options="rightOptions"
+          :key="item.username + item.phone"
+          @click="swipeClick($event, item)"
+          :disabled="!!item.status"
+        >
+          <!-- <div class="activity" v-if="index===0|| (item.activityName!== data[index-1].activityName )">{{item.activityName}}</div> -->
+
+          <div
+            class="item"
+            :style="getStyle(item)"
+            :key="item.username + item.phone"
+            :id="item.username + item.phone"
+          >
+            <div class="first">
+              <div v-if="item.uid">
+                <image
+                  class="msg-icon"
+                  src="/static/msg.svg"
+                  @click="openMsg(item.uid)"
+                />
+              </div>
+
+              <div @click="callOrCopyPhone(item.phone)">{{ item.phone }}</div>
+              <div class="name" @click="copyUsername(item.username)">
+                {{ item.username }}
+              </div>
+
+              <div class="order">
+                <checkbox-group @change="item.isShow = !item.isShow">
+                  <checkbox :checked="item.isShow">
+                    <div v-if="isXiudong">{{ item.nameIndex }}</div>
+                    <div v-else>{{ item.showOrders }}</div>
+                  </checkbox>
+                </checkbox-group>
+              </div>
+
+              <div class="audience-list">
+                <div
+                  class="audience"
+                  v-for="(audience, audienceIndex) in item.audienceList"
+                  :key="audience"
+                  :class="item.orders.includes(audienceIndex) ? 'active' : ''"
+                  @click="
+                    clickAudience(item, audience, audienceIndex, item.phone)
+                  "
+                >
+                  {{
+                    audienceIndex === item.audienceList.length - 1
+                      ? `${audience}(${audienceIndex + 1})`
+                      : audience
+                  }}
+                </div>
+              </div>
+            </div>
+
+            <div class="targetTypes">
+              <div
+                class="target-type"
+                v-for="(targetType, index) in item.targetTypes"
+                :key="index"
+                :style="{ background: getTagColor(targetType) }"
+              >
+                {{ targetType }}
+              </div>
+            </div>
+
+            <div class="remark">
+              {{ item.remark }}
+            </div>
+
+            <div class="btns">
+              <image
+                class="copy"
+                src="/static/edit.svg"
+                @click="openEditDialog(item)"
+              />
+              <button
+                class="btn"
+                size="mini"
+                type="warn"
+                v-if="item.status"
+                @click="stop(item)"
+              >
+                停止
+              </button>
+              <button
+                class="btn"
+                size="mini"
+                type="primary"
+                v-else
+                @click="start(item)"
+                :disabled="loading"
+              >
+                启动
+              </button>
+              <image
+                class="copy"
+                src="/static/copy.svg"
+                @click="openCopyDialog(item)"
+              />
+            </div>
+          </div>
+        </uni-swipe-action-item>
+      </template>
+    </uni-swipe-action>
+  </div>
+  <!-- <page-meta :page-style="'overflow:' + (show ? 'hidden' : 'visible')"></page-meta> -->
+
+  <uni-popup ref="popup" type="bottom" @touchmove.stop @change="changePopup">
+    <div class="dialog" @touchmove.stop>
+      <image
+        mode="widthFix"
+        src="../static/open.svg"
+        @click="toggleForm"
+        :class="isShowAll ? 'toggle' : 'toggle rotate'"
+      >
+      </image>
+      <scroll-view scroll-y style="max-height: 90vh">
+        <div class="form" v-if="isEdit">
+          <template class="basic-form" v-if="isShowAll">
+            <search-input
+              v-if="!isXiudong"
+              placeholder="查询演出"
+              :platform="platform"
+              v-model:value="searchActivityName"
+              @itemChange="activityChange"
+            ></search-input>
+
+            <div
+              v-for="(field, index) in inputFields"
+              :key="index"
+              class="input-wrap"
+            >
+              <span>{{ field }}</span>
+              <my-input
+                type="text"
+                v-model="editForm[field]"
+                :placeholder="field"
+                @change="(val) => changeEditForm(val, field)"
+              />
+            </div>
+
+            <div class="switches">
+              <div class="is-success">
+                <span>是否成功：</span>
+                <switch
+                  :checked="editForm.hasSuccess"
+                  @change="handleSwitchChange"
+                />
+              </div>
+              <div class="is-success">
+                <span>重新获取：</span>
+                <switch
+                  :checked="editForm.isRefresh"
+                  @change="handleRefreshChange"
+                />
+              </div>
+            </div>
+          </template>
+
+          <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
+            <checkbox-group
+              v-if="platform === 'xiudong' && editForm.typeMap"
+              @change="(e) => changeTarget(editForm, e)"
+              class="checkbox-group"
+            >
+              <checkbox
+                :value="item"
+                v-for="(item, index) in Object.keys(editForm.typeMap)"
+                :key="index"
+                :checked="editForm.targetTypes.includes(item)"
+                >{{ item }}
+              </checkbox>
+            </checkbox-group>
+
+            <checkbox-group
+              v-else
+              @change="(e) => changeTarget(editForm, e)"
+              class="checkbox-group"
+            >
+              <checkbox
+                :value="item"
+                v-for="(item, index) in Object.values(editForm.skuIdToTypeMap)"
+                :key="index"
+                :checked="editForm.targetTypes.includes(item)"
+                >{{ item }}
+              </checkbox>
+            </checkbox-group>
+          </scroll-view>
+
+          <button class="btn" type="primary" @click="confirmEdit">
+            确定修改
+          </button>
+        </div>
+        <div class="form" v-else>
+          <template class="basic-form" v-if="isShowAll">
+            <search-input
+              ref="searchInput"
+              placeholder="查询演出"
+              :platform="platform"
+              v-if="!isXiudong"
+              v-model:value="searchActivityName"
+              @itemChange="activityChange"
+            ></search-input>
+            <div
+              v-for="(item, index) in addItems"
+              :key="index"
+              class="add-form-item"
+            >
+              <span :style="{ color: item.isSpecial ? 'red' : 'black' }"
+                >{{ item.name }}:</span
+              >
+              <radio-group
+                v-if="item.name === 'myUsers'"
+                @change="(e) => changeMyUser(e)"
+              >
+                <radio
+                  v-for="(user, index) in item.radioOptions"
+                  :value="user"
+                  :key="index"
+                >
+                  {{ user }}
+                </radio>
+              </radio-group>
+
+              <my-input
+                v-else
+                type="text"
+                v-model="form[item.id]"
+                :placeholder="item.id"
+                @blur="handleBlur(item.id)"
+              />
+            </div>
+          </template>
+
+          <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
+            <checkbox-group
+              v-if="platform === 'xiudong' && form.typeMap"
+              @change="(e) => changeTarget(form, e)"
+              class="checkbox-group"
+            >
+              <checkbox
+                :value="item"
+                v-for="(item, index) in Object.keys(form.typeMap)"
+                :key="index"
+                :checked="form.targetTypes.includes(item)"
+                >{{ item }}
+              </checkbox>
+            </checkbox-group>
+
+            <checkbox-group
+              v-else
+              @change="(e) => changeTarget(form, e)"
+              class="checkbox-group"
+            >
+              <checkbox
+                :value="item"
+                v-for="(item, index) in Object.values(form.skuIdToTypeMap)"
+                :key="index"
+                :checked="form.targetTypes.includes(item)"
+                >{{ item }}
+              </checkbox>
+            </checkbox-group>
+          </scroll-view>
+
+          <div style="display: flex">
+            <button class="btn" @click="checkIsCanBuy">测试</button>
+            <button class="btn" type="primary" @click="add">新增</button>
+          </div>
+        </div>
+      </scroll-view>
+    </div>
+  </uni-popup>
+
+  <my-dialog v-model:value="msgDialogShow">
+    <div class="dialog msg-dialog" @touchmove.stop>
+      <div class="msg-template">
+        <button @click="setTestMsg">测试</button>
+        <button @click="setXingqiuMsg">星球</button>
+        <button @click="setDamaiMsg">大麦</button>
+      </div>
+      <textarea type="textarea" v-model="msgToUser" />
+      <div class="btn-wrap">
+        <button size="medium" @click="msgToUser = ''">清空</button>
+        <button size="medium" class="btn" type="primary" @click="sendMsgToUser">
+          发送
+        </button>
+      </div>
+    </div>
+  </my-dialog>
+  <calc-activity
+    ref="calc"
+    v-model="isShowCalc"
+    :host="host"
+    :port="calcPort"
+    :activityName="calcActivityName"
+    :activityId="calcActivityId"
+    :userConfig="dataWithoutFilter"
+    @startOne="startOne"
+    @stopOne="stopOne"
+    @autoStartUsers="autoStartUsers"
+  ></calc-activity>
 </template>
 
 <script>
-import calcActivity from './calcActivity.vue'
-import SearchInput from './search-input/search-input.vue'
-import MyDialog from './my-dialog/my-dialog.vue'
+import calcActivity from "./calcActivity.vue";
+import SearchInput from "./search-input/search-input.vue";
+import MyDialog from "./my-dialog/my-dialog.vue";
 
 let platformToPortMap = {
-    xiudong: '4000',
-    damai: '5000',
-    xingqiu: "6100",
-    maoyan: '7000'
-}
-import { request, getTagColor } from '@/utils.js'
+  xiudong: "4000",
+  damai: "5000",
+  xingqiu: "6100",
+  maoyan: "7000",
+};
+import { request, getTagColor } from "@/utils.js";
 export default {
-    components: {
-        calcActivity,
-        MyDialog,
-        SearchInput
+  components: {
+    calcActivity,
+    MyDialog,
+    SearchInput,
+  },
+  props: {
+    scrollTop: {
+      type: Number,
+      default: 0,
     },
-    props: {
-        scrollTop: {
-            type: Number,
-            default: 0
-        },
-        platform: {
-            type: String,
-            default: 'xiudong',
-        },
-        pcHost: {
-            type: String,
-            default: ''
-        }
+    platform: {
+      type: String,
+      default: "xiudong",
     },
-
-    data() {
-        return {
-            dataWithoutFilter: [],
-            clientid: '',
-            failCmds: [],
-            fixedTopActivity: uni.getStorageSync(this.platform + 'FixedTopActivity'),
-            msgDialogShow: false,
-            searchActivityName: '',
-            msgToUser: '',
-            percent: 0,
-            isShowAll: true,
-            isShowRecover: false,
-            scrollTopId: '',
-            old: {
-                scrollTop: 0
-            },
-            calcActivityId: '',
-            calcActivityName: '',
-            calcPort: '',
-            isShowCalc: false,
-            show: false,
-            windowHeight: 0,
-            groupData: [],
-            groupDataCopy: [],
-            targetTypeIndexes: [],
-            editForm: {},
-            isEdit: false,
-            selectedActivityIndex: -1,
-            data: [],
-            loading: false,
-            form: {},
-            userMap: {
-                "我": {
-                    phone: '15521373109',
-                    password: "hik12345",
-                },
-                "广": {
-                    phone: '18124935302',
-                    password: "hik12345",
-                },
-                "姐": {
-                    phone: '13422580347',
-                    password: "open5461203",
-                },
-                "姐司": {
-                    phone: '19128713692',
-                    password: "open5461203",
-                },
-                "江": {
-                    phone: '18027645865',
-                    password: "hik12345",
-                },
-                "仁": {
-                    phone: '18029400937',
-                    password: "hik12345",
-                }
-            },
-            queryItems: [
-                {
-                    column: 'username',
-                    value: ''
-                },
-                {
-                    column: 'phone',
-                    value: ''
-                },
-                {
-                    column: 'remark',
-                    value: ''
-                },
-                {
-                    column: "activityId",
-                    value: ''
-                },
-                {
-                    column: "activityName",
-                    value: ''
-                }
-            ],
-            selected: this.pcHost,
-
-
-        };
+    pcHost: {
+      type: String,
+      default: "",
     },
+  },
 
-    watch: {
-        selectedActivityId(val) {
-            this.queryItems.find(one => one.column === 'activityId').value = val
-            this.filterData()
+  data() {
+    return {
+      dataWithoutFilter: [],
+      clientid: "",
+      failCmds: [],
+      fixedTopActivity: uni.getStorageSync(this.platform + "FixedTopActivity"),
+      msgDialogShow: false,
+      searchActivityName: "",
+      msgToUser: "",
+      percent: 0,
+      isShowAll: true,
+      isShowRecover: false,
+      scrollTopId: "",
+      old: {
+        scrollTop: 0,
+      },
+      calcActivityId: "",
+      calcActivityName: "",
+      calcPort: "",
+      isShowCalc: false,
+      show: false,
+      windowHeight: 0,
+      groupData: [],
+      groupDataCopy: [],
+      targetTypeIndexes: [],
+      editForm: {},
+      isEdit: false,
+      selectedActivityIndex: -1,
+      data: [],
+      loading: false,
+      form: {},
+      queryItems: [
+        {
+          column: "username",
+          value: "",
         },
-        selected: {
-            immediate: true,
-            handler() {
-                this.selectedActivityIndex = -1
-                this.getConfig(true)
-            }
+        {
+          column: "phone",
+          value: "",
         },
-        queryItems: {
-            deep: true,
-            handler() {
-                this.filterData()
-            }
+        {
+          column: "remark",
+          value: "",
         },
-        loading(val) {
-            if (val) {
-                uni.showLoading({
-                    title: '加载中'
-                });
-            } else {
-                uni.hideLoading();
-            }
+        {
+          column: "activityId",
+          value: "",
+        },
+        {
+          column: "activityName",
+          value: "",
+        },
+      ],
+      selected: this.pcHost,
+    };
+  },
 
-        },
+  watch: {
+    selectedActivityId(val) {
+      this.queryItems.find((one) => one.column === "activityId").value = val;
+      this.filterData();
     },
-    created() {
-        //#ifdef APP-PLUS
-
-        plus.push.getClientInfoAsync((info) => {
-            this.clientid = info["clientid"];
+    selected: {
+      immediate: true,
+      handler() {
+        this.selectedActivityIndex = -1;
+        this.getConfig(true);
+      },
+    },
+    queryItems: {
+      deep: true,
+      handler() {
+        this.filterData();
+      },
+    },
+    loading(val) {
+      if (val) {
+        uni.showLoading({
+          title: "加载中",
         });
-        //#endif 
-
-        let res = uni.getSystemInfoSync()
-        console.log(res)
-        this.windowHeight = res.windowHeight
-
+      } else {
+        uni.hideLoading();
+      }
     },
-    mounted() {
+  },
+  created() {
+    //#ifdef APP-PLUS
 
+    plus.push.getClientInfoAsync((info) => {
+      this.clientid = info["clientid"];
+    });
+    //#endif
+
+    let res = uni.getSystemInfoSync();
+    console.log(res);
+    this.windowHeight = res.windowHeight;
+  },
+  mounted() {},
+  computed: {
+    userMap() {
+      let obj = {
+        我: {
+          phone: "15521373109",
+          password: "hik12345",
+        },
+        广: {
+          phone: "18124935302",
+          password: "hik12345",
+        },
+        姐: {
+          phone: "13422580347",
+          password: "open5461203",
+        },
+        姐司: {
+          phone: "19128713692",
+          password: "open5461203",
+        },
+        江: {
+          phone: "18027645865",
+          password: "hik12345",
+        },
+        仁: {
+          phone: "18029400937",
+          password: "hik12345",
+        },
+        mom: {
+          phone: "13427487572",
+          password: "hik12345",
+        },
+        新1: {
+          phone: "16773109616",
+          password: "hik12345",
+        },
+        新2: {
+          phone: "16773109618",
+          password: "hik12345",
+        },
+        新3: {
+          phone: "16773109617",
+          password: "hik12345",
+        },
+        新4: {
+          phone: "16773109615",
+          password: "hik12345",
+        },
+        新5: {
+          phone: "16773109613",
+          password: "hik12345",
+        },
+        新6: {
+          phone: "17170565049",
+          password: "hik12345",
+        },
+        新7: {
+          phone: "17170565054",
+          password: "hik12345",
+        },
+        新8: {
+          phone: "17170565064",
+          password: "hik12345",
+        },
+        新9: {
+          phone: "17170565074",
+          password: "hik12345",
+        },
+        新10: {
+          phone: "17170565084",
+          password: "hik12345",
+        },
+      };
+      if (!this.isDamai) {
+        delete obj["姐司"];
+      }
+      return obj
     },
-    computed: {
-        scrollStyle() {
-            return {
-                height: this.isShowAll ? this.isEdit ? '25vh' : '15vh' : 'auto'
-            }
-        },
-        pcs() {
-            return [
-                {
-                    hostname: this.pcHost,
-                    name: '华硕',
-                },
-                {
-                    name: '联想',
-                    hostname: 'e4097n6449.51vip.biz',
-                },
-
-                {
-                    name: '3',
-                    hostname: '100.95.67.33'
-                },
-                {
-                    name: '4',
-                    hostname: '100.116.129.127',
-                },
-            ]
-        },
-        isDamai() {
-            return this.platform === 'damai'
-        },
-        isMaoyan() {
-            return this.platform === 'maoyan'
-        },
-        isXiudong() {
-            return this.platform === 'xiudong'
-        },
-        isXingqiu() {
-            return this.platform === 'xingqiu'
-        },
-        addItems() {
-            let fields = this.isDamai ? ['activityId', 'port', 'showOrders', "myUsers", 'phone', 'password', 'username', 'uid', 'remark'] : this.isXingqiu || this.isMaoyan ? ['activityId', 'port', 'showOrders', 'phone', 'username', 'uid', 'remark'] : ['activityId', 'port', 'nameIndex', 'phone', 'username', 'uid', 'remark']
-            return fields.map(one => ({ name: one, id: one, isSpecial: one === 'showOrders', radioOptions: one === 'myUsers' ? Object.keys(this.userMap) : [] }))
-        },
-        selectedActivityId() {
-            return this.selectedActivityIndex !== -1 ? this.activityInfo[this.selectedActivityIndex].activityId : ''
-        },
-        activityInfo() {
-            return this.groupDataCopy.map(one => ({ activityId: one.data[0].activityId, activityName: one.group }))
-        },
-        activities() {
-            return this.activityInfo.map(one => one.activityName)
-        },
-        rightOptions() {
-            let options = [
-                {
-                    text: '删除',
-                    style: {
-                        backgroundColor: '#dd524d'
-                    }
-                }, {
-                    text: 'toCheck',
-                    style: {
-                        backgroundColor: 'orange'
-                    }
-                }
-            ]
-            if (!this.isXiudong) {
-                options.pop()
-            }
-            return options
-        },
-        host() {
-            return `http://${this.selected}:${platformToPortMap[this.platform]}`
-        },
-        inputFields() {
-            return this.editFields.filter(one => !['targetTypes', 'hasSuccess'].includes(one))
-        },
-        editFields() {
-            let map = {
-                xiudong: ['activityId', 'port', 'nameIndex', 'remark', 'uid', 'targetTypes', "hasSuccess"],
-                damai: ['activityId', 'port', 'password', 'showOrders', 'remark', 'uid', 'targetTypes', "hasSuccess"],
-                xingqiu: ['activityId', 'port', 'showOrders', 'remark', 'uid', 'targetTypes', "hasSuccess"],
-                maoyan: ['activityId', 'port', 'showOrders', 'remark', 'uid', 'targetTypes', "hasSuccess"],
-            }
-            return map[this.platform]
+    isAddMine() {
+      return Object.values(this.userMap).some(
+        (obj) => Number(obj.phone) === Number(this.form.phone)
+      );
+    },
+    selectedAddMineAudienceLength() {
+      if (this.isAddMine && this.isXingqiu) {
+        let target = this.dataWithoutFilter.find(
+          (one) => Number(one.phone) === Number(this.form.phone)
+        );
+        if (target) {
+          return target.audienceList.length;
         }
+      }
+      return 0;
     },
+    scrollStyle() {
+      return {
+        height: this.isShowAll ? (this.isEdit ? "25vh" : "15vh") : "auto",
+      };
+    },
+    pcs() {
+      return [
+        {
+          hostname: this.pcHost,
+          name: "华硕",
+        },
+        {
+          name: "联想",
+          hostname: "e4097n6449.51vip.biz",
+        },
 
-    methods: {
-        getShowActivityName(name) {
-            let str = (name || '').replace(/(\s+)|」|「|(巡回)|(演唱会)|(Ugly)|(Beauty)|(FINALE)|(世界)/g, '')
-            let result = []
-            let length = 0
-            for (let one of str) {
-                if (length >= 20) break;
-                if (one.match(/[a-zA-Z]/)) {
-                    length += 0.5
-                } else {
-                    length += 1
-                }
-                result.push(one)
-            }
-            return result.join('')
+        {
+          name: "3",
+          hostname: "100.95.67.33",
         },
-        changeMyUser(e) {
+        {
+          name: "4",
+          hostname: "100.116.129.127",
+        },
+      ];
+    },
+    isDamai() {
+      return this.platform === "damai";
+    },
+    isMaoyan() {
+      return this.platform === "maoyan";
+    },
+    isXiudong() {
+      return this.platform === "xiudong";
+    },
+    isXingqiu() {
+      return this.platform === "xingqiu";
+    },
+    addItems() {
+      let fields = this.isDamai
+        ? [
+            "activityId",
+            "port",
+            "showOrders",
+            "myUsers",
+            "phone",
+            "password",
+            "username",
+            "uid",
+            "remark",
+          ]
+        : this.isXingqiu || this.isMaoyan
+        ? [
+            "activityId",
+            "port",
+            "showOrders",
+            "myUsers",
+            "phone",
+            "username",
+            "uid",
+            "remark",
+          ]
+        : [
+            "activityId",
+            "port",
+            "nameIndex",
+            "phone",
+            "username",
+            "uid",
+            "remark",
+          ];
+      return fields.map((one) => ({
+        name: one,
+        id: one,
+        isSpecial: one === "showOrders",
+        radioOptions: one === "myUsers" ? Object.keys(this.userMap) : [],
+      }));
+    },
+    selectedActivityId() {
+      return this.selectedActivityIndex !== -1
+        ? this.activityInfo[this.selectedActivityIndex].activityId
+        : "";
+    },
+    activityInfo() {
+      return this.groupDataCopy.map((one) => ({
+        activityId: one.data[0].activityId,
+        activityName: one.group,
+      }));
+    },
+    activities() {
+      return this.activityInfo.map((one) => one.activityName);
+    },
+    rightOptions() {
+      let options = [
+        {
+          text: "删除",
+          style: {
+            backgroundColor: "#dd524d",
+          },
+        },
+        {
+          text: "toCheck",
+          style: {
+            backgroundColor: "orange",
+          },
+        },
+      ];
+      if (!this.isXiudong) {
+        options.pop();
+      }
+      return options;
+    },
+    host() {
+      return `http://${this.selected}:${platformToPortMap[this.platform]}`;
+    },
+    inputFields() {
+      return this.editFields.filter(
+        (one) => !["targetTypes", "hasSuccess"].includes(one)
+      );
+    },
+    editFields() {
+      let map = {
+        xiudong: [
+          "activityId",
+          "port",
+          "nameIndex",
+          "remark",
+          "uid",
+          "targetTypes",
+          "hasSuccess",
+        ],
+        damai: [
+          "activityId",
+          "port",
+          "password",
+          "showOrders",
+          "remark",
+          "uid",
+          "targetTypes",
+          "hasSuccess",
+        ],
+        xingqiu: [
+          "activityId",
+          "port",
+          "showOrders",
+          "remark",
+          "uid",
+          "targetTypes",
+          "hasSuccess",
+        ],
+        maoyan: [
+          "activityId",
+          "port",
+          "showOrders",
+          "remark",
+          "uid",
+          "targetTypes",
+          "hasSuccess",
+        ],
+      };
+      return map[this.platform];
+    },
+  },
 
-            let { phone, password } = this.userMap[e.detail.value]
-            this.form.phone = phone
-            this.form.password = password
-            this.form.username = 'me' + Math.ceil(Math.random() * 10000)
-        },
-        async removeOneAudience(audience, phone) {
-            let data = {
-                audience,
-                phone
-            }
-            await this.confirmAction(`确定删除【${audience}】？`)
-            this.loading = true
-            await request({
-                url: this.host + "/removeAudience",
-                data,
-                method: 'post'
-            });
-            uni.showToast({
-                icon: "none",
-                title: '删除成功',
-                duration: 2000,
-            })
-            this.loading = false
-            this.getConfig(true)
-        },
-        clickAudience(item, audience, index, phone) {
-            let itemList = ['删除', '复制', "切换", "检测"]
-            uni.showActionSheet({
-                itemList,
-                success: async (res) => {
-                    if ([0].includes(res.tapIndex)) {
-
-                        this.removeOneAudience(audience, item.phone)
-
-                    } else if (res.tapIndex === 1) {
-                        uni.setClipboardData({
-                            data: audience,
-                        });
-                    } else if (res.tapIndex === 2) {
-                        let isSelected = item.orders.some(one => Number(one) === index)
-                        let orders = item.orders.map(one => Number(one))
-                        if (isSelected) {
-                            let i = item.orders.indexOf(index)
-                            orders.splice(i, 1)
-                        } else {
-                            orders.push(index)
-                        }
-                        this.loading = true
-                        await request({
-                            method: 'post', url: this.host + "/editConfig/", data: {
-                                username: item.username,
-                                config: {
-                                    orders
-                                }
-                            }
-                        });
-                        this.loading = false
-                        this.getConfig(true)
-
-                    } else {
-                        let isNeedToDelete = await request({
-                            url: this.host + `/checkAudience?phone=${phone}&audienceIndex=${index}`
-                        });
-                        let name = item.audienceList[index]
-                        uni.showToast({
-                            icon: "none",
-                            title: `【${name}】` + (isNeedToDelete ? `可以删除` : '不可删除'),
-                            duration: 2000,
-                        })
-                        if (isNeedToDelete) {
-                            await this.removeOneAudience(name, phone)
-                        }
-                    }
-                }
-            })
-
-        },
-        async checkIsCanBuy() {
-            let res = await request({
-                url: this.host + "/checkIsCanBuy?activityId=" + this.form.activityId
-            });
-            uni.showToast({
-                icon: "none",
-                title: res || '不支持',
-                duration: 2000,
-            })
-        },
-        async recover() {
-            this.loading = true
-            let failCmds = await request({
-                timeout: 2 * 60000,
-                url: this.host + "/recover"
-            });
-            this.failCmds = failCmds || []
-            this.getConfig(true)
-            this.loading = false
-        },
-        activityRightOptions(one) {
-            let arr = [
-                {
-                    text: '刷新',
-                    style: {
-                        backgroundColor: 'rgb(0, 122, 255)'
-                    }
-                },
-                {
-                    text: '置顶',
-                    style: {
-                        backgroundColor: 'rgb(0,200,0)'
-                    }
-
-                },
-                {
-                    text: '删除',
-                    style: {
-                        backgroundColor: 'black'
-                    }
-
-                }
-            ]
-            if (!one.isExpired) {
-                arr.pop()
-            }
-            return arr
-        },
-        addActivity() {
-            this.isEdit = false
-            this.copyActivityId = ''
-            this.form = {
-                activityId: '',
-                port: '',
-                targetTypes: [],
-                showOrders: '0,',
-                phone: '15521373109',
-                // password:"hik12345",
-                nameIndex: 0,
-                username: 'me' + Math.ceil(Math.random() * 1000),
-            }
-
-            if (this.platform === 'xiudong') {
-                this.form.typeMap = {}
-            } else {
-                this.form.skuIdToTypeMap = {}
-            }
-            if (this.platform === 'damai') {
-                this.form.password = 'hik12345'
-            }
-            this.$refs.popup.open('bottom')
-            setTimeout(() => {
-                this.$refs.searchInput && this.$refs.searchInput.showDialog()
-            }, 200);
-        },
-        getTitleStyle(one) {
-            return {
-                background: one.isExpired ? 'red' : 'rgb(94, 128, 177)'
-            }
-        },
-        setXingqiuMsg() {
-            this.msgToUser = '麻烦你直接在这里填写，填完就登录好了，闲鱼不给发链接，谢谢！ 票星球填写这个http://mticket.ddns.net:7777/#/xingqiu'
-        },
-        setDamaiMsg() {
-            this.msgToUser = '麻烦你直接在这里填写，填完就登录好了，闲鱼不给发链接，谢谢！ 大麦填写这个http://mticket.ddns.net:7777'
-        },
-        setTestMsg() {
-            this.msgToUser = '测试'
-        },
-        getValidPort() {
-            let allPorts = this.groupData.map(one => Number(one.data[0].port)).sort((a, b) => a - b)
-            console.log(allPorts)
-            return Number(allPorts.pop()) + 1
-        },
-        activityChange(id) {
-            this.editForm.activityId = id
-            this.form.activityId = id
-
-            let existActivity = this.dataWithoutFilter.find(one => String(one.activityId) === String(id))
-
-            let port = existActivity.port || this.getValidPort()
-            this.editForm.port = port
-            this.form.port = port
-
-            this.editForm.isRefresh = true
-        },
-        async sendMsgToUser() {
-            let host = `http://${this.selected}:4000`
-            await request({
-                method: 'post', url: host + "/sendMsgToUser/", data: {
-                    uid: this.curUid,
-                    msg: this.msgToUser
-                }
-            });
-            this.msgDialogShow = false
-        },
-        openMsg(uid) {
-            this.curUid = uid
-            this.msgToUser = '你好, 目前需要验证码登录哦, 麻烦收到后退出账号再把验证码发给闲鱼卖家, 谢谢'
-            this.msgDialogShow = true
-        },
-        getTagColor,
-        callOrCopyPhone(phone) {
-            let itemList = [phone, '呼叫', '复制']
-            uni.showActionSheet({
-                itemList,
-                success: (res) => {
-                    if ([0, 1].includes(res.tapIndex)) {
-                        uni.makePhoneCall({
-                            phoneNumber: phone,
-                        })
-                    } else if (res.tapIndex === 2) {
-                        uni.setClipboardData({
-                            data: phone,
-                        });
-                    }
-                }
-            })
-
-        },
-        copyUsername(username) {
+  methods: {
+    getShowActivityName(name) {
+      let str = (name || "").replace(
+        /(\s+)|」|「|(巡回)|(演唱会)|(Ugly)|(Beauty)|(FINALE)|(世界)/g,
+        ""
+      );
+      let result = [];
+      let length = 0;
+      for (let one of str) {
+        if (length >= 20) break;
+        if (one.match(/[a-zA-Z]/)) {
+          length += 0.5;
+        } else {
+          length += 1;
+        }
+        result.push(one);
+      }
+      return result.join("");
+    },
+    changeMyUser(e) {
+      let { phone, password } = this.userMap[e.detail.value];
+      this.form.phone = phone;
+      if (this.isDamai) {
+        this.form.password = password;
+      } else if (this.isXingqiu) {
+        this.form.showOrders = String(this.selectedAddMineAudienceLength);
+      }
+      this.form.username = "me" + Math.ceil(Math.random() * 10000);
+    },
+    async removeOneAudience(audience, phone) {
+      let data = {
+        audience,
+        phone,
+      };
+      await this.confirmAction(`确定删除【${audience}】？`);
+      this.loading = true;
+      await request({
+        url: this.host + "/removeAudience",
+        data,
+        method: "post",
+      });
+      uni.showToast({
+        icon: "none",
+        title: "删除成功",
+        duration: 2000,
+      });
+      this.loading = false;
+      this.getConfig(true);
+    },
+    clickAudience(item, audience, index, phone) {
+      let itemList = ["删除", "复制", "切换", "检测"];
+      uni.showActionSheet({
+        itemList,
+        success: async (res) => {
+          if ([0].includes(res.tapIndex)) {
+            this.removeOneAudience(audience, item.phone);
+          } else if (res.tapIndex === 1) {
             uni.setClipboardData({
-                data: username,
+              data: audience,
             });
-        },
-        toggleForm() {
-            this.isShowAll = !this.isShowAll
-        },
-        async startOne(user, isShow) {
-            let item = this.dataWithoutFilter.find(one => one.username === user)
-            item.isShow = isShow
-            try {
-                await this.start(item)
-                this.$refs.calc.refreshDialog()
-            } catch (e) {
-                console.log(e)
-            }
-        },
-        async stopOne(user) {
-            let item = this.dataWithoutFilter.find(one => one.username === user)
-            await this.stop(item)
-            this.$refs.calc.refreshDialog()
-        },
-        async autoStartUsers(users) {
-            this.isShowCalc = false
-            let total = users.length
-            let done = 0
-            for (let user of users) {
-                let item = this.dataWithoutFilter.find(one => one.username === user)
-
-                try {
-                    await this.start(item, true)
-                } catch (e) {
-                    console.log(e)
-                }
-                done++
-                this.percent = Math.ceil((done / total) * 100)
-            }
-            await this.getConfig()
-        },
-        showCalc(id, activityName, port) {
-            this.calcActivityId = id
-            this.calcActivityName = activityName
-            this.calcPort = port
-            this.isShowCalc = true
-        },
-        handleBlur(id) {
-            let map = {
-                password: this.handlePass,
-                phone: this.handlePhone
-            }
-            if (map[id]) {
-                map[id]()
-            }
-        },
-        changePopup(e) {
-            this.show = e.show
-            if (!this.show) {
-                this.isShowAll = true
-                this.searchActivityName = ''
-            }
-        },
-        bindPickerChange(e) {
-            this.selectedActivityIndex = e.detail.value
-        },
-
-        reset() {
-            this.queryItems.forEach(one => {
-                one.value = ''
-            })
-            this.selectedActivityIndex = -1
-        },
-        handlePhone() {
-            if (this.form.phone) {
-                let [, ...left] = this.form.phone.split(/\s+/)
-                let res = this.form.phone.match(/\d{11}/)
-                if (res) {
-                    this.form.phone = res[0]
-                }
-                if (left.length) {
-                    this.form.password = left.join("")
-                    this.handlePass()
-                }
-            }
-        },
-        handlePass() {
-            if (this.form.password) {
-                let res = this.form.password.split(/\s+/)
-                res = res.slice(-1)[0]
-                res = res.replace(/(密码是)|(密码:)|(密码是:)|(密码：)|(密码是：)|(密码)/g, '')
-                this.form.password = res
-            }
-        },
-        changeTarget(form, e) {
-            form.targetTypes = e.detail.value
-        },
-        handleSwitchChange(e) {
-            this.editForm.hasSuccess = e.detail.value
-        },
-        handleRefreshChange(e) {
-            this.editForm.isRefresh = e.detail.value
-        },
-
-        changeEditForm(val, id) {
-            if (id === 'activityId') {
-                this.editForm.isRefresh = true
-            }
-        },
-        checkForm(form, arr) {
-            for (let one of arr) {
-                if (form[one] === '' || form[one] === undefined) {
-                    uni.showToast({
-                        title: one + '不能为空',
-                        icon: "error",
-                        duration: 3500,
-                    });
-                    return false
-                }
-            }
-            return true
-        },
-        async confirmEdit() {
-            let keys = this.editFields
-            let form = keys.reduce((prev, cur) => {
-                prev[cur] = this.editForm[cur]
-                return prev
-            }, {})
-            let data = {
-                username: this.editForm.username,
-                config: form,
-                isRefresh: this.editForm.isRefresh
-            }
-
-            let arr = ['activityId', 'port',]
-
-            if (this.checkForm(form, arr)) {
-                this.loading = true
-                await request({ method: 'post', url: this.host + "/editConfig/", data });
-                this.$refs.popup.close()
-                await this.getConfig()
-                this.loading = false
-            }
-        },
-
-
-        async openEditDialog(item) {
-            this.editForm = { targetTypes: [], ...item }
-            this.isEdit = true
-            this.$refs.popup.open('bottom')
-            this.readDataFromClip()
-        },
-        async activityClick({ index }, groupName) {
-            if (index === 0) {
-                this.getConfig(true)
-            } else if (index === 1) {
-                this.fixedTopActivity = groupName
-                uni.setStorageSync(this.platform + 'FixedTopActivity', this.fixedTopActivity)
-                this.filterData()
-            } else if (index === 2) {
-                console.log("删除全部1")
-                this.loading = true
-                await request({
-                    method: 'post', url: this.host + "/removeOneActivity/", data: {
-                        activityName: groupName,
-                    }
-                });
-                await this.getConfig()
-                this.loading = false
-
-            }
-        },
-        async swipeClick({ index }, { username }) {
-            if (index === 0) {
-                this.loading = true
-                await request({ method: 'post', url: this.host + "/removeConfig/", data: { username } });
-                await this.getConfig()
-                this.loading = false
+          } else if (res.tapIndex === 2) {
+            let isSelected = item.orders.some((one) => Number(one) === index);
+            let orders = item.orders.map((one) => Number(one));
+            if (isSelected) {
+              let i = item.orders.indexOf(index);
+              orders.splice(i, 1);
             } else {
-                this.loading = true
-                await request({ method: 'post', url: this.host + "/toCheck/", data: { username } });
-                await this.getConfig()
-                this.loading = false
+              orders.push(index);
             }
-        },
-        confirmAction(title) {
-            return new Promise((resolve, reject) => {
-                uni.showModal({
-                    title,
-                    cancelText: '否',
-                    success: (res) => {
-                        if (res.confirm) {
-                            resolve()
-                        } else if (res.cancel) {
-                            reject()
-                        }
-                    }
-                });
-            })
-        },
-        async add() {
-            let isTwo = false
-            try {
-                await this.confirmAction(`是否连坐？`)
-                isTwo = true
-            } catch (e) {
-                isTwo = false
-            }
-            if (isTwo) {
-                this.form.showOrders = '0,1'
-            }
-            let data = { ...this.form, isCopy: this.copyActivityId === this.form.activityId, showOrders: this.form.showOrders.replace(/,$/, '') }
-            // todo
-            if (this.isDamai || this.isXingqiu || this.isMaoyan) {
-                data.targetTypes = data.targetTypes.map(name => {
-                    let map = this.platform === 'xiudong' ? data.typeMap : data.skuIdToTypeMap
-                    let ids = Object.keys(map)
-                    return ids.find(id => map[id] === name)
-                })
-            }
-
-
-            let arr = this.isDamai ? ['phone', 'username', 'password', 'activityId', 'port'] : this.isXingqiu || this.isMaoyan ? ['phone', 'username', 'activityId', 'port'] : ['phone', 'username', 'activityId', 'port', 'nameIndex']
-            if (this.checkForm(data, arr)) {
-                this.loading = true
-
-                if (data.uid) {
-                    data.uid = data.uid.replace('尊敬的用户，你的UID是：', '')
-                }
-                await request({ method: 'post', url: this.host + "/addInfo/", data, timeout: 120000 });
-                this.$refs.popup.close()
-                this.reset()
-                await this.getConfig(true)
-                this.loading = false
-                let target = this.dataWithoutFilter.find(one => one.username === data.username)
-                this.start(target)
-
-
-            }
-        },
-        async recoverScroll(scrollTop) {
-            await this.$nextTick()
-            uni.pageScrollTo({
-                duration: 0,
-                scrollTop: scrollTop,
-                direction: 0
-            })
-        },
-        openCopyDialog({ activityId, port, typeMap, skuIdToTypeMap }) {
-
-            this.isEdit = false
-            this.copyActivityId = activityId
-            this.form = {
-                activityId,
-                port,
-                targetTypes: [],
-                showOrders: '0,',
-                nameIndex: 0
-            }
-            if (this.platform === 'xiudong') {
-                this.form.typeMap = typeMap
-            } else {
-                this.form.skuIdToTypeMap = skuIdToTypeMap
-            }
-
-            this.$refs.popup.open('bottom')
-            this.readDataFromClip()
-        },
-        readDataFromClip() {
-            uni.getClipboardData({
-                success: (clip) => {
-                    let clipData = clip.data.replace(/(大麦账号(:)?)|(账号:)|(手机:)|(账号：)|(手机：)|(手机号码)|(手机号)|(账号)|(手机)|/g, '').trim()
-                    clipData = clipData.replace(/密码(:)?(\s)*/g, ' 密码').trim()
-
-                    let handled = false
-
-                    let regMap = {
-                        damai: /itemId=(\d{12})/,
-                        xingqiu: /activityId=(\d{6})/,
-                        xiudong: /detail\/(\d{6})/
-                    }
-                    let reg = regMap[this.platform]
-                    let activityRes = reg && clipData.match(reg)
-                    if (this.isEdit) {
-                        if (!this.editForm.uid && clipData.includes('UID')) {
-                            this.editForm.uid = clipData
-                            handled = true
-                        }
-
-                        if (activityRes) {
-                            this.editForm.activityId = activityRes[1]
-                            this.editForm.port = ''
-                            this.editForm.isRefresh = true
-                            setTimeout(() => {
-                                uni.showToast({
-                                    title: 'activity改变',
-                                    icon: "none",
-                                    duration: 3500,
-                                });
-                            }, 50);
-                            handled = true
-                        }
-                    } else {
-                        if (!clipData.length) return
-                        let [first] = clipData.split(/\s+/)
-                        let res = first.match(/1(3\d|4[5-9]|5[0-35-9]|6[567]|7[0-8]|8\d|9[0-35-9])\d{8}/)
-                        if (activityRes) {
-                            this.form.activityId = activityRes[1]
-                            this.form.port = ''
-                            this.form.typeMap = {}
-                            this.form.skuIdToTypeMap = {}
-                            setTimeout(() => {
-                                uni.showToast({
-                                    title: 'activity改变',
-                                    icon: "none",
-                                    duration: 3500,
-                                });
-                            }, 50);
-                            handled = true
-                        } else if (res) {
-                            this.form.phone = clipData
-                            this.handlePhone()
-                            handled = true
-
-                        } else if (clipData.includes('UID')) {
-                            handled = true
-                            this.form.uid = clipData.trim()
-                        } else if (this.isDamai) {
-                            this.form.password = first
-                            this.handlePass()
-                            handled = true
-                        }
-
-
-                    }
-                    if (handled) {
-                        uni.setClipboardData({
-                            data: '',
-                        });
-                        uni.hideToast()
-                    }
-                }
-            });
-        },
-
-        getStyle(item) {
-            let arr = [
-                {
-                    condition: item.hasSuccess,
-                    background: '#aaffaa'
+            this.loading = true;
+            await request({
+              method: "post",
+              url: this.host + "/editConfig/",
+              data: {
+                username: item.username,
+                config: {
+                  orders,
                 },
-                {
-                    condition: item.remark?.includes('频繁'),
-                    background: 'rgb(225, 223, 223)'
-                },
-                {
-                    condition: !item.uid,
-                    background: 'rgb(254, 214, 91)'
-                },
-                {
-                    condition: item.remark?.includes('优先'),
-                    background: '#21a1ab',
-                    color: 'white'
-                },
-
-            ]
-            let target = arr.find(one => one.condition)
-            return {
-                background: target ? target.background : 'white',
-                color: target ? target.color || 'black' : 'black'
-            }
-        },
-
-        async start(item, isNoRefresh) {
-            this.loading = true
-            try {
-                await request({ method: 'post', url: this.host + "/startUserFromRemote/", data: { cmd: item.cmd + (item.isShow ? (this.isDamai ? ` 1 loop` : ' show') : ''), isStopWhenLogin: isNoRefresh } });
-            } catch (e) {
-                console.log(e)
-            }
-            if (!isNoRefresh) {
-                await this.getConfig()
-            }
-            this.loading = false
-        },
-        async stop(item) {
-            await request({ url: this.host + "/close/" + item.pid + '?isFromRemote=1' });
-            await this.getConfig()
-        },
-        filterData(isFirstGet) {
-            let cmds = Object.values(this.pidToCmd);
-
-            let cmdToPid = {};
-            Object.entries(this.pidToCmd).forEach(([key, value]) => {
-                cmdToPid[value.split(/\s+/).slice(0, 4).join(' ')] = key;
+              },
             });
-            let data = Object.entries(this.config).map(([username, one]) => ({
-                username,
-                ...one,
-                config: one,
-            }));
-
-
-            data.sort((a, b) => Number(b.port) - Number(a.port));
-
-            let notOkData = data.filter(one => one.port === 'null').map(one => one)
-            if (notOkData.length) {
-                uni.showToast({
-                    icon: "none",
-                    title: notOkData.map(one => one.username).join(',') + '端口为null',
-                    duration: 2000,
-                })
-            }
-
-
-
-            data.forEach(one => {
-                let cmd = `npm run start ${one.username}`;
-                one.cmd = cmd;
-                one.loading = false;
-                one.hasSuccess = Boolean(one.hasSuccess);
-                one.status = cmds.some(cmd => cmd.split(/\s+/)[3] === one.username) ? 1 : 0;
-                one.pid = cmdToPid[cmd];
-                if (this.isDamai || this.isXingqiu || this.isMaoyan) {
-                    one.orders = one.orders.map(one => Number(one))
-                    one.showOrders = one.orders.join(',')
-                }
+            this.loading = false;
+            this.getConfig(true);
+          } else {
+            let isNeedToDelete = await request({
+              url:
+                this.host +
+                `/checkAudience?phone=${phone}&audienceIndex=${index}`,
             });
-
-
-            let items = this.queryItems.filter(item => item.value);
-            this.dataWithoutFilter = data
-            let filteredData = data.filter(one => {
-                return items.every(({ value, column }) => String(one[column]).toLowerCase().indexOf(String(value).toLowerCase()) !== -1);
+            let name = item.audienceList[index];
+            uni.showToast({
+              icon: "none",
+              title: `【${name}】` + (isNeedToDelete ? `可以删除` : "不可删除"),
+              duration: 2000,
             });
-
-            this.getGroup(filteredData, isFirstGet)
+            if (isNeedToDelete) {
+              await this.removeOneAudience(name, phone);
+            }
+          }
         },
-        checkIsExpired(one) {
-            if (['damai', 'xingqiu', 'maoyan'].includes(this.platform)) {
-                let dates = [... new Set(Object.values(one.skuIdToTypeMap || {}).map(one => {
-                    let date = one.split('_')[0];
-                    let arr = date.split(/(\s+)/);
-                    return arr[0] + ' ' + arr.slice(-1)[0];
-                }))];
-
-                let isExpired = dates.every(date => new Date(date) < new Date());
-                return isExpired
-            }
-            console.log(one)
-            return false
-            // let types = one.skuIdToTypeMap
+      });
+    },
+    async checkIsCanBuy() {
+      let res = await request({
+        url: this.host + "/checkIsCanBuy?activityId=" + this.form.activityId,
+      });
+      uni.showToast({
+        icon: "none",
+        title: res || "不支持",
+        duration: 2000,
+      });
+    },
+    async recover() {
+      this.loading = true;
+      let failCmds = await request({
+        timeout: 2 * 60000,
+        url: this.host + "/recover",
+      });
+      this.failCmds = failCmds || [];
+      this.getConfig(true);
+      this.loading = false;
+    },
+    activityRightOptions(one) {
+      let arr = [
+        {
+          text: "刷新",
+          style: {
+            backgroundColor: "rgb(0, 122, 255)",
+          },
         },
-        getGroup(data, isFirstGet) {
-            this.data = data
-            console.log(1111, this.data.map(one => one.activityName))
-            let res = []
-            if (!data.length) {
-                this.getGroupData = []
-            }
-            let cur = null
-            data.forEach((one) => {
-                if (!cur || cur.group !== one.activityName) {
-                    cur = {
-                        group: one.activityName,
-                        data: [one],
-                        isExpired: this.checkIsExpired(one)
-                    }
-                    res.push(cur)
-                } else if (cur.group === one.activityName) {
-                    cur.data.push(one)
-                }
-            })
-
-            res.sort((a, b) => (a.group ? a.group[1] : '').charCodeAt() - (b.group ? b.group[1] : '').charCodeAt())
-
-            if (this.fixedTopActivity) {
-                let i = res.findIndex(one => one.group === this.fixedTopActivity)
-                let target = res.splice(i, 1)
-                this.groupData = [...target, ...res]
-            } else {
-                this.groupData = res
-            }
-            console.log('组合数据', this.groupData)
-            if (isFirstGet) {
-                this.groupDataCopy = JSON.parse(JSON.stringify(this.groupData))
-            }
-            console.log(res)
+        {
+          text: "置顶",
+          style: {
+            backgroundColor: "rgb(0,200,0)",
+          },
         },
-        async getConfig(isFirst) {
-            let scrollTop = this.scrollTop
-            this.loading = true
-            try {
-                this.groupData = []
-                this.data = []
-                let {
-                    config, pidToCmd
-                } = await request({ url: this.host + "/getAllUserConfig", cancelPre: true });
-                this.config = config
-                this.pidToCmd = pidToCmd
-                this.isShowRecover = Object.keys(this.pidToCmd).length === 0
-                this.filterData(isFirst)
-            } catch (e) {
-                console.log('出错', e)
-                if (e.errMsg.includes('abort')) {
-                    setTimeout(() => {
-                        this.loading = true
-                    }, 0);
-                }
-            }
-            this.loading = false
-            this.recoverScroll(scrollTop)
-            // let options = Object.values(config).map(({ activityId, activityName }) => ({
-            //     activityId,
-            //     activityName,
-            // }));
-            // let uniqueIds = [...new Set(options.map((one) => one.activityId))];
-            // options = uniqueIds.map((activityId) => ({
-            //     activityId,
-            //     activityName: options.find((one) => one.activityId === activityId)
-            //         .activityName,
-            // }));
-            // console.log(options);
+        {
+          text: "删除",
+          style: {
+            backgroundColor: "black",
+          },
         },
-        choose(item) {
-            this.selected = item.hostname
+      ];
+      if (!one.isExpired) {
+        arr.pop();
+      }
+      return arr;
+    },
+    addActivity() {
+      this.isEdit = false;
+      this.copyActivityId = "";
+      this.form = {
+        activityId: "",
+        port: "",
+        targetTypes: [],
+        showOrders: "0,",
+        phone: "15521373109",
+        // password:"hik12345",
+        nameIndex: 0,
+        username: "me" + Math.ceil(Math.random() * 1000),
+      };
+
+      if (this.platform === "xiudong") {
+        this.form.typeMap = {};
+      } else {
+        this.form.skuIdToTypeMap = {};
+      }
+      if (this.platform === "damai") {
+        this.form.password = "hik12345";
+      }
+      this.$refs.popup.open("bottom");
+      setTimeout(() => {
+        this.$refs.searchInput && this.$refs.searchInput.showDialog();
+      }, 200);
+    },
+    getTitleStyle(one) {
+      return {
+        background: one.isExpired ? "red" : "rgb(94, 128, 177)",
+      };
+    },
+    setXingqiuMsg() {
+      this.msgToUser =
+        "麻烦你直接在这里填写，填完就登录好了，闲鱼不给发链接，谢谢！ 票星球填写这个http://mticket.ddns.net:7777/#/xingqiu";
+    },
+    setDamaiMsg() {
+      this.msgToUser =
+        "麻烦你直接在这里填写，填完就登录好了，闲鱼不给发链接，谢谢！ 大麦填写这个http://mticket.ddns.net:7777";
+    },
+    setTestMsg() {
+      this.msgToUser = "测试";
+    },
+    getValidPort() {
+      let allPorts = this.groupData
+        .map((one) => Number(one.data[0].port))
+        .sort((a, b) => a - b);
+      console.log(allPorts);
+      return Number(allPorts.pop()) + 1;
+    },
+    activityChange(id) {
+      this.editForm.activityId = id;
+      this.form.activityId = id;
+
+      let existActivity = this.dataWithoutFilter.find(
+        (one) => String(one.activityId) === String(id)
+      );
+
+      let port = existActivity.port || this.getValidPort();
+      this.editForm.port = port;
+      this.form.port = port;
+
+      this.editForm.isRefresh = true;
+    },
+    async sendMsgToUser() {
+      let host = `http://${this.selected}:4000`;
+      await request({
+        method: "post",
+        url: host + "/sendMsgToUser/",
+        data: {
+          uid: this.curUid,
+          msg: this.msgToUser,
+        },
+      });
+      this.msgDialogShow = false;
+    },
+    openMsg(uid) {
+      this.curUid = uid;
+      this.msgToUser =
+        "你好, 目前需要验证码登录哦, 麻烦收到后退出账号再把验证码发给闲鱼卖家, 谢谢";
+      this.msgDialogShow = true;
+    },
+    getTagColor,
+    callOrCopyPhone(phone) {
+      let itemList = [phone, "呼叫", "复制"];
+      uni.showActionSheet({
+        itemList,
+        success: (res) => {
+          if ([0, 1].includes(res.tapIndex)) {
+            uni.makePhoneCall({
+              phoneNumber: phone,
+            });
+          } else if (res.tapIndex === 2) {
+            uni.setClipboardData({
+              data: phone,
+            });
+          }
+        },
+      });
+    },
+    copyUsername(username) {
+      uni.setClipboardData({
+        data: username,
+      });
+    },
+    toggleForm() {
+      this.isShowAll = !this.isShowAll;
+    },
+    async startOne(user, isShow) {
+      let item = this.dataWithoutFilter.find((one) => one.username === user);
+      item.isShow = isShow;
+      try {
+        await this.start(item);
+        this.$refs.calc.refreshDialog();
+      } catch (e) {
+        console.log(e);
+      }
+    },
+    async stopOne(user) {
+      let item = this.dataWithoutFilter.find((one) => one.username === user);
+      await this.stop(item);
+      this.$refs.calc.refreshDialog();
+    },
+    async autoStartUsers(users) {
+      this.isShowCalc = false;
+      let total = users.length;
+      let done = 0;
+      for (let user of users) {
+        let item = this.dataWithoutFilter.find((one) => one.username === user);
+
+        try {
+          await this.start(item, true);
+        } catch (e) {
+          console.log(e);
         }
-    }
+        done++;
+        this.percent = Math.ceil((done / total) * 100);
+      }
+      await this.getConfig();
+    },
+    showCalc(id, activityName, port) {
+      this.calcActivityId = id;
+      this.calcActivityName = activityName;
+      this.calcPort = port;
+      this.isShowCalc = true;
+    },
+    handleBlur(id) {
+      let map = {
+        password: this.handlePass,
+        phone: this.handlePhone,
+      };
+      if (map[id]) {
+        map[id]();
+      }
+    },
+    changePopup(e) {
+      this.show = e.show;
+      if (!this.show) {
+        this.isShowAll = true;
+        this.searchActivityName = "";
+      }
+    },
+    bindPickerChange(e) {
+      this.selectedActivityIndex = e.detail.value;
+    },
+
+    reset() {
+      this.queryItems.forEach((one) => {
+        one.value = "";
+      });
+      this.selectedActivityIndex = -1;
+    },
+    handlePhone() {
+      if (this.form.phone) {
+        let [, ...left] = this.form.phone.split(/\s+/);
+        let res = this.form.phone.match(/\d{11}/);
+        if (res) {
+          this.form.phone = res[0];
+        }
+        if (left.length) {
+          this.form.password = left.join("");
+          this.handlePass();
+        }
+      }
+    },
+    handlePass() {
+      if (this.form.password) {
+        let res = this.form.password.split(/\s+/);
+        res = res.slice(-1)[0];
+        res = res.replace(
+          /(密码是)|(密码:)|(密码是:)|(密码：)|(密码是：)|(密码)/g,
+          ""
+        );
+        this.form.password = res;
+      }
+    },
+    changeTarget(form, e) {
+      form.targetTypes = e.detail.value;
+    },
+    handleSwitchChange(e) {
+      this.editForm.hasSuccess = e.detail.value;
+    },
+    handleRefreshChange(e) {
+      this.editForm.isRefresh = e.detail.value;
+    },
+
+    changeEditForm(val, id) {
+      if (id === "activityId") {
+        this.editForm.isRefresh = true;
+      }
+    },
+    checkForm(form, arr) {
+      for (let one of arr) {
+        if (form[one] === "" || form[one] === undefined) {
+          uni.showToast({
+            title: one + "不能为空",
+            icon: "error",
+            duration: 3500,
+          });
+          return false;
+        }
+      }
+      return true;
+    },
+    async confirmEdit() {
+      let keys = this.editFields;
+      let form = keys.reduce((prev, cur) => {
+        prev[cur] = this.editForm[cur];
+        return prev;
+      }, {});
+      let data = {
+        username: this.editForm.username,
+        config: form,
+        isRefresh: this.editForm.isRefresh,
+      };
+
+      let arr = ["activityId", "port"];
+
+      if (this.checkForm(form, arr)) {
+        this.loading = true;
+        await request({
+          method: "post",
+          url: this.host + "/editConfig/",
+          data,
+        });
+        this.$refs.popup.close();
+        await this.getConfig();
+        this.loading = false;
+      }
+    },
+
+    async openEditDialog(item) {
+      this.editForm = { targetTypes: [], ...item };
+      this.isEdit = true;
+      this.$refs.popup.open("bottom");
+      this.readDataFromClip();
+    },
+    async activityClick({ index }, groupName) {
+      if (index === 0) {
+        this.getConfig(true);
+      } else if (index === 1) {
+        this.fixedTopActivity = groupName;
+        uni.setStorageSync(
+          this.platform + "FixedTopActivity",
+          this.fixedTopActivity
+        );
+        this.filterData();
+      } else if (index === 2) {
+        console.log("删除全部1");
+        this.loading = true;
+        await request({
+          method: "post",
+          url: this.host + "/removeOneActivity/",
+          data: {
+            activityName: groupName,
+          },
+        });
+        await this.getConfig();
+        this.loading = false;
+      }
+    },
+    async swipeClick({ index }, { username }) {
+      if (index === 0) {
+        this.loading = true;
+        await request({
+          method: "post",
+          url: this.host + "/removeConfig/",
+          data: { username },
+        });
+        await this.getConfig();
+        this.loading = false;
+      } else {
+        this.loading = true;
+        await request({
+          method: "post",
+          url: this.host + "/toCheck/",
+          data: { username },
+        });
+        await this.getConfig();
+        this.loading = false;
+      }
+    },
+    confirmAction(title) {
+      return new Promise((resolve, reject) => {
+        uni.showModal({
+          title,
+          cancelText: "否",
+          success: (res) => {
+            if (res.confirm) {
+              resolve();
+            } else if (res.cancel) {
+              reject();
+            }
+          },
+        });
+      });
+    },
+    async add() {
+      let isTwo = false;
+      try {
+        await this.confirmAction(`是否连坐？`);
+        isTwo = true;
+      } catch (e) {
+        isTwo = false;
+      }
+      if (isTwo) {
+        this.form.showOrders = this.selectedAddMineAudienceLength
+          ? [
+              this.selectedAddMineAudienceLength - 1,
+              this.selectedAddMineAudienceLength,
+            ].join(",")
+          : "0,1";
+      }
+      let data = {
+        ...this.form,
+        isCopy: this.copyActivityId === this.form.activityId,
+        showOrders: this.form.showOrders.replace(/,$/, ""),
+      };
+      // todo
+      if (this.isDamai || this.isXingqiu || this.isMaoyan) {
+        data.targetTypes = data.targetTypes.map((name) => {
+          let map =
+            this.platform === "xiudong" ? data.typeMap : data.skuIdToTypeMap;
+          let ids = Object.keys(map);
+          return ids.find((id) => map[id] === name);
+        });
+      }
+
+      let arr = this.isDamai
+        ? ["phone", "username", "password", "activityId", "port"]
+        : this.isXingqiu || this.isMaoyan
+        ? ["phone", "username", "activityId", "port"]
+        : ["phone", "username", "activityId", "port", "nameIndex"];
+      if (this.checkForm(data, arr)) {
+        this.loading = true;
+
+        if (data.uid) {
+          data.uid = data.uid.replace("尊敬的用户，你的UID是：", "");
+        }
+        await request({
+          method: "post",
+          url: this.host + "/addInfo/",
+          data,
+          timeout: 120000,
+        });
+        this.$refs.popup.close();
+        this.reset();
+        await this.getConfig(true);
+        this.loading = false;
+        let target = this.dataWithoutFilter.find(
+          (one) => one.username === data.username
+        );
+        this.start(target);
+      }
+    },
+    async recoverScroll(scrollTop) {
+      await this.$nextTick();
+      uni.pageScrollTo({
+        duration: 0,
+        scrollTop: scrollTop,
+        direction: 0,
+      });
+    },
+    openCopyDialog({ activityId, port, typeMap, skuIdToTypeMap }) {
+      this.isEdit = false;
+      this.copyActivityId = activityId;
+      this.form = {
+        activityId,
+        port,
+        targetTypes: [],
+        showOrders: "0,",
+        nameIndex: 0,
+      };
+      if (this.platform === "xiudong") {
+        this.form.typeMap = typeMap;
+      } else {
+        this.form.skuIdToTypeMap = skuIdToTypeMap;
+      }
+
+      this.$refs.popup.open("bottom");
+      this.readDataFromClip();
+    },
+    readDataFromClip() {
+      uni.getClipboardData({
+        success: (clip) => {
+          let clipData = clip.data
+            .replace(
+              /(大麦账号(:)?)|(账号:)|(手机:)|(账号：)|(手机：)|(手机号码)|(手机号)|(账号)|(手机)|/g,
+              ""
+            )
+            .trim();
+          clipData = clipData.replace(/密码(:)?(\s)*/g, " 密码").trim();
+
+          let handled = false;
+
+          let regMap = {
+            damai: /itemId=(\d{12})/,
+            xingqiu: /activityId=(\d{6})/,
+            xiudong: /detail\/(\d{6})/,
+          };
+          let reg = regMap[this.platform];
+          let activityRes = reg && clipData.match(reg);
+          if (this.isEdit) {
+            if (!this.editForm.uid && clipData.includes("UID")) {
+              this.editForm.uid = clipData;
+              handled = true;
+            }
+
+            if (activityRes) {
+              this.editForm.activityId = activityRes[1];
+              this.editForm.port = "";
+              this.editForm.isRefresh = true;
+              setTimeout(() => {
+                uni.showToast({
+                  title: "activity改变",
+                  icon: "none",
+                  duration: 3500,
+                });
+              }, 50);
+              handled = true;
+            }
+          } else {
+            if (!clipData.length) return;
+            let [first] = clipData.split(/\s+/);
+            let res = first.match(
+              /1(3\d|4[5-9]|5[0-35-9]|6[567]|7[0-8]|8\d|9[0-35-9])\d{8}/
+            );
+            if (activityRes) {
+              this.form.activityId = activityRes[1];
+              this.form.port = "";
+              this.form.typeMap = {};
+              this.form.skuIdToTypeMap = {};
+              setTimeout(() => {
+                uni.showToast({
+                  title: "activity改变",
+                  icon: "none",
+                  duration: 3500,
+                });
+              }, 50);
+              handled = true;
+            } else if (res) {
+              this.form.phone = clipData;
+              this.handlePhone();
+              handled = true;
+            } else if (clipData.includes("UID")) {
+              handled = true;
+              this.form.uid = clipData.trim();
+            } else if (this.isDamai) {
+              this.form.password = first;
+              this.handlePass();
+              handled = true;
+            }
+          }
+          if (handled) {
+            uni.setClipboardData({
+              data: "",
+            });
+            uni.hideToast();
+          }
+        },
+      });
+    },
+
+    getStyle(item) {
+      let arr = [
+        {
+          condition: item.hasSuccess,
+          background: "#aaffaa",
+        },
+        {
+          condition: item.remark?.includes("频繁"),
+          background: "rgb(225, 223, 223)",
+        },
+        {
+          condition: !item.uid,
+          background: "rgb(254, 214, 91)",
+        },
+        {
+          condition: item.remark?.includes("优先"),
+          background: "#21a1ab",
+          color: "white",
+        },
+      ];
+      let target = arr.find((one) => one.condition);
+      return {
+        background: target ? target.background : "white",
+        color: target ? target.color || "black" : "black",
+      };
+    },
+
+    async start(item, isNoRefresh) {
+      this.loading = true;
+      try {
+        await request({
+          method: "post",
+          url: this.host + "/startUserFromRemote/",
+          data: {
+            cmd:
+              item.cmd +
+              (item.isShow ? (this.isDamai ? ` 1 loop` : " show") : ""),
+            isStopWhenLogin: isNoRefresh,
+          },
+        });
+      } catch (e) {
+        console.log(e);
+      }
+      if (!isNoRefresh) {
+        await this.getConfig();
+      }
+      this.loading = false;
+    },
+    async stop(item) {
+      await request({
+        url: this.host + "/close/" + item.pid + "?isFromRemote=1",
+      });
+      await this.getConfig();
+    },
+    filterData(isFirstGet) {
+      let cmds = Object.values(this.pidToCmd);
+
+      let cmdToPid = {};
+      Object.entries(this.pidToCmd).forEach(([key, value]) => {
+        cmdToPid[value.split(/\s+/).slice(0, 4).join(" ")] = key;
+      });
+      let data = Object.entries(this.config).map(([username, one]) => ({
+        username,
+        ...one,
+        config: one,
+      }));
+
+      data.sort((a, b) => Number(b.port) - Number(a.port));
+
+      let notOkData = data
+        .filter((one) => one.port === "null")
+        .map((one) => one);
+      if (notOkData.length) {
+        uni.showToast({
+          icon: "none",
+          title: notOkData.map((one) => one.username).join(",") + "端口为null",
+          duration: 2000,
+        });
+      }
+
+      data.forEach((one) => {
+        let cmd = `npm run start ${one.username}`;
+        one.cmd = cmd;
+        one.loading = false;
+        one.hasSuccess = Boolean(one.hasSuccess);
+        one.status = cmds.some((cmd) => cmd.split(/\s+/)[3] === one.username)
+          ? 1
+          : 0;
+        one.pid = cmdToPid[cmd];
+        if (this.isDamai || this.isXingqiu || this.isMaoyan) {
+          one.orders = one.orders.map((one) => Number(one));
+          one.showOrders = one.orders.join(",");
+        }
+      });
+
+      let items = this.queryItems.filter((item) => item.value);
+      this.dataWithoutFilter = data;
+      let filteredData = data.filter((one) => {
+        return items.every(
+          ({ value, column }) =>
+            String(one[column])
+              .toLowerCase()
+              .indexOf(String(value).toLowerCase()) !== -1
+        );
+      });
+
+      this.getGroup(filteredData, isFirstGet);
+    },
+    checkIsExpired(one) {
+      if (["damai", "xingqiu", "maoyan"].includes(this.platform)) {
+        let dates = [
+          ...new Set(
+            Object.values(one.skuIdToTypeMap || {}).map((one) => {
+              let date = one.split("_")[0];
+              let arr = date.split(/(\s+)/);
+              return arr[0] + " " + arr.slice(-1)[0];
+            })
+          ),
+        ];
+
+        let isExpired = dates.every((date) => new Date(date) < new Date());
+        return isExpired;
+      }
+      console.log(one);
+      return false;
+      // let types = one.skuIdToTypeMap
+    },
+    getGroup(data, isFirstGet) {
+      this.data = data;
+      console.log(
+        1111,
+        this.data.map((one) => one.activityName)
+      );
+      let res = [];
+      if (!data.length) {
+        this.getGroupData = [];
+      }
+      let cur = null;
+      data.forEach((one) => {
+        if (!cur || cur.group !== one.activityName) {
+          cur = {
+            group: one.activityName,
+            data: [one],
+            isExpired: this.checkIsExpired(one),
+          };
+          res.push(cur);
+        } else if (cur.group === one.activityName) {
+          cur.data.push(one);
+        }
+      });
+
+      res.sort(
+        (a, b) =>
+          (a.group ? a.group[1] : "").charCodeAt() -
+          (b.group ? b.group[1] : "").charCodeAt()
+      );
+
+      if (this.fixedTopActivity) {
+        let i = res.findIndex((one) => one.group === this.fixedTopActivity);
+        let target = res.splice(i, 1);
+        this.groupData = [...target, ...res];
+      } else {
+        this.groupData = res;
+      }
+      console.log("组合数据", this.groupData);
+      if (isFirstGet) {
+        this.groupDataCopy = JSON.parse(JSON.stringify(this.groupData));
+      }
+      console.log(res);
+    },
+    async getConfig(isFirst) {
+      let scrollTop = this.scrollTop;
+      this.loading = true;
+      try {
+        this.groupData = [];
+        this.data = [];
+        let { config, pidToCmd } = await request({
+          url: this.host + "/getAllUserConfig",
+          cancelPre: true,
+        });
+        this.config = config;
+        this.pidToCmd = pidToCmd;
+        this.isShowRecover = Object.keys(this.pidToCmd).length === 0;
+        this.filterData(isFirst);
+      } catch (e) {
+        console.log("出错", e);
+        if (e.errMsg.includes("abort")) {
+          setTimeout(() => {
+            this.loading = true;
+          }, 0);
+        }
+      }
+      this.loading = false;
+      this.recoverScroll(scrollTop);
+      // let options = Object.values(config).map(({ activityId, activityName }) => ({
+      //     activityId,
+      //     activityName,
+      // }));
+      // let uniqueIds = [...new Set(options.map((one) => one.activityId))];
+      // options = uniqueIds.map((activityId) => ({
+      //     activityId,
+      //     activityName: options.find((one) => one.activityId === activityId)
+      //         .activityName,
+      // }));
+      // console.log(options);
+    },
+    choose(item) {
+      this.selected = item.hostname;
+    },
+  },
 };
 </script>
 
 <style scoped lang="scss">
 .remote {
-    // position: relative;
-    // height: 100vh;
-    // overflow: auto;
+  // position: relative;
+  // height: 100vh;
+  // overflow: auto;
 }
 
 .progress {
-    position: fixed;
-    top: 36vh;
-    z-index: 56666665;
-    left: 32%;
-    right: 32%;
+  position: fixed;
+  top: 36vh;
+  z-index: 56666665;
+  left: 32%;
+  right: 32%;
 }
 
 .fail-item {
-    color: red;
+  color: red;
 }
 
 .pcs {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border: 1px solid rgb(225, 223, 223);
-    border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid rgb(225, 223, 223);
+  border-radius: 12px;
 
-    .pc {
-        flex: 1;
-        padding: 10px;
-        text-align: center;
-        cursor: pointer;
+  .pc {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
 
-        &:not(:last-child) {
-            border-right: 1px solid rgb(225, 223, 223);
-        }
-
-        &.selected {
-            background: rgb(0, 122, 255);
-            color: white;
-        }
-
+    &:not(:last-child) {
+      border-right: 1px solid rgb(225, 223, 223);
     }
 
+    &.selected {
+      background: rgb(0, 122, 255);
+      color: white;
+    }
+  }
 }
 
 .search {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+}
+
+.activity {
+  position: sticky;
+  top: 0;
+  z-index: 88;
+  background: rgb(94, 128, 177);
+  color: white;
+  text-align: center;
+  padding: 5px;
+}
+
+.item {
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-bottom: 1px solid rgb(223, 223, 223);
+
+  > :not(:first-child) {
+    margin-left: 10px;
+    flex-shrink: 0;
+    word-break: break-all;
+  }
+
+  .first {
+    width: 110px;
+    text-align: center;
+
+    > :not(:first-child) {
+      line-height: 2;
+    }
+
+    .audience-list {
+      .audience {
+        font-family: 楷体;
+        // font-weight: bold;
+        border-radius: 12px;
+        margin: 2px 10px;
+
+        &.active {
+          background: rgb(154, 7, 190);
+          color: white;
+        }
+      }
+    }
+
+    .msg-icon {
+      width: 26px;
+      height: 26px;
+    }
+
+    // .copy {
+    //     position: relative;
+    //     top: 4px;
+    //     width: 25px;
+    //     height: 18px;
+    // }
+  }
+
+  .targetTypes {
+    flex: 1;
+
+    .target-type {
+      margin: 5px 0;
+      padding: 2px;
+      // font-weight: bold;
+      color: white;
+      border-radius: 12px;
+      text-align: center;
+      line-height: 1.7;
+    }
+  }
+
+  .remark {
+    width: 30px;
+  }
+
+  .btns {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    button {
+      margin: 12px;
+    }
+
+    .copy {
+      // margin: 10px;
+      position: relative;
+      // top: 4px;
+      width: 25px;
+      height: 18px;
+    }
+  }
+
+  // flex: 1;
+}
+
+input {
+  border: 1px solid gainsboro;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.msg-dialog {
+  .msg-template {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  > * {
+    line-height: 2;
+  }
+
+  textarea {
+    border-radius: 12px;
+    margin: 5px;
+    padding: 5px;
+    width: 100%;
+    height: 100px;
+    border: 1px solid #ede8e8;
+    margin-bottom: 15px;
+  }
+
+  .btn-wrap {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 10px;
-    padding: 15px;
-}
 
-.activity {
-    position: sticky;
-    top: 0;
-    z-index: 88;
-    background: rgb(94, 128, 177);
-    color: white;
-    text-align: center;
-    padding: 5px;
-}
-
-.item {
-    padding: 10px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-bottom: 1px solid rgb(223, 223, 223);
-
-    >:not(:first-child) {
-        margin-left: 10px;
-        flex-shrink: 0;
-        word-break: break-all;
-
+    button {
+      flex: 1;
     }
-
-    .first {
-        width: 110px;
-        text-align: center;
-
-        >:not(:first-child) {
-            line-height: 2;
-        }
-
-        .audience-list {
-            .audience {
-                font-family: 楷体;
-                // font-weight: bold;
-                border-radius: 12px;
-                margin: 2px 10px;
-
-                &.active {
-                    background: rgb(154, 7, 190);
-                    color: white;
-                }
-            }
-        }
-
-        .msg-icon {
-            width: 26px;
-            height: 26px;
-        }
-
-        // .copy {
-        //     position: relative;
-        //     top: 4px;
-        //     width: 25px;
-        //     height: 18px;
-        // }
-    }
-
-    .targetTypes {
-        flex: 1;
-
-
-        .target-type {
-            margin: 5px 0;
-            padding: 2px;
-            // font-weight: bold;
-            color: white;
-            border-radius: 12px;
-            text-align: center;
-            line-height: 1.7;
-        }
-    }
-
-    .remark {
-        width: 30px;
-    }
-
-    .btns {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-
-        button {
-            margin: 12px;
-        }
-
-        .copy {
-            // margin: 10px;
-            position: relative;
-            // top: 4px;
-            width: 25px;
-            height: 18px;
-        }
-    }
-
-    // flex: 1;
-}
-
-input {
-    border: 1px solid gainsboro;
-    padding: 10px;
-    border-radius: 10px;
-}
-
-.msg-dialog {
-    .msg-template {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-
-    >* {
-        line-height: 2;
-    }
-
-    textarea {
-        border-radius: 12px;
-        margin: 5px;
-        padding: 5px;
-        width: 100%;
-        height: 100px;
-        border: 1px solid #ede8e8;
-        margin-bottom: 15px;
-    }
-
-    .btn-wrap {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 10px;
-
-        button {
-            flex: 1
-        }
-    }
+  }
 }
 
 .dialog {
-    background-color: white;
-    padding: 10px 20px;
-    padding-right: 0;
+  background-color: white;
+  padding: 0 5px;
+  padding-bottom: 10px !important;
 
-    .toggle {
-        width: 20px;
-        height: 20px;
-        float: right;
-        transition: 0.3s;
-        z-index: 999;
+  .toggle {
+    width: 20px;
+    height: 20px;
+    float: right;
+    transition: 0.3s;
+    z-index: 999;
 
-        &.rotate {
-            transform: rotate(180deg);
-        }
+    &.rotate {
+      transform: rotate(180deg);
+    }
+  }
+
+  .form {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    > * {
+      width: 100%;
+      margin: 5px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
     }
 
-    .form {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+    .input-wrap {
+      display: flex;
+      // justify-content:center;
+      align-items: center;
 
-        >* {
-            width: 100%;
-            margin: 5px;
-
-            &:last-child {
-                margin-bottom: 0;
-            }
-        }
-
-        .input-wrap {
-            display: flex;
-            // justify-content:center;
-            align-items: center;
-
-            span {
-                margin-right: 5px;
-                width: 80px;
-                text-align: center;
-            }
-        }
-
-        .switches {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .is-success {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgb(221, 221, 222);
-        }
-
-        .checkbox-wrap {
-            max-height: 90vh;
-        }
-
-
-
-        .checkbox-group {
-            padding: 10px 0;
-            gap: 10px;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .add-form-item {
-            display: flex;
-            align-items: center;
-
-            span {
-                margin-right: 10px;
-                text-align: right;
-                width: 95px;
-            }
-        }
+      span {
+        margin-right: 5px;
+        width: 80px;
+        text-align: center;
+      }
     }
+
+    .switches {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .is-success {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgb(221, 221, 222);
+    }
+
+    .checkbox-wrap {
+      max-height: 90vh;
+    }
+
+    .checkbox-group {
+      padding: 10px 0;
+      gap: 10px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .add-form-item {
+      display: flex;
+      align-items: center;
+
+      span {
+        margin-right: 10px;
+        text-align: right;
+        width: 95px;
+      }
+    }
+  }
 }
 </style>
