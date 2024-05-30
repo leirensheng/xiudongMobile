@@ -399,6 +399,7 @@ import MyDialog from "./my-dialog/my-dialog.vue";
 let platformToPortMap = {
   xiudong: "4000",
   damai: "5000",
+  xiecheng: "6200",
   xingqiu: "6100",
   maoyan: "7000",
 };
@@ -597,7 +598,7 @@ export default {
       if (!this.isDamai) {
         delete obj["姐司"];
       }
-      return obj
+      return obj;
     },
     isAddMine() {
       return Object.values(this.userMap).some(
@@ -653,6 +654,9 @@ export default {
     isXingqiu() {
       return this.platform === "xingqiu";
     },
+    isXiecheng() {
+      return this.platform === "xiecheng";
+    },
     addItems() {
       let fields = this.isDamai
         ? [
@@ -666,7 +670,7 @@ export default {
             "uid",
             "remark",
           ]
-        : this.isXingqiu || this.isMaoyan
+        : this.isXingqiu || this.isMaoyan || this.isXiecheng
         ? [
             "activityId",
             "port",
@@ -757,6 +761,15 @@ export default {
           "hasSuccess",
         ],
         xingqiu: [
+          "activityId",
+          "port",
+          "showOrders",
+          "remark",
+          "uid",
+          "targetTypes",
+          "hasSuccess",
+        ],
+        xiecheng: [
           "activityId",
           "port",
           "showOrders",
@@ -1265,7 +1278,7 @@ export default {
         showOrders: this.form.showOrders.replace(/,$/, ""),
       };
       // todo
-      if (this.isDamai || this.isXingqiu || this.isMaoyan) {
+      if (this.isDamai || this.isXingqiu || this.isMaoyan || this.isXiecheng) {
         data.targetTypes = data.targetTypes.map((name) => {
           let map =
             this.platform === "xiudong" ? data.typeMap : data.skuIdToTypeMap;
@@ -1276,7 +1289,7 @@ export default {
 
       let arr = this.isDamai
         ? ["phone", "username", "password", "activityId", "port"]
-        : this.isXingqiu || this.isMaoyan
+        : this.isXingqiu || this.isMaoyan || this.isXiecheng
         ? ["phone", "username", "activityId", "port"]
         : ["phone", "username", "activityId", "port", "nameIndex"];
       if (this.checkForm(data, arr)) {
@@ -1498,7 +1511,12 @@ export default {
           ? 1
           : 0;
         one.pid = cmdToPid[cmd];
-        if (this.isDamai || this.isXingqiu || this.isMaoyan) {
+        if (
+          this.isDamai ||
+          this.isXingqiu ||
+          this.isMaoyan ||
+          this.isXiecheng
+        ) {
           one.orders = one.orders.map((one) => Number(one));
           one.showOrders = one.orders.join(",");
         }
@@ -1518,7 +1536,7 @@ export default {
       this.getGroup(filteredData, isFirstGet);
     },
     checkIsExpired(one) {
-      if (["damai", "xingqiu", "maoyan"].includes(this.platform)) {
+      if (["damai", "xingqiu", "maoyan", "xiecheng"].includes(this.platform)) {
         let dates = [
           ...new Set(
             Object.values(one.skuIdToTypeMap || {}).map((one) => {

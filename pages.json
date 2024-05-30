@@ -47,6 +47,13 @@
 			}
 		},
 		{
+			"path": "pages/xiecheng/index",
+			"style": {
+				"enablePullDownRefresh": true,
+				"navigationBarTitleText": "携程"
+			}
+		},
+		{
 			"path": "pages/damai/ticket",
 			"style": {
 				"enablePullDownRefresh": true,
@@ -75,6 +82,10 @@
 			{
 				"pagePath": "pages/xingqiu/index",
 				"text": "星球"	
+			},
+			{
+				"pagePath": "pages/xiecheng/index",
+				"text": "携程"	
 			},
 			{
 				"pagePath": "pages/damai/ticket",

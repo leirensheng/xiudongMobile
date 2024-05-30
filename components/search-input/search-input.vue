@@ -97,6 +97,7 @@ export default {
         xingqiu: "showId",
         damai: "projectid",
         maoyan: "id",
+        xiecheng:'id'
       };
       return map[this.platform];
     },
@@ -104,6 +105,7 @@ export default {
       let map = {
         maoyan: "name",
         xingqiu: "activityName",
+        xiecheng:'activityName',
         damai: "nameNoHtml",
       };
       return map[this.platform];
@@ -191,6 +193,52 @@ export default {
         performanceVOList.forEach((one) => {
           one.activityName = one.name;
           one.id = one.shareLink.match(/detail\/(\d{6})/)[1];
+        });
+
+        res = {
+          records: performanceVOList,
+          total: performanceVOList.length,
+        };
+      } else if (this.platform === "xiecheng") {
+        let { suggestInfoList: performanceVOList } = await request({
+          noHandleCode: true,
+          method: "post",
+          data: {
+            pageIndex: 1,
+            pageSize: 20,
+            keyword: this.showValue,
+            channelId: "1",
+            extensionMap: {
+              sdkVer: "1.0.0",
+              deviceType: "PHONE",
+              deviceOsv: "9",
+              deviceOs: "ANDROID",
+            },
+            head: {
+              cid: "09031046216373346295",
+              ctok: "",
+              cver: "1.0",
+              lang: "01",
+              sid: "8888",
+              syscode: "09",
+              auth: "",
+              xsid: "",
+              extension: [
+                { name: "gs_page_code", value: "10650102722" },
+                {
+                  name: "gs_activitybiz_source",
+                  value: "gs_activitybiz_search",
+                },
+              ],
+            },
+          },
+
+          url: "https://m.ctrip.com/restapi/soa2/28485/json/suggestRemind",
+        });
+
+        performanceVOList.forEach((one) => {
+          one.activityName = one.concertInfo.concertName;
+          one.id = one.concertInfo.concertId;
         });
 
         res = {
