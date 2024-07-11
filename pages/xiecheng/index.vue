@@ -23,14 +23,14 @@ export default {
         if (globalData.pcHost) {
             this.isReady = true
             if (globalData.pcHost.includes('192')) {
-                this.pcHost = '192.168.2.15'
+                this.pcHost = '192.168.2.9'
             } else {
                 this.pcHost = globalData.pcHost
             }
 
         } else {
             uni.$on('hostDone', val => {
-                this.pcHost = val.includes('192') ? '192.168.2.15' : val
+                this.pcHost = val.includes('192') ? '192.168.2.9' : val
                 this.isReady = true
             })
         }

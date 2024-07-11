@@ -1525,12 +1525,27 @@ export default {
       let items = this.queryItems.filter((item) => item.value);
       this.dataWithoutFilter = data;
       let filteredData = data.filter((one) => {
-        return items.every(
-          ({ value, column }) =>
-            String(one[column])
-              .toLowerCase()
-              .indexOf(String(value).toLowerCase()) !== -1
-        );
+        return items.every(({ value, column }) => {
+          if (column !== "username") {
+            return (
+              String(one[column])
+                .toLowerCase()
+                .indexOf(String(value).toLowerCase()) !== -1
+            );
+          } else {
+            let usernameMatch =
+              String(one["username"])
+                .toLowerCase()
+                .indexOf(String(value).toLowerCase()) !== -1;
+            let targetAudience = one.orders.map(
+              (index) => one.audienceList[index]
+            );
+            let audienceMatch = targetAudience.some((audience) =>
+              audience.includes(value)
+            );
+            return usernameMatch || audienceMatch;
+          }
+        });
       });
 
       this.getGroup(filteredData, isFirstGet);

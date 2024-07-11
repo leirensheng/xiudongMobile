@@ -297,9 +297,11 @@ export default {
       this.loading = false;
     },
     call(phoneNumber, item) {
-      let itemList = [phoneNumber, "呼叫", "复制", "已读", "复制一个观演人"];
+      let itemList = [phoneNumber, "呼叫", "复制", "已读"];
       if (item.payCode) {
         itemList.push("复制口令");
+      }else{
+        itemList.push("复制一个观演人");
       }
       uni.showActionSheet({
         itemList,
