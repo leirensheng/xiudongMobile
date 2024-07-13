@@ -304,11 +304,12 @@
                 @change="(e) => changeMyUser(e)"
               >
                 <radio
+                  :style="'color:' + user.split('__')[1]"
                   v-for="(user, index) in item.radioOptions"
-                  :value="user"
+                  :value="user.split('__')[0]"
                   :key="index"
                 >
-                  {{ user }}
+                  {{ user.split("__")[0] }}
                 </radio>
               </radio-group>
 
@@ -456,6 +457,7 @@ export default {
       data: [],
       loading: false,
       form: {},
+      successInfo: {},
       queryItems: [
         {
           column: "username",
@@ -694,7 +696,21 @@ export default {
         name: one,
         id: one,
         isSpecial: one === "showOrders",
-        radioOptions: one === "myUsers" ? Object.keys(this.userMap) : [],
+        radioOptions:
+          one === "myUsers"
+            ? Object.keys(this.userMap).map((name) => {
+                if (this.isDamai) {
+                  let phone = this.userMap[name] && this.userMap[name].phone;
+                  return this.successInfo[phone]
+                    ? `${name}__${this.getColor(this.successInfo[phone])}__${
+                        this.successInfo[phone]
+                      }`
+                    : name;
+                } else {
+                  return name;
+                }
+              })
+            : [],
       }));
     },
     selectedActivityId() {
@@ -793,6 +809,15 @@ export default {
   },
 
   methods: {
+    getColor(num) {
+      let map = {
+        1: "green",
+        2: "blue",
+        3: "orange",
+        4: "red",
+      };
+      return map[num] || "red";
+    },
     getShowActivityName(name) {
       let str = (name || "").replace(
         /(\s+)|」|「|(巡回)|(演唱会)|(Ugly)|(Beauty)|(FINALE)|(世界)/g,
@@ -820,6 +845,24 @@ export default {
         this.form.showOrders = String(this.selectedAddMineAudienceLength);
       }
       this.form.username = "me" + Math.ceil(Math.random() * 10000);
+      this.getPhoneRunningLength(phone, this.form.activityId);
+    },
+    getPhoneRunningLength(phone, activityId) {
+      let data = this.dataWithoutFilter.filter(
+        (one) =>
+          String(one.activityId) === String(activityId) &&
+          Number(one.phone) === Number(phone) &&
+          one.orders.length
+      );
+      if (data.length) {
+        let arr = data.map((one) => one.orders.length);
+        let length = arr.reduce((a, b) => a + b, 0);
+        uni.showToast({
+          icon: "none",
+          title: `记录【${data.length}】_观演人【${length}】`,
+          duration: 2000,
+        });
+      }
     },
     async removeOneAudience(audience, phone) {
       let data = {
@@ -1322,7 +1365,34 @@ export default {
         direction: 0,
       });
     },
-    openCopyDialog({ activityId, port, typeMap, skuIdToTypeMap }) {
+    async getSuccessInfo(activityName) {
+      this.successInfo = {};
+      let records = await request({
+        method: "post",
+        url: this.host + "/searchSeat/",
+        data: {
+          keyword: activityName.replace(/【.*?】/, ""),
+        },
+      });
+      this.successInfo = records.reduce((prev, cur) => {
+        if (!prev[cur.phone]) {
+          prev[cur.phone] = 0;
+        }
+        prev[cur.phone] += cur.realNames.length;
+        return prev;
+      }, {});
+    },
+    async openCopyDialog({
+      activityId,
+      port,
+      typeMap,
+      skuIdToTypeMap,
+      activityName,
+    }) {
+      if (this.isDamai) {
+        await this.getSuccessInfo(activityName);
+      }
+
       this.isEdit = false;
       this.copyActivityId = activityId;
       this.form = {
