@@ -1,6 +1,6 @@
 <template>
   <uni-popup ref="popup" type="bottom" @change="changePopup">
-    <div class="dialog">
+    <div class="dialog" :class="isWeb ? 'is-web' : ''">
       <div class="activityName" @click="openCheck">{{ activityName }}</div>
       <div class="top">
         <div>启动中: {{ allRunningLength }}</div>
@@ -88,6 +88,7 @@
       </div>
 
       <div class="actions">
+        <button class="btn refresh" @click="refreshActivity">更新票价</button>
         <button class="btn update" @click="updateConfig">修改</button>
         <button
           v-if="!isRunning"
@@ -111,6 +112,7 @@ import { request, getTime } from "@/utils.js";
 export default {
   data() {
     return {
+      isWeb: false,
       curType: "",
       curTypeUsers: [],
       curTypeRunningUsers: [],
@@ -123,9 +125,11 @@ export default {
       checkConfig: {},
     };
   },
-  created() {},
+  created() {
+    this.isWeb = uni.getSystemInfoSync().uniPlatform === "web";
+  },
 
-  emits: ["startOne", "stopOne", "autoStartUsers", "update:modelValue"],
+  emits: ["startOne", "stopOne", "autoStartUsers", "update:modelValue","stopCheck","startCheck"],
   props: {
     userConfig: {
       type: Array,
@@ -172,18 +176,40 @@ export default {
       }
     },
   },
-  computed:{
-    checkHost(){
-        return this.host.includes('5000')? this.host.replace('5000','5010'): this.host
-    }
+  computed: {
+    checkHost() {
+      if (this.host.includes("mticket")) {
+        return this.host.replace("5000", "5010");
+      }
+      return this.host;
+    },
+    activityHost() {
+      return this.host.includes("5000")
+        ? this.host.replace("5000", "5001")
+        : this.host;
+    },
   },
   methods: {
+    async refreshActivity() {
+      this.loading = true;
+      await request({
+        timeout: 60000,
+        url: this.activityHost + "/refreshActivity/" + this.activityId,
+      });
+      await request({
+        url: "http://mticket.ddns.net:5002/syncActivityInfo",
+        method: "get",
+      });
+      await this.getCheckConfig();
+      this.loading = false;
+    },
     async stop() {
       this.loading = true;
       this.isRunning = false;
       await request({ url: this.checkHost + "/stopCheck/" + this.port });
       await this.checkIsRunning();
       this.loading = false;
+      this.$emit('stopCheck',Number(this.port))
     },
     async start() {
       this.loading = true;
@@ -194,14 +220,17 @@ export default {
       });
       await this.checkIsRunning();
       this.loading = false;
+      this.$emit('startCheck',Number(this.port))
     },
     async updateConfig() {
-      console.log(this.checkConfig);
+      let data = { ...this.checkConfig };
+      delete data.skuIdToTypeMap;
+      delete data.activityName;
       this.loading = true;
       await request({
         url: this.checkHost + "/updateCheckConfig/",
         method: "post",
-        data: this.checkConfig,
+        data,
       });
       this.loading = false;
       uni.showToast({
@@ -224,9 +253,14 @@ export default {
       });
     },
     async getCheckConfig() {
-      this.checkConfig = await request({
+      let p1 = request({
         url: this.checkHost + "/getCheckConfig/" + this.activityId,
       });
+      let p2 = request({
+        url: this.activityHost + "/getActivityInfo/" + this.activityId,
+      });
+      let [obj, info] = await Promise.all([p1, p2]);
+      this.checkConfig = { ...obj, ...info };
     },
     async refreshDialog() {
       await this.getCalc();
@@ -423,10 +457,12 @@ export default {
 <style scoped lang="scss">
 .dialog {
   min-height: 30vh;
-  padding-bottom: 60px;
   background-color: white;
   max-height: 80vh;
   overflow: auto;
+  &.is-web {
+    padding-bottom: 60px;
+  }
 
   .activityName {
     text-align: center;
@@ -493,7 +529,9 @@ export default {
     font-size: 14px;
     line-height: 2.3;
     color: white;
-
+    &.refresh {
+      background: rgb(112, 192, 46);
+    }
     &.update {
       background: rgb(46, 80, 192);
     }

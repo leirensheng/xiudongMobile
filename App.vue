@@ -27,7 +27,7 @@ export default {
 			})
 		},
 		async getHost() {
-			let isLocal = await this.checkIsInLocal()
+			let isLocal = false
 			let host = isLocal ? '192.168.2.9' : 'mticket.ddns.net'
 			globalData.pcHost = host
 			uni.$emit('hostDone', host)

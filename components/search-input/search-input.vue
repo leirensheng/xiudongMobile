@@ -98,6 +98,7 @@ export default {
         damai: "projectid",
         maoyan: "id",
         xiecheng: "id",
+        activity: "activityId",
       };
       return map[this.platform];
     },
@@ -107,6 +108,7 @@ export default {
         xingqiu: "activityName",
         xiecheng: "activityName",
         damai: "nameNoHtml",
+        activity: "activityName"
       };
       return map[this.platform];
     },
@@ -140,9 +142,9 @@ export default {
     setValue(item) {
       this.showValue = item[this.showField];
       this.$emit("update:value", this.showValue);
-      console.log(this.showValue);
+      // console.log(this.showValue);
       this.$emit("update:id", item[this.idField]);
-      this.$emit("itemChange", item[this.idField]);
+      this.$emit("itemChange", item[this.idField], this.list);
       this.isShowDialog = false;
     },
     getMore() {
@@ -257,7 +259,7 @@ export default {
             "https://search.damai.cn/searchajax.html?cty=&ctl=&sctl=&tsg=0&st=&et=&order=0&pageSize=30&currPage=1&keyword=" +
             encodeURIComponent(this.showValue),
         });
-        console.log(123, test);
+        // console.log(123, test);
         let {
           pageData: { resultData },
         } = test;
@@ -265,6 +267,31 @@ export default {
           records: resultData,
           total: resultData.length,
         };
+      } else if (this.platform === "activity") {
+        let { data } = await request({
+          noHandleCode: true,
+          url: "http://mticket.ddns.net:5001/getAllActivityInfo",
+        });
+        let arr = Object.keys(data).map((id) => ({
+          activityId: id,
+          ...data[id],
+        }));
+        let records = arr.filter((one) =>
+          one.activityName?.includes(this.showValue)
+        );
+        // console.log(records)
+        res= {
+          records,
+          total: records.length,
+        };
+        // console.log(123, test);
+        // let {
+        //   pageData: { resultData },
+        // } = test;
+        // res = {
+        //   records: resultData,
+        //   total: resultData.length,
+        // };
       }
 
       let { records: list, total } = res;

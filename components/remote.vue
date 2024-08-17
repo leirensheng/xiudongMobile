@@ -45,7 +45,7 @@
         src="/static/add2.svg"
         @click="addActivity"
       />
-
+      <!-- 
       <picker
         v-show="activities.length"
         @change="bindPickerChange"
@@ -62,7 +62,7 @@
           style="width: 16px; height: 16px"
           src="/static/filterSelected.svg"
         />
-      </picker>
+      </picker> -->
     </div>
 
     <uni-swipe-action>
@@ -89,8 +89,8 @@
           v-for="item in one.data"
           :right-options="rightOptions"
           :key="item.username + item.phone"
-          @click="swipeClick($event, item)"
-          :disabled="!!item.status"
+          @click="swipeClick($event, item, one)"
+          :disabled="!!item.runningCmd"
         >
           <!-- <div class="activity" v-if="index===0|| (item.activityName!== data[index-1].activityName )">{{item.activityName}}</div> -->
 
@@ -109,7 +109,9 @@
                 />
               </div>
 
-              <div @click="callOrCopyPhone(item.phone)">{{ item.phone }}</div>
+              <div @click="callOrCopyPhone(item.phone, item.username)">
+                {{ item.phone }}
+              </div>
               <div class="name" @click="copyUsername(item.username)">
                 {{ item.username }}
               </div>
@@ -130,7 +132,7 @@
                   :key="audience"
                   :class="item.orders.includes(audienceIndex) ? 'active' : ''"
                   @click="
-                    clickAudience(item, audience, audienceIndex, item.phone)
+                    clickAudience(item, audience, audienceIndex, item.phone, one)
                   "
                 >
                   {{
@@ -167,10 +169,12 @@
                 class="btn"
                 size="mini"
                 type="warn"
-                v-if="item.status"
+                v-if="item.runningCmd"
                 @click="stop(item)"
               >
-                停止
+                <span class="stop-wrap">
+                  <span>停止</span>
+                </span>
               </button>
               <button
                 class="btn"
@@ -196,7 +200,7 @@
   <!-- <page-meta :page-style="'overflow:' + (show ? 'hidden' : 'visible')"></page-meta> -->
 
   <uni-popup ref="popup" type="bottom" @touchmove.stop @change="changePopup">
-    <div class="dialog" @touchmove.stop>
+    <div class="dialog" :class="isWeb?'is-web':''" @touchmove.stop>
       <image
         mode="widthFix"
         src="../static/open.svg"
@@ -204,7 +208,7 @@
         :class="isShowAll ? 'toggle' : 'toggle rotate'"
       >
       </image>
-      <scroll-view scroll-y style="max-height: 90vh">
+      <scroll-view scroll-y :style="scrollViewHeight">
         <div class="form" v-if="isEdit">
           <template class="basic-form" v-if="isShowAll">
             <search-input
@@ -387,6 +391,8 @@
     :activityId="calcActivityId"
     :userConfig="dataWithoutFilter"
     @startOne="startOne"
+    @startCheck="afterStartCheck"
+    @stopCheck="afterStopCheck"
     @stopOne="stopOne"
     @autoStartUsers="autoStartUsers"
   ></calc-activity>
@@ -396,7 +402,7 @@
 import calcActivity from "./calcActivity.vue";
 import SearchInput from "./search-input/search-input.vue";
 import MyDialog from "./my-dialog/my-dialog.vue";
-
+import userMap from "./userMap";
 let platformToPortMap = {
   xiudong: "4000",
   damai: "5000",
@@ -428,6 +434,7 @@ export default {
 
   data() {
     return {
+      isWeb: false,
       dataWithoutFilter: [],
       clientid: "",
       failCmds: [],
@@ -449,7 +456,6 @@ export default {
       show: false,
       windowHeight: 0,
       groupData: [],
-      groupDataCopy: [],
       targetTypeIndexes: [],
       editForm: {},
       isEdit: false,
@@ -485,10 +491,10 @@ export default {
   },
 
   watch: {
-    selectedActivityId(val) {
-      this.queryItems.find((one) => one.column === "activityId").value = val;
-      this.filterData();
-    },
+    // selectedActivityId(val) {
+    //   this.queryItems.find((one) => one.column === "activityId").value = val;
+    //   this.filterData();
+    // },
     selected: {
       immediate: true,
       handler() {
@@ -513,6 +519,7 @@ export default {
     },
   },
   created() {
+    this.isWeb = uni.getSystemInfoSync().uniPlatform === "web";
     //#ifdef APP-PLUS
 
     plus.push.getClientInfoAsync((info) => {
@@ -526,77 +533,19 @@ export default {
   },
   mounted() {},
   computed: {
+    scrollViewHeight(){
+      return {
+        maxHeight: this.isWeb?'80vh':'90vh'
+      }
+    },
+    checkHost() {
+      if (this.host.includes("mticket")) {
+        return this.host.replace("5000", "5010");
+      }
+      return this.host;
+    },
     userMap() {
-      let obj = {
-        我: {
-          phone: "15521373109",
-          password: "hik12345",
-        },
-        广: {
-          phone: "18124935302",
-          password: "hik12345",
-        },
-        姐: {
-          phone: "13422580347",
-          password: "open5461203",
-        },
-        姐司: {
-          phone: "19128713692",
-          password: "open5461203",
-        },
-        江: {
-          phone: "18027645865",
-          password: "hik12345",
-        },
-        仁: {
-          phone: "18029400937",
-          password: "hik12345",
-        },
-        mom: {
-          phone: "13427487572",
-          password: "hik12345",
-        },
-        新1: {
-          phone: "16773109616",
-          password: "hik12345",
-        },
-        新2: {
-          phone: "16773109618",
-          password: "hik12345",
-        },
-        新3: {
-          phone: "16773109617",
-          password: "hik12345",
-        },
-        新4: {
-          phone: "16773109615",
-          password: "hik12345",
-        },
-        新5: {
-          phone: "16773109613",
-          password: "hik12345",
-        },
-        新6: {
-          phone: "17170565049",
-          password: "hik12345",
-        },
-        新7: {
-          phone: "17170565054",
-          password: "hik12345",
-        },
-        新8: {
-          phone: "17170565064",
-          password: "hik12345",
-        },
-        新9: {
-          phone: "17170565074",
-          password: "hik12345",
-        },
-        新10: {
-          phone: "17170565084",
-          password: "hik12345",
-        },
-      };
+      let obj = userMap;
       if (!this.isDamai) {
         delete obj["姐司"];
       }
@@ -713,20 +662,6 @@ export default {
             : [],
       }));
     },
-    selectedActivityId() {
-      return this.selectedActivityIndex !== -1
-        ? this.activityInfo[this.selectedActivityIndex].activityId
-        : "";
-    },
-    activityInfo() {
-      return this.groupDataCopy.map((one) => ({
-        activityId: one.data[0].activityId,
-        activityName: one.group,
-      }));
-    },
-    activities() {
-      return this.activityInfo.map((one) => one.activityName);
-    },
     rightOptions() {
       let options = [
         {
@@ -809,6 +744,14 @@ export default {
   },
 
   methods: {
+    afterStartCheck(port){
+     let target= this.groupData.find(one=> one.port===port)
+     target.isCheckRunning = true
+    },
+    afterStopCheck(port){
+     let target= this.groupData.find(one=> one.port===port)
+     target.isCheckRunning = false
+    },
     getColor(num) {
       let map = {
         1: "green",
@@ -864,10 +807,10 @@ export default {
         });
       }
     },
-    async removeOneAudience(audience, phone) {
+    async removeOneAudience(audience, item) {
       let data = {
         audience,
-        phone,
+        phone: item.phone,
       };
       await this.confirmAction(`确定删除【${audience}】？`);
       this.loading = true;
@@ -884,13 +827,13 @@ export default {
       this.loading = false;
       this.getConfig(true);
     },
-    clickAudience(item, audience, index, phone) {
+    clickAudience(item, audience, index, phone, group) {
       let itemList = ["删除", "复制", "切换", "检测"];
       uni.showActionSheet({
         itemList,
         success: async (res) => {
           if ([0].includes(res.tapIndex)) {
-            this.removeOneAudience(audience, item.phone);
+            this.removeOneAudience(audience, item);
           } else if (res.tapIndex === 1) {
             uni.setClipboardData({
               data: audience,
@@ -930,7 +873,7 @@ export default {
               duration: 2000,
             });
             if (isNeedToDelete) {
-              await this.removeOneAudience(name, phone);
+              await this.removeOneAudience(name, item);
             }
           }
         },
@@ -1011,7 +954,11 @@ export default {
     },
     getTitleStyle(one) {
       return {
-        background: one.isExpired ? "red" : "rgb(94, 128, 177)",
+        background: one.isExpired
+          ? "red"
+          : one.isCheckRunning
+          ? "rgb(59 168 59)"
+          : "rgb(94, 128, 177)",
       };
     },
     setXingqiuMsg() {
@@ -1065,11 +1012,11 @@ export default {
       this.msgDialogShow = true;
     },
     getTagColor,
-    callOrCopyPhone(phone) {
-      let itemList = [phone, "呼叫", "复制"];
+    callOrCopyPhone(phone, nickname) {
+      let itemList = [phone, "呼叫", "复制", "关闭并截图", "关闭并支付"];
       uni.showActionSheet({
         itemList,
-        success: (res) => {
+        success: async (res) => {
           if ([0, 1].includes(res.tapIndex)) {
             uni.makePhoneCall({
               phoneNumber: phone,
@@ -1078,6 +1025,26 @@ export default {
             uni.setClipboardData({
               data: phone,
             });
+          } else if (res.tapIndex === 3) {
+            this.loading = true;
+            await request({
+              method: "post",
+              url: this.host + "/closeAndScreenshot/",
+              data: {
+                nickname,
+              },
+            });
+            this.loading = false;
+          } else if (res.tapIndex === 4) {
+            this.loading = true;
+            await request({
+              method: "post",
+              url: this.host + "/closeAndPay/",
+              data: {
+                nickname,
+              },
+            });
+            this.loading = false;
           }
         },
       });
@@ -1263,7 +1230,29 @@ export default {
         this.loading = false;
       }
     },
-    async swipeClick({ index }, { username }) {
+
+    handleRemoveOneInPage(item,group){
+        delete this.config[item.username];
+        let i = group.data.indexOf(item);
+        if (i !== -1) {
+          group.data.splice(i, 1);
+          if(group.data.length === 0){
+            this.groupData.splice(this.groupData.indexOf(group), 1);
+          }
+        }
+
+        i = this.dataWithoutFilter.indexOf(item);
+        if (i !== -1) {
+          this.dataWithoutFilter.splice(i, 1);
+        }
+
+        i = this.data.indexOf(item);
+        if (i !== -1) {
+          this.data.splice(i, 1);
+        }
+    },
+    async swipeClick({ index }, item, group) {
+      let { username } = item;
       if (index === 0) {
         this.loading = true;
         await request({
@@ -1271,7 +1260,7 @@ export default {
           url: this.host + "/removeConfig/",
           data: { username },
         });
-        await this.getConfig();
+        this.handleRemoveOneInPage(item,group)
         this.loading = false;
       } else {
         this.loading = true;
@@ -1341,6 +1330,7 @@ export default {
         if (data.uid) {
           data.uid = data.uid.replace("尊敬的用户，你的UID是：", "");
         }
+        delete data.skuIdToTypeMap;
         await request({
           method: "post",
           url: this.host + "/addInfo/",
@@ -1499,6 +1489,10 @@ export default {
           background: "#aaffaa",
         },
         {
+          condition: item.isLoop,
+          background: "cyan",
+        },
+        {
           condition: item.remark?.includes("频繁"),
           background: "rgb(225, 223, 223)",
         },
@@ -1546,7 +1540,7 @@ export default {
       });
       await this.getConfig();
     },
-    filterData(isFirstGet) {
+    filterData() {
       let cmds = Object.values(this.pidToCmd);
 
       let cmdToPid = {};
@@ -1577,9 +1571,10 @@ export default {
         one.cmd = cmd;
         one.loading = false;
         one.hasSuccess = Boolean(one.hasSuccess);
-        one.status = cmds.some((cmd) => cmd.split(/\s+/)[3] === one.username)
-          ? 1
-          : 0;
+        one.runningCmd = cmds.find(
+          (cmd) => cmd.split(/\s+/)[3] === one.username
+        );
+        one.isLoop = one.runningCmd?.includes("loop");
         one.pid = cmdToPid[cmd];
         if (
           this.isDamai ||
@@ -1607,9 +1602,9 @@ export default {
               String(one["username"])
                 .toLowerCase()
                 .indexOf(String(value).toLowerCase()) !== -1;
-            let targetAudience = one.orders.map(
-              (index) => one.audienceList[index]
-            );
+            let targetAudience = one.orders
+              .map((index) => one.audienceList && one.audienceList[index])
+              .filter(Boolean);
             let audienceMatch = targetAudience.some((audience) =>
               audience.includes(value)
             );
@@ -1618,7 +1613,7 @@ export default {
         });
       });
 
-      this.getGroup(filteredData, isFirstGet);
+      this.getGroup(filteredData);
     },
     checkIsExpired(one) {
       if (["damai", "xingqiu", "maoyan", "xiecheng"].includes(this.platform)) {
@@ -1639,12 +1634,8 @@ export default {
       return false;
       // let types = one.skuIdToTypeMap
     },
-    getGroup(data, isFirstGet) {
+    getGroup(data) {
       this.data = data;
-      console.log(
-        1111,
-        this.data.map((one) => one.activityName)
-      );
       let res = [];
       if (!data.length) {
         this.getGroupData = [];
@@ -1653,6 +1644,8 @@ export default {
       data.forEach((one) => {
         if (!cur || cur.group !== one.activityName) {
           cur = {
+            isCheckRunning: this.runningCheckPorts.includes(Number(one.port)),
+            port: Number(one.port),
             group: one.activityName,
             data: [one],
             isExpired: this.checkIsExpired(one),
@@ -1677,25 +1670,58 @@ export default {
         this.groupData = res;
       }
       console.log("组合数据", this.groupData);
-      if (isFirstGet) {
-        this.groupDataCopy = JSON.parse(JSON.stringify(this.groupData));
-      }
       console.log(res);
     },
     async getConfig(isFirst) {
       let scrollTop = this.scrollTop;
       this.loading = true;
       try {
-        this.groupData = [];
-        this.data = [];
-        let { config, pidToCmd } = await request({
+        // this.groupData = [];
+        // this.data = [];
+        let p1 = request({
           url: this.host + "/getAllUserConfig",
           cancelPre: true,
         });
+
+        let p2 = request({
+          url:
+            (this.isDamai ? this.host.replace("5000", "5001") : this.host) +
+            "/getAllActivityInfo",
+          cancelPre: true,
+        });
+        let p3 = request({
+          url:
+            (this.isDamai ? this.host.replace("5000", "5001") : this.host) +
+            "/getAllAudienceInfo",
+          cancelPre: true,
+        });
+
+        let p4 = request({
+          url: this.checkHost + "/getRunningCheckPorts",
+          cancelPre: true,
+        });
+
+        this.runningCheckPorts = [];
+        let [
+          { config, pidToCmd },
+          activityInfo,
+          audienceInfo,
+          runningCheckPorts = [],
+        ] = await Promise.all([p1, p2, p3, p4]);
+
+        this.runningCheckPorts = runningCheckPorts;
+        Object.values(config).forEach((obj) => {
+          let info = activityInfo[obj.activityId];
+          obj.activityName = info?.activityName;
+          obj.audienceList = audienceInfo ? audienceInfo[obj.phone] : [];
+          obj.skuIdToTypeMap = info ? info.skuIdToTypeMap : {};
+        });
+
         this.config = config;
+
         this.pidToCmd = pidToCmd;
         this.isShowRecover = Object.keys(this.pidToCmd).length === 0;
-        this.filterData(isFirst);
+        this.filterData();
       } catch (e) {
         console.log("出错", e);
         if (e.errMsg.includes("abort")) {
@@ -1705,7 +1731,7 @@ export default {
         }
       }
       this.loading = false;
-      this.recoverScroll(scrollTop);
+      // this.recoverScroll(scrollTop);
       // let options = Object.values(config).map(({ activityId, activityName }) => ({
       //     activityId,
       //     activityName,
@@ -1861,6 +1887,11 @@ export default {
     button {
       margin: 12px;
     }
+    .stop-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
     .copy {
       // margin: 10px;
@@ -1916,12 +1947,18 @@ input {
 .dialog {
   background-color: white;
   padding: 0 5px;
-  padding-bottom: 10px !important;
+  padding-bottom: 10px;
+  position: relative;
+  &.is-web{
+    padding-bottom: 50px;
+  }
 
   .toggle {
     width: 20px;
     height: 20px;
-    float: right;
+    position: absolute;
+    top: 5px;
+    right: 5px;
     transition: 0.3s;
     z-index: 999;
 

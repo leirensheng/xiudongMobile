@@ -12,10 +12,10 @@ let request = (options) =>
       success: (res) => {
         console.log(res);
         let result = res.data;
-        let { code, data, msg }  = result
-        if(options.noHandleCode){
-          resolve(result)
-          return
+        let { code, data, msg } = result;
+        if (options.noHandleCode) {
+          resolve(result);
+          return;
         }
         let tips = msg;
         if (code !== 0) {
@@ -44,7 +44,7 @@ let request = (options) =>
   });
 
 let random = (min, max) => Math.floor(Math.random() * (max - min)) + min;
-let tagList = []
+let tagList = [];
 
 let getTagColor = (tag) => {
   if (!tagList[tag]) {
@@ -57,7 +57,6 @@ let getTagColor = (tag) => {
   return tagList[tag];
 };
 
-
 let formatNumber = (val) => (val < 10 ? "0" + val : val);
 let getTime = (date) => {
   if (!date) {
@@ -65,15 +64,16 @@ let getTime = (date) => {
   }
   let year = date.getFullYear();
 
-  let month = date.getMonth()+1
+  let month = date.getMonth() + 1;
   let day = date.getDate();
   let hour = date.getHours();
   let minute = date.getMinutes();
   let second = date.getSeconds();
 
-  return `${year}-${formatNumber(month)}-${formatNumber(day)} ${formatNumber(hour)}:${formatNumber(minute)}:${formatNumber(
-    second
-  )}`;
+  return `${year}-${formatNumber(month)}-${formatNumber(day)} ${formatNumber(
+    hour
+  )}:${formatNumber(minute)}:${formatNumber(second)}`;
 };
+let sleep = (time) => new Promise((r) => setTimeout(r, time));
 
-export { request, getTagColor,getTime };
+export { request, getTagColor, getTime, sleep };
