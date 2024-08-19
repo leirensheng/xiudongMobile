@@ -132,7 +132,13 @@
                   :key="audience"
                   :class="item.orders.includes(audienceIndex) ? 'active' : ''"
                   @click="
-                    clickAudience(item, audience, audienceIndex, item.phone, one)
+                    clickAudience(
+                      item,
+                      audience,
+                      audienceIndex,
+                      item.phone,
+                      one
+                    )
                   "
                 >
                   {{
@@ -200,7 +206,7 @@
   <!-- <page-meta :page-style="'overflow:' + (show ? 'hidden' : 'visible')"></page-meta> -->
 
   <uni-popup ref="popup" type="bottom" @touchmove.stop @change="changePopup">
-    <div class="dialog" :class="isWeb?'is-web':''" @touchmove.stop>
+    <div class="dialog" :class="isWeb ? 'is-web' : ''" @touchmove.stop>
       <image
         mode="widthFix"
         src="../static/open.svg"
@@ -327,38 +333,15 @@
             </div>
           </template>
 
-          <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
-            <checkbox-group
-              v-if="platform === 'xiudong' && form.typeMap"
-              @change="(e) => changeTarget(form, e)"
-              class="checkbox-group"
-            >
-              <checkbox
-                :value="item"
-                v-for="(item, index) in Object.keys(form.typeMap)"
-                :key="index"
-                :checked="form.targetTypes.includes(item)"
-                >{{ item }}
-              </checkbox>
-            </checkbox-group>
-
-            <checkbox-group
-              v-else
-              @change="(e) => changeTarget(form, e)"
-              class="checkbox-group"
-            >
-              <checkbox
-                :value="item"
-                v-for="(item, index) in Object.values(form.skuIdToTypeMap)"
-                :key="index"
-                :checked="form.targetTypes.includes(item)"
-                >{{ item }}
-              </checkbox>
-            </checkbox-group>
-          </scroll-view>
-
           <div style="display: flex">
-            <button class="btn" @click="checkIsCanBuy">测试</button>
+            <button
+              class="btn"
+              @click="checkIsCanBuy"
+              :loading="isTesting"
+              :disabled="isTesting"
+            >
+              {{ testBtnText }}
+            </button>
             <button class="btn" type="primary" @click="add">新增</button>
           </div>
         </div>
@@ -434,6 +417,8 @@ export default {
 
   data() {
     return {
+      isTesting: false,
+      testBtnText: "测试",
       isWeb: false,
       dataWithoutFilter: [],
       clientid: "",
@@ -533,10 +518,10 @@ export default {
   },
   mounted() {},
   computed: {
-    scrollViewHeight(){
+    scrollViewHeight() {
       return {
-        maxHeight: this.isWeb?'80vh':'90vh'
-      }
+        maxHeight: this.isWeb ? "80vh" : "92vh",
+      };
     },
     checkHost() {
       if (this.host.includes("mticket")) {
@@ -569,7 +554,7 @@ export default {
     },
     scrollStyle() {
       return {
-        height: this.isShowAll ? (this.isEdit ? "25vh" : "15vh") : "auto",
+        maxHeight: this.isShowAll ? (this.isEdit ? "25vh" : "15vh") : "auto",
       };
     },
     pcs() {
@@ -744,13 +729,13 @@ export default {
   },
 
   methods: {
-    afterStartCheck(port){
-     let target= this.groupData.find(one=> one.port===port)
-     target.isCheckRunning = true
+    afterStartCheck(port) {
+      let target = this.groupData.find((one) => one.port === port);
+      target.isCheckRunning = true;
     },
-    afterStopCheck(port){
-     let target= this.groupData.find(one=> one.port===port)
-     target.isCheckRunning = false
+    afterStopCheck(port) {
+      let target = this.groupData.find((one) => one.port === port);
+      target.isCheckRunning = false;
     },
     getColor(num) {
       let map = {
@@ -880,6 +865,7 @@ export default {
       });
     },
     async checkIsCanBuy() {
+      this.isTesting = true;
       let res = await request({
         url: this.host + "/checkIsCanBuy?activityId=" + this.form.activityId,
       });
@@ -888,6 +874,8 @@ export default {
         title: res || "不支持",
         duration: 2000,
       });
+      this.testBtnText = res || "不支持"
+      this.isTesting = false;
     },
     async recover() {
       this.loading = true;
@@ -980,6 +968,7 @@ export default {
       return Number(allPorts.pop()) + 1;
     },
     activityChange(id) {
+      this.testBtnText = "测试";
       this.editForm.activityId = id;
       this.form.activityId = id;
 
@@ -1231,25 +1220,25 @@ export default {
       }
     },
 
-    handleRemoveOneInPage(item,group){
-        delete this.config[item.username];
-        let i = group.data.indexOf(item);
-        if (i !== -1) {
-          group.data.splice(i, 1);
-          if(group.data.length === 0){
-            this.groupData.splice(this.groupData.indexOf(group), 1);
-          }
+    handleRemoveOneInPage(item, group) {
+      delete this.config[item.username];
+      let i = group.data.indexOf(item);
+      if (i !== -1) {
+        group.data.splice(i, 1);
+        if (group.data.length === 0) {
+          this.groupData.splice(this.groupData.indexOf(group), 1);
         }
+      }
 
-        i = this.dataWithoutFilter.indexOf(item);
-        if (i !== -1) {
-          this.dataWithoutFilter.splice(i, 1);
-        }
+      i = this.dataWithoutFilter.indexOf(item);
+      if (i !== -1) {
+        this.dataWithoutFilter.splice(i, 1);
+      }
 
-        i = this.data.indexOf(item);
-        if (i !== -1) {
-          this.data.splice(i, 1);
-        }
+      i = this.data.indexOf(item);
+      if (i !== -1) {
+        this.data.splice(i, 1);
+      }
     },
     async swipeClick({ index }, item, group) {
       let { username } = item;
@@ -1260,7 +1249,7 @@ export default {
           url: this.host + "/removeConfig/",
           data: { username },
         });
-        this.handleRemoveOneInPage(item,group)
+        this.handleRemoveOneInPage(item, group);
         this.loading = false;
       } else {
         this.loading = true;
@@ -1949,7 +1938,7 @@ input {
   padding: 0 5px;
   padding-bottom: 10px;
   position: relative;
-  &.is-web{
+  &.is-web {
     padding-bottom: 50px;
   }
 

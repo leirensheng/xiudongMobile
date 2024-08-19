@@ -308,6 +308,11 @@ export default {
             one.msg = one.msg.replace("orange", "#420bfe");
           });
         }
+        let addLength = arr.length - this.msgArr.length;
+        arr.slice(0, addLength).forEach(one=>{
+          console.log(one)
+          this.handleReceiveOneMsg(one)
+        })
         this.msgArr = arr;
       }
     }, 5000);
@@ -330,13 +335,7 @@ export default {
         if (hasAdd) return;
         this.msgArr.unshift(payload);
 
-        if (payload.type === "success") {
-          this.playSong();
-        } else if (payload.msg.includes("未支付")) {
-          this.playSong();
-        } else if (!this.isNoSound) {
-          this.sound(payload.type, payload.msg);
-        }
+        this.handleReceiveOneMsg(payload);
       },
       false
     );
@@ -366,6 +365,19 @@ export default {
     this.isWeb = !!document;
   },
   methods: {
+    handleReceiveOneMsg(payload) {
+      if(!payload){
+        console.log("没有palyload")
+        return
+      }
+      if (payload.type === "success") {
+        this.playSong();
+      } else if (payload.msg.includes("未支付")) {
+        this.playSong();
+      } else if (!this.isNoSound) {
+        this.sound(payload.type, payload.msg);
+      }
+    },
     closePay() {
       this.$refs.pay.close();
     },
@@ -998,7 +1010,14 @@ export default {
     }
   }
 }
-
+.popup-content {
+  background: white;
+  padding: 15px;
+  padding-top: 40vh;
+  input {
+    margin-bottom: 15px;
+  }
+}
 .bottom {
   display: flex;
   justify-content: center;
