@@ -46,12 +46,14 @@ let request = (options) =>
 let random = (min, max) => Math.floor(Math.random() * (max - min)) + min;
 let tagList = [];
 
+let randomColor = () => {
+  return `rgb(${random(0, 255)}, ${random(0, 255)}, ${random(0, 255)})`;
+};
+
+
 let getTagColor = (tag) => {
   if (!tagList[tag]) {
-    tagList[tag] = `rgb(${random(0, 255)}, ${random(0, 255)}, ${random(
-      0,
-      255
-    )})`;
+    tagList[tag] = randomColor()
     // localStorage.tagList = JSON.stringify(tagList);
   }
   return tagList[tag];
@@ -76,4 +78,4 @@ let getTime = (date) => {
 };
 let sleep = (time) => new Promise((r) => setTimeout(r, time));
 
-export { request, getTagColor, getTime, sleep };
+export { request, getTagColor, getTime, sleep,randomColor };

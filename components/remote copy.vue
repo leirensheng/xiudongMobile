@@ -109,18 +109,12 @@
                 />
               </div>
 
-              <div @click="callOrCopyPhone(item)">
+              <div @click="callOrCopyPhone(item.phone, item.username)">
                 {{ item.phone }}
               </div>
               <div class="name" @click="copyUsername(item.username)">
                 {{ item.username }}
               </div>
-
-              <switch
-                :disabled="item.runningCmd || loading"
-                :checked="item.isUseSlave"
-                @change="(e) => handleSlaveChange(e, item)"
-              />
 
               <div class="order">
                 <checkbox-group @change="item.isShow = !item.isShow">
@@ -268,16 +262,10 @@
             >
               <checkbox
                 :value="item"
-                v-for="(item, index) in currentTypes"
-                :key="item"
+                v-for="(item, index) in Object.values(editForm.skuIdToTypeMap)"
+                :key="index"
                 :checked="editForm.targetTypes.includes(item)"
-                ><span
-                  :style="{
-                    color: 'white',
-                    backgroundColor: getTypesColor(currentTypes, index),
-                  }"
-                  >{{ item }}</span
-                >
+                >{{ item }}
               </checkbox>
             </checkbox-group>
           </scroll-view>
@@ -326,12 +314,7 @@
               />
             </div>
 
-            <scroll-view
-              class="checkbox-wrap"
-              scroll-y
-              :style="scrollStyle"
-              v-if="Object.values(form.skuIdToTypeMap).length"
-            >
+            <scroll-view class="checkbox-wrap" scroll-y :style="scrollStyle">
               <checkbox-group
                 @change="(e) => changeTarget(form, e)"
                 class="checkbox-group"
@@ -394,18 +377,12 @@
     @autoStartUsers="autoStartUsers"
   ></calc-activity>
 
-  <set-time
-    v-model:isShow="isSetTimeShow"
-    ref="setTime"
-    v-model:setTimeStr="setTimeStr"
-  ></set-time>
 </template>
 
 <script>
 import calcActivity from "./calcActivity.vue";
 import SearchInput from "./search-input/search-input.vue";
 import MyDialog from "./my-dialog/my-dialog.vue";
-import SetTime from "./setTime.vue";
 import userMap from "./userMap";
 let platformToPortMap = {
   xiudong: "4010",
@@ -414,10 +391,9 @@ let platformToPortMap = {
   xingqiu: "6100",
   maoyan: "7000",
 };
-import { request, getTagColor, randomColor } from "@/utils.js";
+import { request, getTagColor } from "@/utils.js";
 export default {
   components: {
-    SetTime,
     calcActivity,
     MyDialog,
     SearchInput,
@@ -439,9 +415,6 @@ export default {
 
   data() {
     return {
-      indexToColor: {},
-      isSetTimeShow: false,
-      setTimeStr: "",
       isTesting: false,
       testBtnText: "测试",
       isWeb: false,
@@ -543,9 +516,6 @@ export default {
   },
   mounted() {},
   computed: {
-    currentTypes() {
-      return Object.values(this.editForm.skuIdToTypeMap);
-    },
     scrollViewHeight() {
       return {
         maxHeight: this.isWeb ? "80vh" : "92vh",
@@ -748,35 +718,6 @@ export default {
   },
 
   methods: {
-    getTypesColor(all, i) {
-      if (i === 0) {
-        this.indexToColor[i] = randomColor();
-      } else {
-        let preDate = all[i - 1].split("_")[0];
-        let curDate = all[i].split("_")[0];
-        if (preDate === curDate) {
-          this.indexToColor[i] = this.indexToColor[i - 1];
-        } else {
-          this.indexToColor[i] = randomColor();
-        }
-      }
-      return this.indexToColor[i];
-    },
-    async handleSlaveChange(e, item) {
-      item.isUseSlave = e.detail.value;
-      this.loading = true;
-      await request({
-        method: "post",
-        url: this.host + "/editConfig/",
-        data: {
-          username: item.username,
-          config: {
-            isUseSlave: e.detail.value,
-          },
-        },
-      });
-      this.loading = false;
-    },
     afterStartCheck(port) {
       let target = this.groupData.find((one) => one.port === port);
       target.isCheckRunning = true;
@@ -795,8 +736,8 @@ export default {
       return map[num] || "red";
     },
     getShowActivityName(name) {
-      let str = (name || "").replace(
-        /(\s+)|」|「|(巡回)|(演唱会)|(Ugly)|(Beauty)|(FINALE)|(世界)|(Infinity Arena)|(WORLDTOUR)|MACAU|巡演|YELLOW/g,
+      let str = (name || "").replaceAll(
+        /(\s+)|」|「|(巡回)|(演唱会)|(Ugly)|(Beauty)|(FINALE)|(世界)|(Infinity Arena)|(WORLDTOUR)|MACAU/g,
         ""
       );
       let result = [];
@@ -1045,8 +986,7 @@ export default {
       this.msgDialogShow = true;
     },
     getTagColor,
-    callOrCopyPhone(item) {
-      let { phone, username: nickname, isUseSlave } = item;
+    callOrCopyPhone(phone, nickname) {
       let itemList = [
         phone,
         "呼叫",
@@ -1054,7 +994,7 @@ export default {
         "关闭并截图",
         "关闭并支付",
         "关闭并接盘",
-        "关闭并取消订单",
+        "关闭并放单",
       ];
       uni.showActionSheet({
         itemList,
@@ -1073,60 +1013,29 @@ export default {
               method: "post",
               url: this.host + "/closeAndScreenshot/",
               data: {
-                isUseSlave,
                 nickname,
               },
             });
             this.loading = false;
           } else if (res.tapIndex === 4) {
-            await this.confirmAction("确认支付？");
             this.loading = true;
             await request({
               method: "post",
               url: this.host + "/closeAndPay/",
               data: {
                 nickname,
-                isUseSlave,
               },
             });
             this.loading = false;
           } else if (res.tapIndex === 5) {
-            this.setTimeStr =
-              item.snappedTime && new Date(item.snappedTime) > new Date()
-                ? item.cancelTime
-                : "";
-            this.$refs.setTime.mode = "接盘";
-            let snappedTime = await this.$refs.setTime.setTimeForParent();
             this.loading = true;
-            item.snappedTime = snappedTime;
-            await request({
-              method: "post",
-              url: this.host + "/closeAndSetSnappedTime/",
-              data: {
-                snappedTime,
-                nickname,
-                isUseSlave,
-              },
-            });
-            this.loading = false;
-          } else if (res.tapIndex === 6) {
-            this.setTimeStr =
-              item.cancelTime && new Date(item.cancelTime) > new Date()
-                ? item.cancelTime
-                : "";
-            this.$refs.setTime.mode = "取消订单";
-            let cancelTime = await this.$refs.setTime.setTimeForParent();
-            this.loading = true;
-            item.cancelTime = cancelTime;
-            await request({
-              method: "post",
-              url: this.host + "/closeAndCancelOrder/",
-              data: {
-                cancelTime,
-                nickname,
-                isUseSlave,
-              },
-            });
+            // await request({
+            //   method: "post",
+            //   url: this.host + "/closeAnd/",
+            //   data: {
+            //     nickname,
+            //   },
+            // });
             this.loading = false;
           }
         },
@@ -1590,17 +1499,14 @@ export default {
 
     async start(item, isNoRefresh) {
       this.loading = true;
-      let cmd =
-        item.cmd + (item.isShow ? (this.isDamai ? ` 1 loop` : " show") : "");
-      item.runningCmd = cmd;
-
       try {
         await request({
           method: "post",
           url: this.host + "/startUserFromRemote/",
           data: {
-            isUseSlave: item.isUseSlave,
-            cmd,
+            cmd:
+              item.cmd +
+              (item.isShow ? (this.isDamai ? ` 1 loop` : " show") : ""),
             isStopWhenLogin: isNoRefresh,
           },
         });
@@ -1613,17 +1519,10 @@ export default {
       this.loading = false;
     },
     async stop(item) {
-      this.loading = true;
       await request({
-        url: this.host + "/stopUser/" + item.username,
-        data: {
-          isUseSlave: item.isUseSlave,
-        },
+        url: this.host + "/close/" + item.pid + "?isFromRemote=1",
       });
-      delete item.runningCmd;
-      item.isLoop = false;
-      console.log(item);
-      this.loading = false;
+      await this.getConfig();
     },
     filterData() {
       let cmds = Object.values(this.pidToCmd);
@@ -1635,6 +1534,7 @@ export default {
       let data = Object.entries(this.config).map(([username, one]) => ({
         username,
         ...one,
+        config: one,
       }));
 
       data.sort((a, b) => Number(b.port) - Number(a.port));

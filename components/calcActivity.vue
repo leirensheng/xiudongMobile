@@ -86,8 +86,26 @@
           当前时间
         </button>
       </div>
-
       <div class="actions">
+        <div class="not-pc" v-if="checkConfig.isPc">
+          <image
+            style="width: 28px"
+            mode="widthFix"
+            src="/static/phone.svg"
+          ></image>
+          <switch :checked="checkConfig.notUsePc" @change="changeIsNotUsePc" />
+        </div>
+        <div class="not-pc" v-else>
+          <image
+            style="width: 28px"
+            mode="widthFix"
+            src="/static/limit.svg"
+          ></image>
+          <switch
+            :checked="checkConfig.isLimitFrequency"
+            @change="changeIsLimitFrequency"
+          />
+        </div>
         <button class="btn refresh" @click="refreshActivity">更新票价</button>
         <button class="btn update" @click="updateConfig">修改</button>
         <button
@@ -129,7 +147,14 @@ export default {
     this.isWeb = uni.getSystemInfoSync().uniPlatform === "web";
   },
 
-  emits: ["startOne", "stopOne", "autoStartUsers", "update:modelValue","stopCheck","startCheck"],
+  emits: [
+    "startOne",
+    "stopOne",
+    "autoStartUsers",
+    "update:modelValue",
+    "stopCheck",
+    "startCheck",
+  ],
   props: {
     userConfig: {
       type: Array,
@@ -190,15 +215,19 @@ export default {
     },
   },
   methods: {
+    async changeIsNotUsePc(e) {
+      this.checkConfig.notUsePc = e.detail.value;
+      await this.updateConfig();
+    },
+    async changeIsLimitFrequency(e) {
+      this.checkConfig.isLimitFrequency = e.detail.value;
+      await this.updateConfig();
+    },
     async refreshActivity() {
       this.loading = true;
       await request({
         timeout: 60000,
         url: this.activityHost + "/refreshActivity/" + this.activityId,
-      });
-      await request({
-        url: "http://mticket.ddns.net:5002/syncActivityInfo",
-        method: "get",
       });
       await this.getCheckConfig();
       this.loading = false;
@@ -209,7 +238,7 @@ export default {
       await request({ url: this.checkHost + "/stopCheck/" + this.port });
       await this.checkIsRunning();
       this.loading = false;
-      this.$emit('stopCheck',Number(this.port))
+      this.$emit("stopCheck", Number(this.port));
     },
     async start() {
       this.loading = true;
@@ -220,7 +249,7 @@ export default {
       });
       await this.checkIsRunning();
       this.loading = false;
-      this.$emit('startCheck',Number(this.port))
+      this.$emit("startCheck", Number(this.port));
     },
     async updateConfig() {
       let data = { ...this.checkConfig };
@@ -301,7 +330,7 @@ export default {
           ? (one.runningLength / one.allLength) * one.percent
           : 0;
       });
-      // console.log(this.data)
+      console.log(this.data);
     },
     changeIsMin(e) {
       this.isMin = e.detail.value;
@@ -417,10 +446,17 @@ export default {
       this.data = [];
       this.$emit("update:modelValue", e.show);
     },
+    getOneUserAllTypes(name) {
+      let arr = this.data.filter((one) => one.all.includes(name));
+      return arr.map((one) => one.type);
+    },
+
     stopOrStart(item, running) {
+      let types = this.getOneUserAllTypes(item.name).join("______");
       if (running) {
         uni.showModal({
           title: `确定停止${item.name}？`,
+          content: types,
           success: (res) => {
             if (res.confirm) {
               this.$emit("stopOne", item.name);
@@ -432,6 +468,7 @@ export default {
       } else {
         uni.showModal({
           title: `确定启动【${item.name}】？`,
+          content: types,
           success: (res) => {
             if (res.confirm) {
               setTimeout(() => {
@@ -544,8 +581,12 @@ export default {
       background: rgb(195, 84, 20);
     }
   }
-
   .actions {
+    .not-pc {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
     display: flex;
     justify-content: space-around;
     align-items: center;

@@ -5,9 +5,16 @@
 			<div class="dot" :style="{ background: connected ? '#49e749' : 'red' }"> </div>
 		</div> -->
     <div class="actions">
-      <button @click="restartSlide" size="small" class="btn restart">
+      <image
+        class="sync"
+        style="width: 30px; height: 30px; margin-right: 10px"
+        :class="restarting ? 'syncing' : ''"
+        src="/static/restart.svg"
+        @click="restartSlide"
+      />
+      <!-- <button @click="restartSlide" size="small" class="btn restart">
         重启
-      </button>
+      </button> -->
       <image
         class="sync"
         style="width: 30px; height: 30px; flex-shrink: 0"
@@ -16,20 +23,35 @@
         @click="syncActivityInfo"
       />
 
-      <button @click="toAudience" size="small" class="btn audience">
-        观演人
-      </button>
+
+      <image
+        class="audience"
+        style="width: 35px; height: 35px"
+        src="/static/audience.svg"
+        @click="toAudience"
+      />
     </div>
     <div class="status">
-      <div style="margin-right: 10px">勿扰:</div>
+      <image
+        class="sync"
+        style="width: 35px; height: 35px"
+        src="/static/sleep.svg"
+      />
       <switch :checked="isNoSound" @change="handleNOSoundChange" />
-      <!-- 
-			<div style="margin-right: 10px;">勿扰: </div>
-			<switch :checked="isNoSound" @change="handleNOSoundChange" />
 
- -->
-      <div style="margin-right: 10px">仅成功:</div>
+      <image
+        class="sync"
+        style="width: 30px; height: 30px"
+        src="/static/success.svg"
+      />
       <switch :checked="isOnlySuccess" @change="handleOnlySuccessChange" />
+
+      <image
+        class="sync"
+        style="width: 30px; height: 30px; margin-right: 5px"
+        src="/static/wx.svg"
+      />
+      <switch :checked="isWx" @change="handleToggleWx" />
       <my-input
         class="keyword"
         type="text"
@@ -119,6 +141,7 @@
             ></search-input>
 
             <checkbox-group
+              v-if="Object.values(skuIdToTypeMap).length"
               @change="(e) => changeTarget(e)"
               class="checkbox-group"
             >
@@ -191,7 +214,9 @@ import userMap from "@/components/userMap.js";
 export default {
   data() {
     return {
+      isWx: false,
       syncIng: false,
+      restarting: false,
       phoneCode: "",
       allConfig: [],
       form: {
@@ -279,6 +304,10 @@ export default {
       let arr = this.isOnlySuccess
         ? this.msgArr.filter((one) => one.type === "success")
         : this.msgArr;
+
+      if (this.isWx) {
+        arr = arr.filter((one) => one.msg.includes("微信"));
+      }
       if (this.keyword) {
         return arr.filter((one) =>
           one.msg.replace(/\s{2}/, " ").includes(this.keyword)
@@ -293,6 +322,7 @@ export default {
     },
   },
   onLoad() {
+    this.getAllActivity();
     this.loadAllMsg();
     // #ifdef WEB
     setInterval(async () => {
@@ -305,14 +335,14 @@ export default {
         console.log("更新消息");
         if (this.isWeb) {
           arr.forEach((one) => {
-            one.msg = one.msg.replace("orange", "#420bfe");
+            one.msg = one.msg.replace("orange", "#420bfe;font-weight:bold");
           });
         }
         let addLength = arr.length - this.msgArr.length;
-        arr.slice(0, addLength).forEach(one=>{
-          console.log(one)
-          this.handleReceiveOneMsg(one)
-        })
+        arr.slice(0, addLength).forEach((one) => {
+          console.log(one);
+          this.handleReceiveOneMsg(one);
+        });
         this.msgArr = arr;
       }
     }, 5000);
@@ -365,10 +395,16 @@ export default {
     this.isWeb = !!document;
   },
   methods: {
+    async getAllActivity() {
+      this.allActivityInfo = await request({
+        method: "get",
+        url: "http://mticket.ddns.net:5001/getAllActivityInfo",
+      });
+    },
     handleReceiveOneMsg(payload) {
-      if(!payload){
-        console.log("没有palyload")
-        return
+      if (!payload) {
+        console.log("没有palyload");
+        return;
       }
       if (payload.type === "success") {
         this.playSong();
@@ -386,6 +422,7 @@ export default {
       await request({
         url: "http://mticket.ddns.net:5000/payWithMessage",
         data: {
+          isUseSlave: this.isUseSlave,
           endPoint: this.endPoint,
           phoneCode: this.phoneCode,
         },
@@ -395,7 +432,7 @@ export default {
       this.closePay();
     },
     async restartSlide() {
-      this.loading = false;
+      this.restarting = true;
       await request({
         url: "http://mticket.ddns.net:5000/restartSlideServer",
         method: "get",
@@ -405,7 +442,7 @@ export default {
         method: "get",
       });
       await sleep(3000);
-      this.loading = false;
+      this.restarting = false;
     },
     async syncActivityInfo() {
       this.loading = false;
@@ -607,6 +644,9 @@ export default {
         uni.removeStorageSync("isNoSound");
       }
     },
+    handleToggleWx(e) {
+      this.isWx = e.detail.value;
+    },
     handleOnlySuccessChange(e) {
       this.isOnlySuccess = e.detail.value;
       if (this.isOnlySuccess) {
@@ -658,7 +698,7 @@ export default {
       });
       if (this.isWeb) {
         arr.forEach((one) => {
-          one.msg = one.msg.replace("orange", "#420bfe");
+          one.msg = one.msg.replace("orange", "#420bfe;font-weight:bold");
         });
       }
       this.msgArr = arr;
@@ -679,6 +719,48 @@ export default {
       });
     },
 
+    async getActivityFromMsg(msg) {
+      let ids = Object.keys(this.allActivityInfo);
+      for (let one of ids) {
+      }
+      let id = ids.find((one) => {
+        let { activityName } = this.allActivityInfo[one];
+        if (activityName) {
+          let res = activityName.match(/【(.*?)】/);
+          let cityName = res ? res[1] : "";
+          // console.log("当前城市名称", cityName);
+          if (cityName && msg.includes(cityName)) {
+            let index = msg.indexOf(cityName);
+            let actorName = msg.slice(
+              index + cityName.length,
+              index + cityName.length + 2
+            );
+            console.log("actorName", actorName);
+            if (activityName.includes(actorName)) {
+              console.log("可能是", activityName);
+              return true;
+            } else {
+              let actorName = msg.slice(index - 2, index);
+              console.log("actorName", actorName);
+
+              if (activityName.includes(actorName)) {
+                console.log("可能是", activityName);
+                return true;
+              }
+            }
+          }
+        }
+      });
+      if (id) {
+        this.searchActivityName = this.allActivityInfo[id].activityName;
+
+        let list = Object.keys(this.allActivityInfo).map((activityId) => ({
+          ...this.allActivityInfo[id],
+          activityId,
+        }));
+        this.activityChange(id, list);
+      }
+    },
     async clickMsg(item, index) {
       if (item.type === "cheDan") {
         await this.confirmAction(
@@ -702,8 +784,21 @@ export default {
         }
       } else if (item.isPay) {
         this.endPoint = item.endPoint;
+        this.isUseSlave = item.isUseSlave
         this.$refs.pay.open();
       } else if (item.msg.includes("截图")) {
+        // console.log("有截图")
+        // this.getSelect(document.querySelector("#screenshot"));
+        // document.execCommand("copy");
+        // window.getSelection().removeAllRanges();
+      } else if (item.msg.includes("同一时间的演出")) {
+        if (item.nickname) {
+          uni.setStorageSync("searchUser", item.nickname);
+          uni.switchTab({
+            url: "/pages/damai/index",
+          });
+        }
+
         // console.log("有截图")
         // this.getSelect(document.querySelector("#screenshot"));
         // document.execCommand("copy");
@@ -742,6 +837,7 @@ export default {
             method: "get",
             url: "http://mticket.ddns.net:5001/getAllAudienceInfo",
           });
+          this.getActivityFromMsg(item.msg);
         }
       }
     },
@@ -903,6 +999,7 @@ export default {
 }
 
 .actions {
+  padding: 0 15px;
   // display: flex;
   // justify-content: center;
   // align-items: center;
