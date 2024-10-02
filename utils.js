@@ -78,4 +78,15 @@ let getTime = (date) => {
 };
 let sleep = (time) => new Promise((r) => setTimeout(r, time));
 
-export { request, getTagColor, getTime, sleep,randomColor };
+
+let debounce = (fn) => {
+  let timer;
+  return function (...args) {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      fn.call(this, ...args);
+    }, 500);
+  };
+};
+export { debounce,request, getTagColor, getTime, sleep,randomColor };

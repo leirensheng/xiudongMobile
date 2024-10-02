@@ -457,7 +457,7 @@ let platformToPortMap = {
   xingqiu: "6100",
   maoyan: "7000",
 };
-import { request, getTagColor, randomColor } from "@/utils.js";
+import { request, getTagColor, randomColor, debounce } from "@/utils.js";
 export default {
   components: {
     SetTime,
@@ -567,7 +567,7 @@ export default {
     queryItems: {
       deep: true,
       handler() {
-        this.filterData();
+        this.filterDataWithDebounce();
       },
     },
     loading(val) {
@@ -581,6 +581,8 @@ export default {
     },
   },
   created() {
+    this.filterDataWithDebounce = debounce(this.filterData, 500);
+
     this.isWeb = uni.getSystemInfoSync().uniPlatform === "web";
     //#ifdef APP-PLUS
 
