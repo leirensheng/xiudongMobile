@@ -48,7 +48,9 @@
           :key="index"
           @click="stopOrStart(item, curTypeRunningUsers.includes(item.name))"
         >
-          <div class="name">{{ item.name }}</div>
+          <div class="name" :class="item.isFake ? 'is-fake' : ''">
+            {{ item.name }}
+          </div>
           <div class="score">{{ item.score }}</div>
         </div>
       </div>
@@ -301,11 +303,16 @@ export default {
       this.curTypeUsers = item.all
         .map((one) => ({
           name: one,
+          isFake: this.checkIsFake(one),
           score: this.getScore(one, this.userConfig),
         }))
         .sort((a, b) => b.score - a.score);
       this.curTypeRunningUsers = item.running;
       this.$refs.oneType.open("top");
+    },
+    checkIsFake(name) {
+      let target = this.userConfig.find((one) => one.username === name);
+      return target.remark && target.remark.includes("借");
     },
     async getCalc() {
       let data = await request({
@@ -622,6 +629,11 @@ export default {
         background: rgb(52, 228, 55);
       }
 
+      .name {
+        &.is-fake {
+          color: blue;
+        }
+      }
       .score {
         padding: 5px;
         border-radius: 50%;

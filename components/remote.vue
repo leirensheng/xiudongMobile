@@ -24,6 +24,37 @@
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
         </div> -->
     <div class="search">
+      <image
+        v-if="isHideBorrow"
+        class="audience"
+        style="width: 35px; height: 35px"
+        src="/static/hide.svg"
+        @click="isHideBorrow = false"
+      />
+      <image
+        v-else
+        class="audience"
+        style="width: 35px; height: 35px"
+        src="/static/show.svg"
+        @click="isHideBorrow = true"
+      />
+
+      <image
+        v-if="!isHideSlave"
+        class="audience"
+        style="width: 35px; height: 35px"
+        src="/static/showSlaveHost.svg"
+        @click="isHideSlave = true"
+      />
+      <image
+        v-else
+        class="audience"
+        style="width: 35px; height: 35px"
+        src="/static/hideSlaveHost.svg"
+        @click="isHideSlave = false"
+      />
+    </div>
+    <div class="search">
       <input
         v-for="(item, index) in queryItems.filter(
           (one) => one.column !== 'activityId'
@@ -68,6 +99,12 @@
     <uni-swipe-action>
       <template v-for="(one, index) in groupData" :key="one.group + index">
         <div class="activity" :style="getTitleStyle(one)">
+          <image
+            mode="widthFix"
+            src="../static/down.svg"
+            @click="one.isShow = !one.isShow"
+            :class="one.isShow ? 'toggle-collapse' : 'toggle-collapse rotate'"
+          />
           <uni-swipe-action-item
             :right-options="activityRightOptions(one)"
             @click="activityClick($event, one.group)"
@@ -85,126 +122,129 @@
             </div>
           </uni-swipe-action-item>
         </div>
-        <uni-swipe-action-item
-          v-for="item in one.data"
-          :right-options="rightOptions"
-          :key="item.username + item.phone"
-          @click="swipeClick($event, item, one)"
-          :disabled="!!item.runningCmd"
-        >
-          <!-- <div class="activity" v-if="index===0|| (item.activityName!== data[index-1].activityName )">{{item.activityName}}</div> -->
 
-          <div
-            class="item"
-            :style="getStyle(item)"
+        <template v-if="one.isShow">
+          <uni-swipe-action-item
+            v-for="item in one.data"
+            :right-options="rightOptions"
             :key="item.username + item.phone"
-            :id="item.username + item.phone"
+            @click="swipeClick($event, item, one)"
+            :disabled="!!item.runningCmd"
           >
-            <div class="first">
-              <div v-if="item.uid">
-                <image
-                  class="msg-icon"
-                  src="/static/msg.svg"
-                  @click="openMsg(item.uid)"
+            <!-- <div class="activity" v-if="index===0|| (item.activityName!== data[index-1].activityName )">{{item.activityName}}</div> -->
+
+            <div
+              class="item"
+              :style="getStyle(item)"
+              :key="item.username + item.phone"
+              :id="item.username + item.phone"
+            >
+              <div class="first">
+                <div v-if="item.uid">
+                  <image
+                    class="msg-icon"
+                    src="/static/msg.svg"
+                    @click="openMsg(item.uid)"
+                  />
+                </div>
+
+                <div @click="callOrCopyPhone(item)">
+                  {{ item.phone }}
+                </div>
+                <div class="name" @click="copyUsername(item.username)">
+                  {{ item.username }}
+                </div>
+
+                <switch
+                  :disabled="item.runningCmd || loading"
+                  :checked="item.isUseSlave"
+                  @change="(e) => handleSlaveChange(e, item)"
                 />
-              </div>
 
-              <div @click="callOrCopyPhone(item)">
-                {{ item.phone }}
-              </div>
-              <div class="name" @click="copyUsername(item.username)">
-                {{ item.username }}
-              </div>
+                <div class="order">
+                  <checkbox-group @change="item.isShow = !item.isShow">
+                    <checkbox :checked="item.isShow">
+                      <div>{{ item.showOrders }}</div>
+                    </checkbox>
+                  </checkbox-group>
+                </div>
 
-              <switch
-                :disabled="item.runningCmd || loading"
-                :checked="item.isUseSlave"
-                @change="(e) => handleSlaveChange(e, item)"
-              />
-
-              <div class="order">
-                <checkbox-group @change="item.isShow = !item.isShow">
-                  <checkbox :checked="item.isShow">
-                    <div>{{ item.showOrders }}</div>
-                  </checkbox>
-                </checkbox-group>
-              </div>
-
-              <div class="audience-list">
-                <div
-                  class="audience"
-                  v-for="(audience, audienceIndex) in item.audienceList"
-                  :key="audience"
-                  :class="item.orders.includes(audienceIndex) ? 'active' : ''"
-                  @click="
-                    clickAudience(
-                      item,
-                      audience,
-                      audienceIndex,
-                      item.phone,
-                      one
-                    )
-                  "
-                >
-                  {{
-                    audienceIndex === item.audienceList.length - 1
-                      ? `${audience}(${audienceIndex + 1})`
-                      : audience
-                  }}
+                <div class="audience-list">
+                  <div
+                    class="audience"
+                    v-for="(audience, audienceIndex) in item.audienceList"
+                    :key="audience"
+                    :class="item.orders.includes(audienceIndex) ? 'active' : ''"
+                    @click="
+                      clickAudience(
+                        item,
+                        audience,
+                        audienceIndex,
+                        item.phone,
+                        one
+                      )
+                    "
+                  >
+                    {{
+                      audienceIndex === item.audienceList.length - 1
+                        ? `${audience}(${audienceIndex + 1})`
+                        : audience
+                    }}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="targetTypes">
-              <div
-                class="target-type"
-                v-for="(targetType, index) in item.targetTypes"
-                :key="index"
-                :style="{ background: getTagColor(targetType) }"
-              >
-                {{ targetType }}
+              <div class="targetTypes">
+                <div
+                  class="target-type"
+                  v-for="(targetType, index) in item.targetTypes"
+                  :key="index"
+                  :style="{ background: getTagColor(targetType) }"
+                >
+                  {{ targetType }}
+                </div>
+              </div>
+
+              <div class="remark">
+                {{ item.remark }}
+              </div>
+
+              <div class="btns">
+                <image
+                  class="copy"
+                  src="/static/edit.svg"
+                  @click="openEditDialog(item)"
+                />
+                <button
+                  class="btn"
+                  size="mini"
+                  type="warn"
+                  v-if="item.runningCmd"
+                  @click="stop(item)"
+                >
+                  <span class="stop-wrap">
+                    <span>停止</span>
+                  </span>
+                </button>
+                <button
+                  class="btn"
+                  size="mini"
+                  type="primary"
+                  v-else
+                  @click="start(item)"
+                  :disabled="loading"
+                >
+                  启动
+                </button>
+                <image
+                  class="copy"
+                  src="/static/copy.svg"
+                  @click="openCopyDialog(item)"
+                />
               </div>
             </div>
-
-            <div class="remark">
-              {{ item.remark }}
-            </div>
-
-            <div class="btns">
-              <image
-                class="copy"
-                src="/static/edit.svg"
-                @click="openEditDialog(item)"
-              />
-              <button
-                class="btn"
-                size="mini"
-                type="warn"
-                v-if="item.runningCmd"
-                @click="stop(item)"
-              >
-                <span class="stop-wrap">
-                  <span>停止</span>
-                </span>
-              </button>
-              <button
-                class="btn"
-                size="mini"
-                type="primary"
-                v-else
-                @click="start(item)"
-                :disabled="loading"
-              >
-                启动
-              </button>
-              <image
-                class="copy"
-                src="/static/copy.svg"
-                @click="openCopyDialog(item)"
-              />
-            </div>
-          </div>
-        </uni-swipe-action-item>
+          </uni-swipe-action-item>
+        </template>
       </template>
     </uni-swipe-action>
   </div>
@@ -251,6 +291,8 @@
                   @change="handleSwitchChange"
                 />
               </div>
+              <image class="jie" src="/static/borrow.svg" @click="jieyong" />
+              <!-- <div class="jie" @click="jieyong">借用</div> -->
               <div class="is-success">
                 <span>重新获取：</span>
                 <switch
@@ -397,6 +439,7 @@
   <set-time
     v-model:isShow="isSetTimeShow"
     ref="setTime"
+    :isCanCancel="isCanCancel"
     v-model:setTimeStr="setTimeStr"
   ></set-time>
 </template>
@@ -440,8 +483,11 @@ export default {
   data() {
     return {
       indexToColor: {},
+      isHideBorrow: false,
+      isHideSlave: false,
       isSetTimeShow: false,
       setTimeStr: "",
+      isCanCancel: false,
       isTesting: false,
       testBtnText: "测试",
       isWeb: false,
@@ -511,6 +557,12 @@ export default {
         this.selectedActivityIndex = -1;
         this.getConfig(true);
       },
+    },
+    isHideBorrow() {
+      this.filterData();
+    },
+    isHideSlave() {
+      this.filterData();
     },
     queryItems: {
       deep: true,
@@ -748,6 +800,16 @@ export default {
   },
 
   methods: {
+    jieyong() {
+      if (!this.editForm.remark.includes("借用")) {
+        this.editForm.remark += "借用";
+      }
+      this.editForm.remark = this.editForm.remark.replace(
+        /代(魔|胜|姐|椰|坤)_(自|客)_/,
+        ""
+      );
+      this.editForm.hasSuccess = false;
+    },
     getTypesColor(all, i) {
       if (i === 0) {
         this.indexToColor[i] = randomColor();
@@ -796,9 +858,11 @@ export default {
     },
     getShowActivityName(name) {
       let str = (name || "").replace(
-        /(\s+)|」|「|(巡回)|(演唱会)|(Ugly)|(Beauty)|(FINALE)|(世界)|(Infinity Arena)|(WORLDTOUR)|MACAU|巡演|YELLOW/g,
+        /（Galaxy Express）|(\s+)|」|「|(巡回)|(演唱会)|(Ugly)|(Beauty)|(FINALE)|(世界)|(Infinity Arena)|(WORLDTOUR)|MACAU|巡演|YELLOW/g,
         ""
       );
+      console.log(name, str);
+
       let result = [];
       let length = 0;
       for (let one of str) {
@@ -1099,6 +1163,7 @@ export default {
             let snappedTime = await this.$refs.setTime.setTimeForParent();
             this.loading = true;
             item.snappedTime = snappedTime;
+            item.isLoop = true;
             await request({
               method: "post",
               url: this.host + "/closeAndSetSnappedTime/",
@@ -1110,10 +1175,12 @@ export default {
             });
             this.loading = false;
           } else if (res.tapIndex === 6) {
-            this.setTimeStr =
-              item.cancelTime && new Date(item.cancelTime) > new Date()
-                ? item.cancelTime
-                : "";
+            // this.setTimeStr =
+            //   item.cancelTime && new Date(item.cancelTime) > new Date()
+            //     ? item.cancelTime
+            //     : "";
+            let time = await this.$refs.setTime.paste();
+            this.checkShouldCancel(time, item.isUseSlave);
             this.$refs.setTime.mode = "取消订单";
             let cancelTime = await this.$refs.setTime.setTimeForParent();
             this.loading = true;
@@ -1131,6 +1198,16 @@ export default {
           }
         },
       });
+    },
+    checkShouldCancel(time, isUseSlave) {
+      let target = this.dataWithoutFilter.find(
+        (one) =>
+          one.snappedTime &&
+          one.snappedTime.includes(time) &&
+          !(!one.isUseSlave === !!isUseSlave)
+      );
+      this.isCanCancel =
+        target && new Date(time).getTime() - Date.now() > 15000;
     },
     copyUsername(username) {
       uni.setClipboardData({
@@ -1568,7 +1645,7 @@ export default {
           background: "cyan",
         },
         {
-          condition: item.remark?.includes("频繁"),
+          condition: item.remark?.includes("借用"),
           background: "rgb(225, 223, 223)",
         },
         {
@@ -1689,8 +1766,16 @@ export default {
           }
         });
       });
-
-      this.getGroup(filteredData);
+      if (this.isHideBorrow) {
+        filteredData = filteredData.filter(
+          (one) => one.remark && !one.remark.includes("借")
+        );
+      }
+      if (this.isHideSlave) {
+        filteredData = filteredData.filter((one) => !one.isUseSlave);
+      }
+      let isHasFilter = filteredData.length !== data.length;
+      this.getGroup(filteredData, isHasFilter);
     },
     checkIsExpired(one) {
       if (["damai", "xingqiu", "maoyan", "xiecheng"].includes(this.platform)) {
@@ -1711,19 +1796,21 @@ export default {
       return false;
       // let types = one.skuIdToTypeMap
     },
-    getGroup(data) {
+    getGroup(data, isHasFilter) {
       this.data = data;
       let res = [];
       if (!data.length) {
         this.getGroupData = [];
       }
       let cur = null;
-      data.forEach((one) => {
+      data.forEach((one, index) => {
+        console.log(11111111111111, index);
         if (!cur || cur.group !== one.activityName) {
           cur = {
             isCheckRunning: this.runningCheckPorts.includes(Number(one.port)),
             port: Number(one.port),
             group: one.activityName,
+            isShow: isHasFilter,
             data: [one],
             isExpired: this.checkIsExpired(one),
           };
@@ -1746,7 +1833,10 @@ export default {
       } else {
         this.groupData = res;
       }
+
       console.log("组合数据", this.groupData);
+      this.groupData.length && (this.groupData[0].isShow = true);
+
       console.log(res);
     },
     async getConfig(isFirst) {
@@ -1887,6 +1977,16 @@ export default {
   color: white;
   text-align: center;
   padding: 5px;
+  .toggle-collapse {
+    float: right;
+    margin-right: 5px;
+    width: 20px;
+    height: 20px;
+    transition: all 0.3s;
+    &.rotate {
+      transform: rotate(180deg);
+    }
+  }
 }
 
 .item {
@@ -2076,6 +2176,12 @@ input {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      .jie {
+        width: 25px;
+        height: 25px;
+        color: orange;
+        padding-bottom: 10px;
+      }
     }
 
     .is-success {

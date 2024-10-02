@@ -3,16 +3,16 @@
     <div class="dialog msg-dialog" :style="style" @touchmove.stop>
       <div class="title">{{ mode }}</div>
       <my-input type="text" v-model="showTime" placeholder="时间" />
-      <div class="wrap">
+      <div class="wrap" v-if="mode === '接盘'">
         <button @click="setTime">1</button>
         <button @click="setTime2">1.7</button>
         <button @click="setTime3">2</button>
         <button @click="paste">粘贴</button>
-        <button @click="add" v-if="mode === '接盘'">+ms</button>
+        <button @click="add">+ms</button>
       </div>
       <div class="btns">
         <button @click="cancel">取消</button>
-        <button @click="confirm">确定</button>
+        <button @click="confirm" :disabled="isDisable">确定</button>
       </div>
     </div>
   </my-dialog>
@@ -31,6 +31,9 @@ export default {
     };
   },
   computed: {
+    isDisable() {
+      return this.mode === "接盘" ? false : !this.isCanCancel;
+    },
     style() {
       return {
         color: this.mode === "接盘" ? "rgba(0,240,0)" : "red",
@@ -50,6 +53,9 @@ export default {
     setTimeStr: {
       type: String,
     },
+    isCanCancel: {
+      type: Boolean,
+    },
   },
   created() {},
   mounted() {},
@@ -67,10 +73,13 @@ export default {
       }
     },
     paste() {
-      uni.getClipboardData({
-        success: (clip) => {
-          this.showTime = clip.data.replace(/(\.\d+)/, "");
-        },
+      return new Promise((r) => {
+        uni.getClipboardData({
+          success: (clip) => {
+            this.showTime = clip.data.replace(/(\.\d+)/, "");
+            r(this.showTime);
+          },
+        });
       });
     },
     async setTimeForParent() {

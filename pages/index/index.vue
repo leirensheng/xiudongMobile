@@ -20,9 +20,8 @@
         style="width: 30px; height: 30px; flex-shrink: 0"
         :class="syncIng ? 'syncing' : ''"
         src="/static/sync.svg"
-        @click="syncActivityInfo"
+        @click="syncPidInfo"
       />
-
 
       <image
         class="audience"
@@ -444,12 +443,27 @@ export default {
       await sleep(3000);
       this.restarting = false;
     },
-    async syncActivityInfo() {
+    async syncPidInfo() {
       this.loading = false;
       this.syncIng = true;
+      let { pidToCmd } = await request({
+        url: "http://mticket.ddns.net:5010/getAllUserConfig/",
+      });
+
+      let cmds = Object.values(pidToCmd);
+      let pidInfo = Object.keys(pidToCmd).reduce((prev, pid) => {
+        prev[pidToCmd[pid]] = pid;
+        return prev;
+      }, {});
+      cmds = cmds.filter((one) => one.includes("npm run start"));
+
       await request({
-        url: "http://mticket.ddns.net:5002/syncActivityInfo",
-        method: "get",
+        url: "http://mticket.ddns.net:5000/saveSlavePid",
+        method: "post",
+        data: {
+          cmds,
+          pidInfo,
+        },
       });
       this.syncIng = false;
       this.loading = false;
@@ -784,7 +798,7 @@ export default {
         }
       } else if (item.isPay) {
         this.endPoint = item.endPoint;
-        this.isUseSlave = item.isUseSlave
+        this.isUseSlave = item.isUseSlave;
         this.$refs.pay.open();
       } else if (item.msg.includes("截图")) {
         // console.log("有截图")
