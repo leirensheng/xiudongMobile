@@ -15,14 +15,14 @@
 
 			}
 		},
-		{
-			"path": "pages/maoyan/index",
-			"style": {
-				"navigationBarTitleText": "猫眼",
-				"enablePullDownRefresh": true
+		// {
+		// 	"path": "pages/maoyan/index",
+		// 	"style": {
+		// 		"navigationBarTitleText": "猫眼",
+		// 		"enablePullDownRefresh": true
 
-			}
-		},
+		// 	}
+		// },
 		{
 			"path": "pages/audience/index",
 			"style": {
@@ -46,13 +46,13 @@
 				"navigationBarTitleText": "票星球"
 			}
 		},
-		{
-			"path": "pages/xiecheng/index",
-			"style": {
-				"enablePullDownRefresh": true,
-				"navigationBarTitleText": "携程"
-			}
-		},
+		// {
+		// 	"path": "pages/xiecheng/index",
+		// 	"style": {
+		// 		"enablePullDownRefresh": true,
+		// 		"navigationBarTitleText": "携程"
+		// 	}
+		// },
 		{
 			"path": "pages/damai/ticket",
 			"style": {
@@ -71,10 +71,10 @@
 				"pagePath": "pages/xiudong/index",
 				"text": "秀动"	
 			},
-			{
-				"pagePath": "pages/maoyan/index",
-				"text": "猫眼"	
-			},
+			// {
+			// 	"pagePath": "pages/maoyan/index",
+			// 	"text": "猫眼"	
+			// },
 			{
 				"pagePath": "pages/damai/index",
 				"text": "大麦"	
@@ -83,10 +83,10 @@
 				"pagePath": "pages/xingqiu/index",
 				"text": "星球"	
 			},
-			{
-				"pagePath": "pages/xiecheng/index",
-				"text": "携程"	
-			},
+			// {
+			// 	"pagePath": "pages/xiecheng/index",
+			// 	"text": "携程"	
+			// },
 			{
 				"pagePath": "pages/damai/ticket",
 				"text": "抢"	
@@ -98,6 +98,7 @@
 		"navigationBarTitleText": "uni-app",
 		"navigationBarBackgroundColor": "#F8F8F8",
 		"backgroundColor": "#F8F8F8"
+
 	},
 	"uniIdRouter": {}
 }

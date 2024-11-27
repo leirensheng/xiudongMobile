@@ -16,6 +16,19 @@
           <switch :checked="isSingle" @change="changeIsSingle" />
         </div>
       </div>
+      <div class="machines">
+        <span @click="machine = 'all'" :class="machine === 'all' && 'active'"
+          >所有</span
+        >
+        <span @click="machine = 'main'" :class="machine === 'main' && 'active'"
+          >主机</span
+        >
+        <span
+          @click="machine = 'slave'"
+          :class="machine === 'slave' && 'active'"
+          >从机</span
+        >
+      </div>
       <div
         v-if="data.length"
         class="item-wrap"
@@ -25,7 +38,7 @@
       >
         <div
           class="item"
-          :style="getStyle(item.runningPercent)"
+          :style="getStyle(item.runningPercent, data, index)"
           @click="showInfo(item)"
         >
           <div class="text">
@@ -39,11 +52,17 @@
 
   <uni-popup ref="oneType" type="top">
     <div class="one-type">
-      <div class="cur-type">{{ curType }}</div>
+      <div class="cur-type" @click="restartAll">{{ curType }}</div>
       <div class="user-list">
         <div
           class="user"
-          :class="curTypeRunningUsers.includes(item.name) ? 'running' : ''"
+          :class="
+            nextStartUser === item.name
+              ? 'will-restart'
+              : curTypeRunningUsers.includes(item.name)
+              ? 'running'
+              : ''
+          "
           v-for="(item, index) in curTypeUsers"
           :key="index"
           @click="stopOrStart(item, curTypeRunningUsers.includes(item.name))"
@@ -52,6 +71,12 @@
             {{ item.name }}
           </div>
           <div class="score">{{ item.score }}</div>
+          <image
+            mode="widthFix"
+            src="/static/close.svg"
+            class="close"
+            @click.stop="removeUser(item, index)"
+          ></image>
         </div>
       </div>
     </div>
@@ -127,11 +152,13 @@
 </template>
 
 <script>
-import { request, getTime } from "@/utils.js";
+import { request, sleep, getTime, randomColorWithoutGreen } from "@/utils.js";
 
 export default {
   data() {
     return {
+      machine: "all",
+      indexToColor: {},
       isWeb: false,
       curType: "",
       curTypeUsers: [],
@@ -143,6 +170,7 @@ export default {
       isRunning: false,
       loading: false,
       checkConfig: {},
+      nextStartUser: "",
     };
   },
   created() {
@@ -185,6 +213,9 @@ export default {
   },
   mounted() {},
   watch: {
+    machine() {
+      this.getCalc();
+    },
     loading(val) {
       if (val) {
         uni.showLoading({
@@ -217,6 +248,81 @@ export default {
     },
   },
   methods: {
+    async restartAll() {
+      await this.confirmAction("确定重启所有？");
+      this.loading = true;
+      let items = this.curTypeUsers.map((one) => ({
+        name: one.name,
+        isRunning: this.curTypeRunningUsers.includes(one.name),
+      }));
+
+      let gap = (2.5 * 60000) / items.length;
+      uni.showToast({
+        icon: "none",
+        title: "间隔" + gap + "ms",
+        duration: 2000,
+      });
+      let i = 0;
+      for (let one of items) {
+        let start = Date.now();
+        if (one.isRunning) {
+          await new Promise((resolve) => {
+            uni.$once("stop" + one.name + "done", (data) => {
+              setTimeout(() => {
+                resolve();
+              }, 3000);
+            });
+            this.$emit("stopOne", one.name);
+          });
+        }
+        let used = Date.now() - start;
+        console.log("启动", one.name + "结束耗时" + used);
+        this.$emit("startOne", one.name, false);
+        let title = "启动了" + Math.floor(((i + 1) / items.length) * 100) + "%";
+        console.log(title);
+        uni.showToast({
+          icon: "none",
+          title,
+          duration: 2000,
+        });
+        if (i !== items.length - 1) {
+          this.nextStartUser = items[i].name;
+          await sleep(gap - used);
+        } else {
+          this.nextStartUser = "";
+        }
+        i++;
+      }
+      this.loading = false;
+    },
+
+    confirmAction(title) {
+      return new Promise((resolve, reject) => {
+        uni.showModal({
+          title,
+          cancelText: "否",
+          success: (res) => {
+            if (res.confirm) {
+              resolve();
+            } else if (res.cancel) {
+              reject();
+            }
+          },
+        });
+      });
+    },
+    async removeUser(item, index) {
+      await this.confirmAction(`确定删除用户【${item.name}】`);
+      this.loading = true;
+      await request({
+        method: "post",
+        url: this.host + "/removeConfig/",
+        data: { username: item.name },
+      });
+      this.curTypeUsers.splice(index, 1);
+      this.getCalc();
+      this.loading = false;
+    },
     async changeIsNotUsePc(e) {
       this.checkConfig.notUsePc = e.detail.value;
       await this.updateConfig();
@@ -270,6 +376,21 @@ export default {
         duration: 1000,
       });
     },
+
+    getTypesColor(all, i) {
+      if (i === 0) {
+        this.indexToColor[i] = randomColorWithoutGreen();
+      } else {
+        let preDate = all[i - 1].split("_")[0];
+        let curDate = all[i].split("_")[0];
+        if (preDate === curDate) {
+          this.indexToColor[i] = this.indexToColor[i - 1];
+        } else {
+          this.indexToColor[i] = randomColorWithoutGreen();
+        }
+      }
+      return this.indexToColor[i];
+    },
     changeTarget(form, e) {
       form.onlyMonitorType = e.detail.value;
     },
@@ -321,7 +442,9 @@ export default {
           "/activityInfo/" +
           this.activityId +
           "?isSingle=" +
-          (this.isSingle ? 1 : 0),
+          (this.isSingle ? 1 : 0) +
+          "&machine=" +
+          this.machine,
       });
 
       let allRunning = Object.keys(data)
@@ -351,25 +474,25 @@ export default {
       if (config.hasSuccess || config.remark.match(/(频繁)|(密码不正确)/))
         return 0;
       let score = 500;
-      if (config.price === "undefined") {
-        config.price = "";
-      }
+      // if (config.price === "undefined") {
+      //   config.price = "";
+      // }
       score = score - config.orders.length * 50;
       score = score - config.targetTypes.length * 15;
-      let advPrice = Math.max(
-        (config.price || 100) / config.orders.length,
-        100
-      );
-      console.log(
-        Math.max((config.price || 100) / config.orders.length, 100),
-        config.price,
-        config.orders.length
-      );
-      console.log(name, "平均价格", advPrice);
-      score = score + (advPrice / 100) * 25;
+      // let advPrice = Math.max(
+      //   (config.price || 100) / config.orders.length,
+      //   100
+      // );
+      // console.log(
+      //   Math.max((config.price || 100) / config.orders.length, 100),
+      //   config.price,
+      //   config.orders.length
+      // );
+      // console.log(name, "平均价格", advPrice);
+      // score = score + (advPrice / 100) * 25;
       if (config.remark.match(/假/)) {
         score = score - 100;
-      } else if (config.remark.match(/低|夏|魔|缘|火/)) {
+      } else if (config.remark.match(/低|夏|魔|缘|火|坤|椰/)) {
         score = score - 20;
       } else if (config.remark.match(/高/)) {
         //高雅优先级低
@@ -378,8 +501,16 @@ export default {
         score = score + 20;
       } else if (config.remark.includes("空")) {
         score = 0;
-      } else if (config.remark) {
-        score = score - 10;
+      } else if (config.remark.match(/胜|姐/)) {
+        let nameNum = name.match(/(胜|姐)(\d+)/);
+        console.log(name, nameNum);
+        if (nameNum) {
+          if (nameNum) {
+            nameNum = nameNum[2];
+          }
+          score = score + Number(nameNum) * 2;
+        }
+        // score = score - 10;
       }
       // 没有uid暂时不做处理
       // if (!config.uid) {
@@ -441,9 +572,13 @@ export default {
         }, 2000);
       }
     },
-    getStyle(percent) {
+    getStyle(percent, data, index) {
+      if (!data || !data.length) return {};
+      let all = data.map((one) => one.type);
       return {
         "background-size": percent + "%",
+        color: "white",
+        "background-color": this.getTypesColor(all, index),
       };
     },
     setTime() {
@@ -452,18 +587,28 @@ export default {
     changePopup(e) {
       this.data = [];
       this.$emit("update:modelValue", e.show);
+      if (!e.show) {
+        this.machine = "all";
+      }
     },
     getOneUserAllTypes(name) {
       let arr = this.data.filter((one) => one.all.includes(name));
       return arr.map((one) => one.type);
     },
 
-    stopOrStart(item, running) {
-      let types = this.getOneUserAllTypes(item.name).join("______");
+    async stopOrStart(item, running) {
+      let types =
+        this.getOneUserAllTypes(item.name).join("______") + item.remark;
+      let config = await request({
+        url: this.host + "/getOneUserConfig/" + item.name,
+      });
+
       if (running) {
         uni.showModal({
-          title: `确定停止${item.name}？`,
-          content: types,
+          title: `【${config.isUseSlave ? "从机" : "主机"}】确定停止${
+            item.name
+          }？`,
+          content: types + `==========> ${config && config.remark}`,
           success: (res) => {
             if (res.confirm) {
               this.$emit("stopOne", item.name);
@@ -474,8 +619,10 @@ export default {
         });
       } else {
         uni.showModal({
-          title: `确定启动【${item.name}】？`,
-          content: types,
+          title: `【${config.isUseSlave ? "从机" : "主机"}】确定启动【${
+            item.name
+          }】？`,
+          content: types + `==========> ${config && config.remark}`,
           success: (res) => {
             if (res.confirm) {
               setTimeout(() => {
@@ -525,7 +672,22 @@ export default {
     justify-content: space-between;
     align-items: center;
   }
-
+  .machines {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    > * {
+      display: inline-block;
+      margin: 5px;
+      padding: 5px;
+      background: rgb(196, 194, 194);
+      color: white;
+      border-radius: 5px;
+    }
+    > .active {
+      background: #20be1d;
+    }
+  }
   .item-wrap {
     line-height: 2.5;
     position: relative;
@@ -609,6 +771,7 @@ export default {
     font-weight: bold;
     font-weight: 18px;
     margin-bottom: 20px;
+    cursor: pointer;
   }
 
   .user-list {
@@ -629,6 +792,21 @@ export default {
         background: rgb(52, 228, 55);
       }
 
+      &.will-restart {
+        background: rgb(181, 206, 40);
+        animation: 2s linear infinite move_eye;
+        @keyframes move_eye {
+          0% {
+            transform: scale(1);
+          }
+          33% {
+            transform: scale(1.1);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+      }
       .name {
         &.is-fake {
           color: blue;
@@ -642,6 +820,16 @@ export default {
         right: 0;
         background-color: green;
         transform: translate(50%, -50%);
+      }
+      .close {
+        width: 20px;
+        height: 2px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        background: white;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
       }
     }
   }

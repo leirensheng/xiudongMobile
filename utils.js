@@ -10,7 +10,7 @@ let request = (options) =>
       ...options,
       timeout: options.timeout || 20000,
       success: (res) => {
-        console.log(res);
+        // console.log(res);
         let result = res.data;
         let { code, data, msg } = result;
         if (options.noHandleCode) {
@@ -50,10 +50,13 @@ let randomColor = () => {
   return `rgb(${random(0, 255)}, ${random(0, 255)}, ${random(0, 255)})`;
 };
 
+let randomColorWithoutGreen = () => {
+  return `rgb(${random(0, 255)}, ${random(0, 120)}, ${random(0, 255)})`;
+};
 
 let getTagColor = (tag) => {
   if (!tagList[tag]) {
-    tagList[tag] = randomColor()
+    tagList[tag] = randomColor();
     // localStorage.tagList = JSON.stringify(tagList);
   }
   return tagList[tag];
@@ -78,7 +81,6 @@ let getTime = (date) => {
 };
 let sleep = (time) => new Promise((r) => setTimeout(r, time));
 
-
 let debounce = (fn) => {
   let timer;
   return function (...args) {
@@ -89,4 +91,21 @@ let debounce = (fn) => {
     }, 500);
   };
 };
-export { debounce,request, getTagColor, getTime, sleep,randomColor };
+
+let highlightOne = (str, keyword, color = "#42A64E") => {
+  const newText = keyword.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+  const reg = new RegExp(newText, "g");
+  return str.replace(reg, (res) => {
+    return `<span style="color:${color} !important">${res}</span>`;
+  });
+};
+export {
+  debounce,
+  request,
+  getTagColor,
+  getTime,
+  sleep,
+  randomColor,
+  randomColorWithoutGreen,
+  highlightOne,
+};

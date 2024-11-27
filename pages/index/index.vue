@@ -1,218 +1,260 @@
 <template>
-  <view class="content">
-    <!-- <div class="status">
+  <check-permission>
+    <view class="content">
+      <!-- <div class="status">
 			<div>连接状态: </div>
 			<div class="dot" :style="{ background: connected ? '#49e749' : 'red' }"> </div>
 		</div> -->
-    <div class="actions">
-      <image
-        class="sync"
-        style="width: 30px; height: 30px; margin-right: 10px"
-        :class="restarting ? 'syncing' : ''"
-        src="/static/restart.svg"
-        @click="restartSlide"
-      />
-      <!-- <button @click="restartSlide" size="small" class="btn restart">
+      <div class="actions">
+        <image
+          class="sync"
+          style="width: 30px; height: 30px; margin-right: 10px"
+          :class="restarting ? 'syncing' : ''"
+          src="/static/restart.svg"
+          @click="openShutdown"
+        />
+        <!-- <button @click="restartSlide" size="small" class="btn restart">
         重启
       </button> -->
-      <image
-        class="sync"
-        style="width: 30px; height: 30px; flex-shrink: 0"
-        :class="syncIng ? 'syncing' : ''"
-        src="/static/sync.svg"
-        @click="syncPidInfo"
-      />
+        <image
+          class="sync"
+          style="width: 30px; height: 30px; flex-shrink: 0"
+          :class="syncIng ? 'syncing' : ''"
+          src="/static/sync.svg"
+          @click="syncPidInfo"
+        />
 
-      <image
-        class="audience"
-        style="width: 35px; height: 35px"
-        src="/static/audience.svg"
-        @click="toAudience"
-      />
-    </div>
-    <div class="status">
-      <image
-        class="sync"
-        style="width: 35px; height: 35px"
-        src="/static/sleep.svg"
-      />
-      <switch :checked="isNoSound" @change="handleNOSoundChange" />
+        <image
+          class="audience"
+          style="width: 35px; height: 35px"
+          src="/static/audience.svg"
+          @click="toAudience"
+        />
+      </div>
+      <div class="status">
+        <image
+          class="sync"
+          style="width: 35px; height: 35px"
+          src="/static/sleep.svg"
+        />
+        <switch :checked="isNoSound" @change="handleNOSoundChange" />
 
-      <image
-        class="sync"
-        style="width: 30px; height: 30px"
-        src="/static/success.svg"
-      />
-      <switch :checked="isOnlySuccess" @change="handleOnlySuccessChange" />
+        <image
+          class="sync"
+          style="width: 30px; height: 30px"
+          src="/static/success.svg"
+        />
+        <switch :checked="isOnlySuccess" @change="handleOnlySuccessChange" />
 
-      <image
-        class="sync"
-        style="width: 30px; height: 30px; margin-right: 5px"
-        src="/static/wx.svg"
-      />
-      <switch :checked="isWx" @change="handleToggleWx" />
-      <my-input
-        class="keyword"
-        type="text"
-        v-model="keyword"
-        placeholder="筛选"
-      />
-    </div>
-
-    <div class="all-message">
-      <div class="sum" v-if="msgArr.length">
-        共有{{ msgArr.length }}条消息， 当前条件{{ showArr.length }}条<span
-          v-if="successLength"
-          >，{{ successLength }}条成功</span
-        >
+        <image
+          class="sync"
+          style="width: 30px; height: 30px; margin-right: 5px"
+          src="/static/wx.svg"
+        />
+        <switch :checked="isWx" @change="handleToggleWx" />
+        <my-input
+          class="keyword"
+          type="text"
+          v-model="keyword"
+          placeholder="筛选"
+        />
       </div>
 
-      <uni-swipe-action>
-        <template v-for="(item, index) in showArr" :key="index + item.msg">
-          <uni-swipe-action-item
-            :right-options="activityRightOptions"
-            @click="activityClick($event, item)"
+      <div class="all-message">
+        <div class="sum" v-if="msgArr.length">
+          共有{{ msgArr.length }}条消息， 当前条件{{ showArr.length }}条<span
+            v-if="successLength"
+            >，{{ successLength }}条成功</span
           >
+        </div>
+
+        <uni-swipe-action>
+          <template v-for="(item, index) in showArr" :key="index + item.msg">
+            <uni-swipe-action-item
+              :right-options="activityRightOptions"
+              @click="activityClick($event, item)"
+            >
+              <div
+                class="message-wrap"
+                :class="item.type"
+                @click="clickMsg(item, index)"
+              >
+                <!-- <div class="index">{{index+1}}.</div> -->
+                <div class="message" v-html="item.msg"></div>
+                <!-- <div>{{ index + 1 }}: {{ item.msg }}</div> -->
+              </div>
+            </uni-swipe-action-item>
+          </template>
+        </uni-swipe-action>
+      </div>
+
+      <div class="bottom">
+        <button
+          @click="clear"
+          class="clear"
+          type="primary"
+          v-if="msgArr.length"
+        >
+          清除
+        </button>
+        <button
+          @click="clearCurrent"
+          class="clear clear-current"
+          type="primary"
+          v-if="showArr.length"
+        >
+          清除当前
+        </button>
+        <button
+          @click="stop"
+          class="stop"
+          v-if="innerAudioContext"
+          type="success"
+        >
+          停止
+        </button>
+      </div>
+      <uni-popup ref="popup" type="bottom" @touchmove.stop>
+        <div class="audience-dialog">
+          <scroll-view scroll-y style="max-height: 70vh">
+            <div class="origin-message" v-html="originMsg"></div>
             <div
-              class="message-wrap"
-              :class="item.type"
-              @click="clickMsg(item, index)"
-            >
-              <!-- <div class="index">{{index+1}}.</div> -->
-              <div class="message" v-html="item.msg"></div>
-              <!-- <div>{{ index + 1 }}: {{ item.msg }}</div> -->
-            </div>
-          </uni-swipe-action-item>
-        </template>
-      </uni-swipe-action>
-    </div>
+              class="origin-message"
+              v-html="firstMsg"
+              style="color: red; margin-top: 15px"
+            ></div>
+            <div class="list">
+              <checkbox-group @change="changeAudience">
+                <checkbox
+                  :value="JSON.stringify(item)"
+                  v-for="(item, index) in audienceList"
+                  :key="index"
+                  class="item"
+                  :checked="checkedAudience.includes(JSON.stringify(item))"
+                >
+                  <input
+                    type="text"
+                    v-model="item.audience"
+                    class="first"
+                    @click="copyAudience(item.audience)"
+                  />
+                  <span>{{ item.number }}</span>
+                </checkbox>
+              </checkbox-group>
 
-    <div class="bottom">
-      <button @click="clear" class="clear" type="primary" v-if="msgArr.length">
-        清除
-      </button>
-      <button
-        @click="clearCurrent"
-        class="clear clear-current"
-        type="primary"
-        v-if="showArr.length"
-      >
-        清除当前
-      </button>
-      <button
-        @click="stop"
-        class="stop"
-        v-if="innerAudioContext"
-        type="success"
-      >
-        停止
-      </button>
-    </div>
-    <uni-popup ref="popup" type="bottom" @touchmove.stop>
-      <div class="audience-dialog">
-        <scroll-view scroll-y style="max-height: 70vh">
-          <div class="origin-message" v-html="originMsg"></div>
-          <div
-            class="origin-message"
-            v-html="firstMsg"
-            style="color: red; margin-top: 15px"
-          ></div>
-          <div class="list">
-            <checkbox-group @change="changeAudience">
-              <checkbox
-                :value="JSON.stringify(item)"
-                v-for="(item, index) in audienceList"
-                :key="index"
-                class="item"
-                :checked="checkedAudience.includes(JSON.stringify(item))"
+              <search-input
+                class="search"
+                placeholder="查询演出"
+                :platform="'activity'"
+                v-model:value="searchActivityName"
+                @itemChange="activityChange"
+              ></search-input>
+
+              <checkbox-group
+                v-if="Object.values(skuIdToTypeMap).length"
+                @change="(e) => changeTarget(e)"
+                class="checkbox-group"
               >
-                <input type="text" v-model="item.audience" class="first" />
-                <span>{{ item.number }}</span>
-              </checkbox>
-            </checkbox-group>
+                <checkbox
+                  :value="item"
+                  v-for="(item, index) in Object.values(skuIdToTypeMap)"
+                  :key="index"
+                >
+                  <span
+                    :style="{
+                      color: 'white',
+                      backgroundColor: getTypesColor(
+                        Object.values(skuIdToTypeMap),
+                        index
+                      ),
+                    }"
+                    >{{ item }}</span
+                  >
+                </checkbox>
+              </checkbox-group>
 
-            <search-input
-              class="search"
-              placeholder="查询演出"
-              :platform="'activity'"
-              v-model:value="searchActivityName"
-              @itemChange="activityChange"
-            ></search-input>
+              <div class="radio-wrap">
+                <radio-group
+                  :key="searchActivityName"
+                  v-if="searchActivityName"
+                  @change="(e) => changeMyUser(e)"
+                >
+                  <radio
+                    :style="
+                      'width:50%;marginBottom:10px;color:' + user.split('__')[1]
+                    "
+                    v-for="(user, index) in userInfo"
+                    :value="user.split('__')[0]"
+                    :disabled="user.split('__')[1] === 'grey'"
+                    :key="index"
+                    @longpress="changeToAble(user.split('__')[0])"
+                  >
+                    <!-- {{ user }} -->
+                    {{ user.split("__")[0] }}__{{ user.split("__")[3] }}__{{
+                      user.split("__")[4]
+                    }}
+                  </radio>
+                </radio-group>
+              </div>
 
-            <checkbox-group
-              v-if="Object.values(skuIdToTypeMap).length"
-              @change="(e) => changeTarget(e)"
-              class="checkbox-group"
-            >
-              <checkbox
-                :value="item"
-                v-for="(item, index) in Object.values(skuIdToTypeMap)"
-                :key="index"
-                >{{ item }}
-              </checkbox>
-            </checkbox-group>
-
-            <radio-group
-              :key="searchActivityName"
-              v-if="searchActivityName"
-              @change="(e) => changeMyUser(e)"
-            >
-              <radio
-                :style="
-                  'width:50%;marginBottom:10px;color:' + user.split('__')[1]
-                "
-                v-for="(user, index) in userInfo"
-                :value="user.split('__')[0]"
-                :key="index"
-              >
-                <!-- {{ user }} -->
-                {{ user.split("__")[0] }}__{{ user.split("__")[3] }}__{{
-                  user.split("__")[4]
-                }}
-              </radio>
-            </radio-group>
-
-            <my-input
-              type="text"
-              placeholder="备注"
-              v-model="form.remark"
-              v-show="searchActivityName"
-            />
-            <!-- <div class="select-phone">
+              <my-input
+                type="text"
+                placeholder="备注"
+                v-model="form.remark"
+                v-show="searchActivityName"
+              />
+              <!-- <div class="select-phone">
               {{ form.phone }}
             </div> -->
-            <button
-              class="btn"
-              type="primary"
-              @click="addAudience"
-              :disabled="loading || !isBtnOk"
-            >
-              提交 {{ form.phone }}
-            </button>
-          </div>
-        </scroll-view>
-      </div>
-    </uni-popup>
-
-    <uni-popup ref="pay" type="top">
-      <div class="popup-content">
-        <my-input type="text" v-model="phoneCode" placeholder="验证码" />
-        <div>
-          <button @click="closePay">取消</button>
-          <button @click="payWithMessage">确定</button>
+              <button
+                class="btn"
+                type="primary"
+                @click="addAudience"
+                :disabled="loading || !isBtnOk"
+              >
+                提交 {{ form.phone }}
+              </button>
+            </div>
+          </scroll-view>
         </div>
-      </div>
-    </uni-popup>
-  </view>
+      </uni-popup>
+
+      <uni-popup ref="pay" type="top">
+        <div class="popup-content">
+          <my-input type="text" v-model="phoneCode" placeholder="验证码" />
+          <div>
+            <button @click="closePay">取消</button>
+            <button @click="payWithMessage">确定</button>
+          </div>
+        </div>
+      </uni-popup>
+
+      <uni-popup ref="shutdown" type="top">
+        <div class="popup-content">
+          <div style="font-weight: bold; text-align: center; margin: 20px">
+            关机时间
+          </div>
+          <my-input type="text" v-model="shutdownMin" placeholder="分钟" />
+          <div>
+            <button @click="shutdown">确定</button>
+          </div>
+        </div>
+      </uni-popup>
+    </view>
+  </check-permission>
 </template>
 
 <script>
-import { request, sleep } from "@/utils.js";
+import { request, sleep, randomColor, highlightOne } from "@/utils.js";
 import SearchInput from "@/components/search-input/search-input.vue";
 import userMap from "@/components/userMap.js";
+import CheckPermission from "../../components/checkPermission.vue";
+
 export default {
   data() {
     return {
+      shutdownMin: 30,
+      notOkPhoneInfo: [],
       isWx: false,
       syncIng: false,
       restarting: false,
@@ -249,15 +291,18 @@ export default {
       title: "Hello",
       msgArr: [],
       selectedAudienceList: [],
+      indexToColor: {},
     };
   },
   components: {
     SearchInput,
+    CheckPermission,
   },
   computed: {
     userInfo() {
       let arr = Object.keys(this.userMap).map((name) => {
         let phone = this.userMap[name] && this.userMap[name].phone;
+        let isDisabled = this.checkIsDisabled(phone);
         let runningLength = 0;
         let audienceLength =
           this.audienceInfo && this.audienceInfo[phone]
@@ -272,16 +317,23 @@ export default {
           );
         }
         let successLength = this.successInfo[phone] || 0;
-        return { name, successLength, runningLength, audienceLength };
+        return {
+          name,
+          successLength,
+          runningLength,
+          audienceLength,
+          isDisabled,
+        };
       });
       arr = arr.filter((one) => one.successLength < 4);
       arr.sort((a, b) => a.successLength - b.successLength);
       arr.sort((a, b) => a.runningLength - b.runningLength);
       arr.sort((a, b) => a.audienceLength - b.audienceLength);
       return arr.map(
-        ({ successLength, runningLength, audienceLength, name }) =>
+        ({ successLength, runningLength, audienceLength, name, isDisabled }) =>
           `${name}__${this.getColor(
-            successLength
+            successLength,
+            isDisabled
           )}__${successLength}__${runningLength}__${audienceLength}`
       );
     },
@@ -308,9 +360,17 @@ export default {
         arr = arr.filter((one) => one.msg.includes("微信"));
       }
       if (this.keyword) {
-        return arr.filter((one) =>
-          one.msg.replace(/\s{2}/, " ").includes(this.keyword)
+        let words = this.keyword.split(/\s+/).filter(Boolean);
+        let res = arr.filter((one) =>
+          words.every((word) => one.msg.replace(/\s{2}/, " ").includes(word))
         );
+        return res.map((one) => {
+          let obj = { ...one };
+          for (let one of words) {
+            obj.msg = highlightOne(obj.msg, one, "red");
+          }
+          return obj;
+        });
       } else {
         if (arr.length > 900) {
           return arr.slice(0, 400);
@@ -323,6 +383,7 @@ export default {
   onLoad() {
     this.getAllActivity();
     this.loadAllMsg();
+    this.getNotOkPhoneInfo();
     // #ifdef WEB
     setInterval(async () => {
       let host = `http://mticket.ddns.net:4000/getAllAppMsg`;
@@ -338,6 +399,10 @@ export default {
           });
         }
         let addLength = arr.length - this.msgArr.length;
+        if (addLength < 1) {
+          addLength = 1;
+        }
+
         arr.slice(0, addLength).forEach((one) => {
           console.log(one);
           this.handleReceiveOneMsg(one);
@@ -394,6 +459,58 @@ export default {
     this.isWeb = !!document;
   },
   methods: {
+    async changeToAble(val) {
+      let { phone } = this.userMap[val];
+      let isDisabled = this.checkIsDisabled(phone);
+
+      this.loading = true;
+      if (isDisabled) {
+        await request({
+          method: "post",
+          url: "http://mticket.ddns.net:5001/removeNotOkPhone/" + phone,
+        });
+      } else {
+        await request({
+          method: "post",
+          url: "http://mticket.ddns.net:5001/setNotOkPhone/" + phone,
+        });
+      }
+      await this.getNotOkPhoneInfo();
+      this.loading = false;
+      console.log(phone);
+    },
+    copyAudience(name) {
+      setTimeout(() => {
+        uni.setClipboardData({
+          data: name,
+        });
+      }, 1000);
+    },
+    getTypesColor(all, i) {
+      if (i === 0) {
+        this.indexToColor[i] = randomColor();
+      } else {
+        let preDate = all[i - 1].split("_")[0];
+        let curDate = all[i].split("_")[0];
+        if (preDate === curDate) {
+          this.indexToColor[i] = this.indexToColor[i - 1];
+        } else {
+          this.indexToColor[i] = randomColor();
+        }
+      }
+      return this.indexToColor[i];
+    },
+    checkIsDisabled(phone) {
+      return this.notOkPhoneInfo.find(
+        (one) => Number(one.phone) === Number(phone)
+      );
+    },
+    async getNotOkPhoneInfo() {
+      this.notOkPhoneInfo = await request({
+        method: "get",
+        url: "http://mticket.ddns.net:5001/getNotOkPhone",
+      });
+    },
     async getAllActivity() {
       this.allActivityInfo = await request({
         method: "get",
@@ -413,6 +530,9 @@ export default {
         this.sound(payload.type, payload.msg);
       }
     },
+    closeShutdown() {
+      this.$refs.shutdown.close();
+    },
     closePay() {
       this.$refs.pay.close();
     },
@@ -429,6 +549,24 @@ export default {
       });
       this.loading = false;
       this.closePay();
+    },
+    async shutdown() {
+      await this.confirmAction("确定关机？");
+      this.loading = true;
+      await request({
+        url:
+          "http://mticket.ddns.net:5001/laterShutdown?minute=" +
+          this.shutdownMin,
+        method: "get",
+      });
+      await request({
+        url:
+          "http://mticket.ddns.net:5002/laterShutdown?minute=" +
+          this.shutdownMin,
+        method: "get",
+      });
+      this.loading = false;
+      this.closeShutdown();
     },
     async restartSlide() {
       this.restarting = true;
@@ -447,7 +585,7 @@ export default {
       this.loading = false;
       this.syncIng = true;
       let { pidToCmd } = await request({
-        url: "http://mticket.ddns.net:5010/getAllUserConfig/",
+        url: "http://mticket.ddns.net:5003/getAllUserConfig/",
       });
 
       let cmds = Object.values(pidToCmd);
@@ -505,7 +643,10 @@ export default {
         return prev;
       }, {});
     },
-    getColor(num) {
+    getColor(num, isDisabled) {
+      if (isDisabled) {
+        return "grey";
+      }
       let map = {
         0: "black",
         1: "green",
@@ -536,10 +677,11 @@ export default {
 
           await request({
             url,
+            timeout: 50000,
             method: "post",
             data,
           });
-          await sleep(1200);
+          await sleep(3000);
         }
         uni.showToast({
           icon: "none",
@@ -598,7 +740,9 @@ export default {
 
       return data.length;
     },
-
+    async openShutdown() {
+      this.$refs.shutdown.open();
+    },
     async addOneRecord() {
       let port = await this.getPort(this.form.activityId);
       let showOrders = this.selectedAudienceList.map((_, i) => i).join(",");
@@ -612,7 +756,7 @@ export default {
 
       this.loading = true;
 
-      await request({
+      let { username } = await request({
         method: "post",
         url: "http://mticket.ddns.net:5000/addInfo/",
         data,
@@ -626,7 +770,7 @@ export default {
         title: "新增记录成功",
         duration: 1000,
       });
-      this.startOne(data.username);
+      this.startOne(username);
     },
     async changeAudience(e) {
       this.selectedAudienceList = e.detail.value.map((one) => JSON.parse(one));
@@ -734,31 +878,25 @@ export default {
     },
 
     async getActivityFromMsg(msg) {
+      console.log("getActivityFromMsg", msg);
       let ids = Object.keys(this.allActivityInfo);
-      for (let one of ids) {
-      }
+
       let id = ids.find((one) => {
         let { activityName } = this.allActivityInfo[one];
         if (activityName) {
           let res = activityName.match(/【(.*?)】/);
           let cityName = res ? res[1] : "";
-          // console.log("当前城市名称", cityName);
-          if (cityName && msg.includes(cityName)) {
-            let index = msg.indexOf(cityName);
-            let actorName = msg.slice(
-              index + cityName.length,
-              index + cityName.length + 2
-            );
-            console.log("actorName", actorName);
-            if (activityName.includes(actorName)) {
-              console.log("可能是", activityName);
-              return true;
-            } else {
-              let actorName = msg.slice(index - 2, index);
-              console.log("actorName", actorName);
+          // console.log("当前城市名称", cityName,msg);
+          if (cityName) {
+            let i = msg.findIndex((word) => cityName.includes(word));
+            // console.log("找到城市index", i);
+            if (i !== -1) {
+              let actorIndex = i === 0 ? 1 : 0;
+              let actorName = msg[actorIndex];
+              // console.log("actorName", actorName);
 
               if (activityName.includes(actorName)) {
-                console.log("可能是", activityName);
+                // console.log("可能是", activityName);
                 return true;
               }
             }
@@ -776,6 +914,7 @@ export default {
       }
     },
     async clickMsg(item, index) {
+      console.log(item);
       if (item.type === "cheDan") {
         await this.confirmAction(
           `确定删除【${item.username}】, 观演人【${item.audienceList.join(
@@ -800,12 +939,31 @@ export default {
         this.endPoint = item.endPoint;
         this.isUseSlave = item.isUseSlave;
         this.$refs.pay.open();
-      } else if (item.msg.includes("截图")) {
-        // console.log("有截图")
+      } else if (item.msg.includes("截图") && !this.isWeb) {
+        await this.confirmAction("确定保存图片吗？");
+        let url = /'(.*?)'/.exec(item.msg)[1].trim();
+        uni.saveImageToPhotosAlbum({
+          filePath: url,
+          success: () => {
+            uni.showToast({
+              icon: "none",
+              title: "保存成功",
+              duration: 2000,
+            });
+          },
+          fail: () => {
+            uni.showToast({
+              icon: "none",
+              title: "保存失败",
+              duration: 2000,
+            });
+          },
+        });
+
         // this.getSelect(document.querySelector("#screenshot"));
         // document.execCommand("copy");
         // window.getSelection().removeAllRanges();
-      } else if (item.msg.includes("同一时间的演出")) {
+      } else if (item.msg.includes("同一")) {
         if (item.nickname) {
           uni.setStorageSync("searchUser", item.nickname);
           uni.switchTab({
@@ -835,14 +993,28 @@ export default {
 
         uni.hideLoading();
         this.removeOneMsg(item.id);
-      } else if (item.msg.includes("微信") && !item.msg.includes("真撤")) {
-        let res = this.getAudienceFromWxMsg(item.msg);
+      } else if (item.msg.includes("微信")) {
+        let { msg } = this.msgArr.find((one) => one.id === item.id);
+        let res = this.getAudienceFromWxMsg(msg);
 
         if (res.length) {
-          let firstOne = this.msgArr.find((one) =>
-            one.msg.includes(res[0].audience)
-          );
-          this.firstMsg = firstOne.msg.includes("真撤") ? firstOne.msg : "";
+          let isCurrenIsChe = msg.includes("真撤");
+          let firstOne;
+
+          if (isCurrenIsChe) {
+            console.log("真的撤单");
+            firstOne = this.msgArr.find(
+              (one) =>
+                one.msg.includes(res[0].audience) && !one.msg.includes("撤")
+            );
+            console.log("");
+          } else {
+            firstOne = this.msgArr.find(
+              (one) =>
+                one.msg.includes(res[0].audience) && one.msg.includes("真撤")
+            );
+          }
+          this.firstMsg = firstOne ? firstOne.msg : "";
           this.originMsg = item.msg;
           this.audienceList = res;
           this.reset();
@@ -851,7 +1023,9 @@ export default {
             method: "get",
             url: "http://mticket.ddns.net:5001/getAllAudienceInfo",
           });
-          this.getActivityFromMsg(item.msg);
+          this.getActivityFromMsg(
+            item.targetWords.map((one) => one.replace("】", ""))
+          );
         }
       }
     },
@@ -880,6 +1054,7 @@ export default {
       await request({
         url: hostMap[platform] + "/removeAudience",
         data,
+        timeout: 50000,
         method: "post",
       });
       uni.showToast({
@@ -965,11 +1140,11 @@ export default {
       if (item.payCode) {
         itemList.push("复制口令");
       } else {
-        itemList.push("复制一个观演人");
+        itemList.push("复制一个观演人", "跳转");
       }
       uni.showActionSheet({
         itemList,
-        success: (res) => {
+        success: async (res) => {
           if ([0, 1].includes(res.tapIndex)) {
             item.type = "success-call";
             uni.makePhoneCall({
@@ -987,6 +1162,13 @@ export default {
                 ? item.payCode
                 : item.realNames.split("_")[0],
             });
+          } else if (res.tapIndex === 5) {
+            if (item.nickname) {
+              uni.setStorageSync("searchUser", item.nickname);
+              uni.switchTab({
+                url: "/pages/damai/index",
+              });
+            }
           }
         },
       });
@@ -1186,6 +1368,9 @@ export default {
     align-items: center;
     flex-wrap: wrap;
   }
+}
+.radio-wrap{
+  padding:  5px 80rpx;
 }
 </style>
 

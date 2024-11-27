@@ -107,7 +107,7 @@
           />
           <uni-swipe-action-item
             :right-options="activityRightOptions(one)"
-            @click="activityClick($event, one.group)"
+            @click="activityClick($event, one.group, one.data[0].activityId)"
           >
             <div
               @click="
@@ -140,18 +140,18 @@
               :id="item.username + item.phone"
             >
               <div class="first">
-                <div v-if="item.uid">
+                <!-- <div v-if="item.uid">
                   <image
                     class="msg-icon"
                     src="/static/msg.svg"
                     @click="openMsg(item.uid)"
                   />
-                </div>
+                </div> -->
 
                 <div @click="callOrCopyPhone(item)">
                   {{ item.phone }}
                 </div>
-                <div class="name" @click="copyUsername(item.username)">
+                <div class="name" @click="copyUsername(item)">
                   {{ item.username }}
                 </div>
 
@@ -743,6 +743,9 @@ export default {
     host() {
       return `http://${this.selected}:${platformToPortMap[this.platform]}`;
     },
+    slideHost() {
+      return this.isDamai ? this.host.replace("5000", "5001") : this.host;
+    },
     inputFields() {
       return this.editFields.filter(
         (one) => !["targetTypes", "hasSuccess"].includes(one)
@@ -766,6 +769,7 @@ export default {
           "showOrders",
           "remark",
           "uid",
+          "createTime",
           "targetTypes",
           "hasSuccess",
         ],
@@ -806,6 +810,9 @@ export default {
       if (!this.editForm.remark.includes("借用")) {
         this.editForm.remark += "借用";
       }
+      this.editForm.isRefresh = this.editForm.activityId !== "827391921261";
+      this.editForm.activityId = "827391921261";
+      this.editForm.port = "6547";
       this.editForm.remark = this.editForm.remark.replace(
         /代(魔|胜|姐|椰|坤)_(自|客)_/,
         ""
@@ -860,10 +867,10 @@ export default {
     },
     getShowActivityName(name) {
       let str = (name || "").replace(
-        /（Galaxy Express）|(\s+)|」|「|(巡回)|(演唱会)|(Ugly)|(Beauty)|(FINALE)|(世界)|(Infinity Arena)|(WORLDTOUR)|MACAU|巡演|YELLOW/g,
+        /（Galaxy Express）|(\s+)|」|「|(巡回)|(A-LINK with PASSENGERS)|(演唱会)|(Ugly)|(Beauty)|(FINALE)|(世界)|(Infinity Arena)|(WORLDTOUR)|MACAU|巡演|YELLOW/g,
         ""
       );
-      console.log(name, str);
+      // console.log(name, str);
 
       let result = [];
       let length = 0;
@@ -916,6 +923,7 @@ export default {
       await request({
         url: this.host + "/removeAudience",
         data,
+        timeout: 50000,
         method: "post",
       });
       uni.showToast({
@@ -1016,6 +1024,12 @@ export default {
           },
         },
         {
+          text: "查",
+          style: {
+            backgroundColor: "#007aff",
+          },
+        },
+        {
           text: "删除",
           style: {
             backgroundColor: "black",
@@ -1112,28 +1126,34 @@ export default {
     },
     getTagColor,
     callOrCopyPhone(item) {
-      let { phone, username: nickname, isUseSlave } = item;
+      let { phone, username: nickname, hasSuccess, isUseSlave, orderId } = item;
       let itemList = [
         phone,
-        "呼叫",
         "复制",
         "关闭并截图",
-        "关闭并支付",
-        "关闭并接盘",
-        "关闭并取消订单",
+        hasSuccess ? "关闭并取消订单" : "关闭并接盘",
       ];
       uni.showActionSheet({
         itemList,
         success: async (res) => {
-          if ([0, 1].includes(res.tapIndex)) {
+          if ([0].includes(res.tapIndex)) {
             uni.makePhoneCall({
               phoneNumber: phone,
             });
-          } else if (res.tapIndex === 2) {
+          } else if (res.tapIndex === 1) {
             uni.setClipboardData({
               data: phone,
             });
-          } else if (res.tapIndex === 3) {
+          } else if (res.tapIndex === 2) {
+            if (this.platform === "xingqiu" && !orderId) {
+              uni.showToast({
+                icon: "none",
+                title: "没有订单ID",
+                duration: 2000,
+              });
+              return;
+            }
+
             this.loading = true;
             await request({
               method: "post",
@@ -1141,79 +1161,84 @@ export default {
               data: {
                 isUseSlave,
                 nickname,
+                orderId,
               },
             });
             this.loading = false;
-          } else if (res.tapIndex === 4) {
+          } else if (res.tapIndex === 3) {
+            if (hasSuccess) {
+              let time = await this.$refs.setTime.paste();
+              this.checkShouldCancel(time);
+              this.$refs.setTime.mode = "取消订单";
+              let cancelTime = await this.$refs.setTime.setTimeForParent();
+              this.loading = true;
+              item.cancelTime = cancelTime;
+              await request({
+                method: "post",
+                url: this.host + "/closeAndCancelOrder/",
+                data: {
+                  cancelTime,
+                  nickname,
+                  isUseSlave,
+                },
+              });
+              this.loading = false;
+            } else {
+              this.setTimeStr =
+                item.snappedTime && new Date(item.snappedTime) > new Date()
+                  ? item.cancelTime
+                  : "";
+              this.$refs.setTime.mode = "接盘";
+              let snappedTime = await this.$refs.setTime.setTimeForParent();
+              this.loading = true;
+              item.snappedTime = snappedTime;
+              item.isLoop = true;
+              await request({
+                method: "post",
+                url: this.host + "/closeAndSetSnappedTime/",
+                data: {
+                  snappedTime,
+                  nickname,
+                  isUseSlave,
+                },
+              });
+              this.loading = false;
+            }
+          }
+        },
+      });
+    },
+    checkShouldCancel(time) {
+      let target = this.dataWithoutFilter.find(
+        (one) => one.snappedTime && one.snappedTime.includes(time)
+      );
+      this.isCanCancel =
+        target && new Date(time).getTime() - Date.now() > 15000;
+    },
+    copyUsername(item) {
+      let { phone, username, isUseSlave } = item;
+      let itemList = [username, "复制", "关闭并支付"];
+      uni.showActionSheet({
+        itemList,
+        success: async (res) => {
+          if ([0, 1].includes(res.tapIndex)) {
+            uni.setClipboardData({
+              data: username,
+            });
+          } else if (res.tapIndex === 2) {
             await this.confirmAction("确认支付？");
             this.loading = true;
             await request({
               method: "post",
               url: this.host + "/closeAndPay/",
               data: {
-                nickname,
-                isUseSlave,
-              },
-            });
-            this.loading = false;
-          } else if (res.tapIndex === 5) {
-            this.setTimeStr =
-              item.snappedTime && new Date(item.snappedTime) > new Date()
-                ? item.cancelTime
-                : "";
-            this.$refs.setTime.mode = "接盘";
-            let snappedTime = await this.$refs.setTime.setTimeForParent();
-            this.loading = true;
-            item.snappedTime = snappedTime;
-            item.isLoop = true;
-            await request({
-              method: "post",
-              url: this.host + "/closeAndSetSnappedTime/",
-              data: {
-                snappedTime,
-                nickname,
-                isUseSlave,
-              },
-            });
-            this.loading = false;
-          } else if (res.tapIndex === 6) {
-            // this.setTimeStr =
-            //   item.cancelTime && new Date(item.cancelTime) > new Date()
-            //     ? item.cancelTime
-            //     : "";
-            let time = await this.$refs.setTime.paste();
-            this.checkShouldCancel(time, item.isUseSlave);
-            this.$refs.setTime.mode = "取消订单";
-            let cancelTime = await this.$refs.setTime.setTimeForParent();
-            this.loading = true;
-            item.cancelTime = cancelTime;
-            await request({
-              method: "post",
-              url: this.host + "/closeAndCancelOrder/",
-              data: {
-                cancelTime,
-                nickname,
+                nickname: username,
                 isUseSlave,
               },
             });
             this.loading = false;
           }
         },
-      });
-    },
-    checkShouldCancel(time, isUseSlave) {
-      let target = this.dataWithoutFilter.find(
-        (one) =>
-          one.snappedTime &&
-          one.snappedTime.includes(time) &&
-          !(!one.isUseSlave === !!isUseSlave)
-      );
-      this.isCanCancel =
-        target && new Date(time).getTime() - Date.now() > 15000;
-    },
-    copyUsername(username) {
-      uni.setClipboardData({
-        data: username,
       });
     },
     toggleForm() {
@@ -1233,6 +1258,7 @@ export default {
       let item = this.dataWithoutFilter.find((one) => one.username === user);
       await this.stop(item);
       this.$refs.calc.refreshDialog();
+      uni.$emit("stop" + user + "done");
     },
     async autoStartUsers(users) {
       this.isShowCalc = false;
@@ -1368,7 +1394,7 @@ export default {
       this.$refs.popup.open("bottom");
       this.readDataFromClip();
     },
-    async activityClick({ index }, groupName) {
+    async activityClick({ index }, groupName, activityId) {
       if (index === 0) {
         this.getConfig(true);
       } else if (index === 1) {
@@ -1379,13 +1405,16 @@ export default {
         );
         this.filterData();
       } else if (index === 2) {
+        this.queryItems.find((one) => one.column === "activityName").value =
+          groupName.slice(0, 6);
+      } else if (index === 3) {
         console.log("删除全部1");
         this.loading = true;
         await request({
           method: "post",
           url: this.host + "/removeOneActivity/",
           data: {
-            activityName: groupName,
+            activityId,
           },
         });
         await this.getConfig();
@@ -1488,7 +1517,7 @@ export default {
           data.uid = data.uid.replace("尊敬的用户，你的UID是：", "");
         }
         delete data.skuIdToTypeMap;
-        await request({
+        let { username } = await request({
           method: "post",
           url: this.host + "/addInfo/",
           data,
@@ -1499,7 +1528,7 @@ export default {
         await this.getConfig(true);
         this.loading = false;
         let target = this.dataWithoutFilter.find(
-          (one) => one.username === data.username
+          (one) => one.username === username
         );
         this.start(target);
       }
@@ -1676,6 +1705,7 @@ export default {
       try {
         await request({
           method: "post",
+          timeout: 40000,
           url: this.host + "/startUserFromRemote/",
           data: {
             isUseSlave: item.isUseSlave,
@@ -1694,6 +1724,7 @@ export default {
     async stop(item) {
       this.loading = true;
       await request({
+        timeout: 60000,
         url: this.host + "/stopUser/" + item.username,
         data: {
           isUseSlave: item.isUseSlave,
@@ -1705,47 +1736,8 @@ export default {
       this.loading = false;
     },
     filterData() {
-      let cmds = Object.values(this.pidToCmd);
-
-      let cmdToPid = {};
-      Object.entries(this.pidToCmd).forEach(([key, value]) => {
-        cmdToPid[value.split(/\s+/).slice(0, 4).join(" ")] = key;
-      });
-      let data = Object.entries(this.config).map(([username, one]) => ({
-        username,
-        ...one,
-      }));
-
-      data.sort((a, b) => Number(b.port) - Number(a.port));
-
-      let notOkData = data
-        .filter((one) => one.port === "null")
-        .map((one) => one);
-      if (notOkData.length) {
-        uni.showToast({
-          icon: "none",
-          title: notOkData.map((one) => one.username).join(",") + "端口为null",
-          duration: 2000,
-        });
-      }
-
-      data.forEach((one) => {
-        let cmd = `npm run start ${one.username}`;
-        one.cmd = cmd;
-        one.loading = false;
-        one.hasSuccess = Boolean(one.hasSuccess);
-        one.runningCmd = cmds.find(
-          (cmd) => cmd.split(/\s+/)[3] === one.username
-        );
-        one.isLoop = one.runningCmd?.includes("loop");
-        one.pid = cmdToPid[cmd];
-        one.orders = one.orders.map((one) => Number(one));
-        one.showOrders = one.orders.join(",");
-      });
-
       let items = this.queryItems.filter((item) => item.value);
-      this.dataWithoutFilter = data;
-      let filteredData = data.filter((one) => {
+      let filteredData = this.dataWithoutFilter.filter((one) => {
         return items.every(({ value, column }) => {
           if (column !== "username") {
             return (
@@ -1776,7 +1768,7 @@ export default {
       if (this.isHideSlave) {
         filteredData = filteredData.filter((one) => !one.isUseSlave);
       }
-      let isHasFilter = filteredData.length !== data.length;
+      let isHasFilter = filteredData.length !== this.dataWithoutFilter.length;
       this.getGroup(filteredData, isHasFilter);
     },
     checkIsExpired(one) {
@@ -1806,7 +1798,6 @@ export default {
       }
       let cur = null;
       data.forEach((one, index) => {
-        console.log(11111111111111, index);
         if (!cur || cur.group !== one.activityName) {
           cur = {
             isCheckRunning: this.runningCheckPorts.includes(Number(one.port)),
@@ -1839,7 +1830,7 @@ export default {
       console.log("组合数据", this.groupData);
       this.groupData.length && (this.groupData[0].isShow = true);
 
-      console.log(res);
+      // console.log(res);
     },
     async getConfig(isFirst) {
       let scrollTop = this.scrollTop;
@@ -1890,6 +1881,46 @@ export default {
 
         this.pidToCmd = pidToCmd;
         this.isShowRecover = Object.keys(this.pidToCmd).length === 0;
+
+        let cmds = Object.values(this.pidToCmd);
+
+        let cmdToPid = {};
+        Object.entries(this.pidToCmd).forEach(([key, value]) => {
+          cmdToPid[value.split(/\s+/).slice(0, 4).join(" ")] = key;
+        });
+        let data = Object.entries(this.config).map(([username, one]) => ({
+          username,
+          ...one,
+        }));
+
+        data.sort((a, b) => Number(b.port) - Number(a.port));
+
+        let notOkData = data
+          .filter((one) => one.port === "null")
+          .map((one) => one);
+        if (notOkData.length) {
+          uni.showToast({
+            icon: "none",
+            title:
+              notOkData.map((one) => one.username).join(",") + "端口为null",
+            duration: 2000,
+          });
+        }
+
+        data.forEach((one) => {
+          let cmd = `npm run start ${one.username}`;
+          one.cmd = cmd;
+          one.loading = false;
+          one.hasSuccess = Boolean(one.hasSuccess);
+          one.runningCmd = cmds.find(
+            (cmd) => cmd.split(/\s+/)[3] === one.username
+          );
+          one.isLoop = one.runningCmd?.includes("loop");
+          one.pid = cmdToPid[cmd];
+          one.orders = one.orders.map((one) => Number(one));
+          one.showOrders = one.orders.join(",");
+        });
+        this.dataWithoutFilter = data;
         this.filterData();
       } catch (e) {
         console.log("出错", e);

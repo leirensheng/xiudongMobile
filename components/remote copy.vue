@@ -109,7 +109,7 @@
                 />
               </div>
 
-              <div @click="callOrCopyPhone(item.phone, item.username)">
+              <div @click="callOrCopyPhone(item.phone, item.username, item.orderId)">
                 {{ item.phone }}
               </div>
               <div class="name" @click="copyUsername(item.username)">
@@ -809,7 +809,7 @@ export default {
           if ([0].includes(res.tapIndex)) {
             this.removeOneAudience(audience, item);
           } else if (res.tapIndex === 1) {
-            uni.setClipboardData({
+            uni.pboardData({
               data: audience,
             });
           } else if (res.tapIndex === 2) {
@@ -986,7 +986,7 @@ export default {
       this.msgDialogShow = true;
     },
     getTagColor,
-    callOrCopyPhone(phone, nickname) {
+    callOrCopyPhone(phone, nickname,orderId) {
       let itemList = [
         phone,
         "呼叫",
@@ -1647,7 +1647,7 @@ export default {
         this.groupData = res;
       }
       console.log("组合数据", this.groupData);
-      console.log(res);
+      // console.log(res);
     },
     async getConfig(isFirst) {
       let scrollTop = this.scrollTop;

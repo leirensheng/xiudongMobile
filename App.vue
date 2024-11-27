@@ -3,6 +3,10 @@ import globalData from './globalData.js'
 export default {
 	onLaunch: function () {
 		this.getHost()
+		if(document&&document.querySelector('.uni-page-head')){
+			let dom = document.querySelector('.uni-page-head')
+			dom.parentElement.removeChild(dom)
+		}
 	},
 	data() {
 		return {
@@ -56,5 +60,8 @@ span,
 textarea,
 button {
 	box-sizing: border-box;
+}
+@uni-page{
+	display:none
 }
 </style>

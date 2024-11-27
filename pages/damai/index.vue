@@ -1,19 +1,23 @@
 <template>
-  <remote-config
-    v-if="isReady"
-    platform="damai"
-    ref="remote"
-    :pcHost="pcHost"
-    :scrollTop="scrollTop"
-  ></remote-config>
+  <check-permission>
+    <remote-config
+      v-if="isReady"
+      platform="damai"
+      ref="remote"
+      :pcHost="pcHost"
+      :scrollTop="scrollTop"
+    ></remote-config>
+  </check-permission>
 </template>
 
 <script>
 import globalData from "../../globalData.js";
 import RemoteConfig from "../../components/remote.vue";
+import CheckPermission from "../../components/checkPermission.vue";
 export default {
   components: {
     RemoteConfig,
+    CheckPermission,
   },
   data() {
     return {

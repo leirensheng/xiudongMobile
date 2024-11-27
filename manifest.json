@@ -52,7 +52,13 @@
                 "push" : {
                     "unipush" : {}
                 },
-                "ad" : {}
+                "ad" : {},
+                "share" : {
+                    "weixin" : {
+                        "appid" : "",
+                        "UniversalLinks" : ""
+                    }
+                }
             },
             "icons" : {
                 "android" : {
