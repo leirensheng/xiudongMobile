@@ -25,6 +25,13 @@
         />
 
         <image
+          class="sync"
+          style="width: 30px; height: 30px; flex-shrink: 0;margin-left: 10px"
+          src="/static/snap.svg"
+          @click="toSnap"
+        />
+
+        <image
           class="audience"
           style="width: 35px; height: 35px"
           src="/static/audience.svg"
@@ -77,6 +84,7 @@
               <div
                 class="message-wrap"
                 :class="item.type"
+                :style="{ backgroundColor: item.hasRead ? 'black' : '' }"
                 @click="clickMsg(item, index)"
               >
                 <!-- <div class="index">{{index+1}}.</div> -->
@@ -245,12 +253,15 @@
 </template>
 
 <script>
-import { request, sleep, randomColor, highlightOne } from "@/utils.js";
+import { request,removeTitle, sleep, randomColor, highlightOne } from "@/utils.js";
 import SearchInput from "@/components/search-input/search-input.vue";
 import userMap from "@/components/userMap.js";
 import CheckPermission from "../../components/checkPermission.vue";
 
 export default {
+  onShow(){
+    removeTitle()
+  },
   data() {
     return {
       shutdownMin: 30,
@@ -459,6 +470,11 @@ export default {
     this.isWeb = !!document;
   },
   methods: {
+    toSnap(){
+      uni.navigateTo({
+        url: "/pages/snap/index"
+      })
+    },
     async changeToAble(val) {
       let { phone } = this.userMap[val];
       let isDisabled = this.checkIsDisabled(phone);
@@ -589,10 +605,6 @@ export default {
       });
 
       let cmds = Object.values(pidToCmd);
-      let pidInfo = Object.keys(pidToCmd).reduce((prev, pid) => {
-        prev[pidToCmd[pid]] = pid;
-        return prev;
-      }, {});
       cmds = cmds.filter((one) => one.includes("npm run start"));
 
       await request({
@@ -600,7 +612,7 @@ export default {
         method: "post",
         data: {
           cmds,
-          pidInfo,
+          pidToCmd,
         },
       });
       this.syncIng = false;
@@ -750,6 +762,7 @@ export default {
         ...this.form,
         isCopy: true,
         port,
+        isUseSlave: true,
         username: this.validUsername,
         showOrders,
       };
@@ -786,8 +799,17 @@ export default {
         }
       }
     },
-    clearCurrent() {
-      this.showArr.map((one) => this.removeOneMsg(one.id));
+    async clearCurrent() {
+      await this.confirmAction("确定清除当前吗?");
+      this.loading = true;
+      this.msgArr = await request({
+        method: "post",
+        url: "http://mticket.ddns.net:4000/removeMessages",
+        data: {
+          ids: this.showArr.map((one) => one.id),
+        },
+      });
+      this.loading = false;
     },
     toAudience() {
       uni.navigateTo({
@@ -1090,6 +1112,7 @@ export default {
       });
     },
     async clear() {
+      await this.confirmAction("确定清空吗?");
       this.loading = true;
       this.msgArr = [];
       let host = `http://mticket.ddns.net:4000/removeAllAppMsg`;
@@ -1136,7 +1159,7 @@ export default {
       return null;
     },
     call(phoneNumber, item) {
-      let itemList = [phoneNumber, "呼叫", "复制", "已读"];
+      let itemList = [phoneNumber, "呼叫", "复制", "已通知"];
       if (item.payCode) {
         itemList.push("复制口令");
       } else {
@@ -1146,7 +1169,7 @@ export default {
         itemList,
         success: async (res) => {
           if ([0, 1].includes(res.tapIndex)) {
-            item.type = "success-call";
+            // item.type = "success-call";
             uni.makePhoneCall({
               phoneNumber,
             });
@@ -1155,7 +1178,12 @@ export default {
               data: phoneNumber,
             });
           } else if (res.tapIndex === 3) {
-            item.type = "success-call";
+            let host = `http://mticket.ddns.net:4000/setHasRead/${item.id}`;
+            await request({
+              method: "get",
+              url: host,
+            });
+            item.hasRead = true;
           } else if (res.tapIndex === 4) {
             uni.setClipboardData({
               data: itemList.includes("复制口令")
@@ -1369,8 +1397,8 @@ export default {
     flex-wrap: wrap;
   }
 }
-.radio-wrap{
-  padding:  5px 80rpx;
+.radio-wrap {
+  padding: 5px 80rpx;
 }
 </style>
 

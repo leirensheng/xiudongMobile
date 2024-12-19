@@ -14,6 +14,8 @@
 import globalData from "../../globalData.js";
 import RemoteConfig from "../../components/remote.vue";
 import CheckPermission from "../../components/checkPermission.vue";
+import { removeTitle } from "@/utils.js";
+
 export default {
   components: {
     RemoteConfig,
@@ -51,6 +53,8 @@ export default {
       target.value = uni.getStorageSync("searchUser");
       uni.removeStorageSync("searchUser");
     }
+
+    removeTitle()
   },
   async onPullDownRefresh() {
     this.$refs.remote.reset();

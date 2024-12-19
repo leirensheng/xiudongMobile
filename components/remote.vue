@@ -25,6 +25,12 @@
         </div> -->
     <div class="search">
       <image
+        class="audience"
+        style="width: 35px; height: 35px"
+        src="/static/running.svg"
+        @click="toggleRunning"
+      />
+      <image
         v-if="isHideBorrow"
         class="audience"
         style="width: 35px; height: 35px"
@@ -69,6 +75,12 @@
         src="/static/recover.svg"
         @click="recover"
         v-if="isShowRecover"
+      />
+      <image
+        style="width: 20px; height: 20px; flex-shrink: 0"
+        src="/static/recoverSlave.svg"
+        @click="recoverSlave"
+        v-if="isShowSlaveRecover"
       />
 
       <image
@@ -219,6 +231,7 @@
                   class="btn"
                   size="mini"
                   type="warn"
+                  :disabled="loading && stoppingUsers.has(item.username)"
                   v-if="item.runningCmd"
                   @click="stop(item)"
                 >
@@ -232,7 +245,6 @@
                   type="primary"
                   v-else
                   @click="start(item)"
-                  :disabled="loading"
                 >
                   启动
                 </button>
@@ -429,6 +441,7 @@
     :activityName="calcActivityName"
     :activityId="calcActivityId"
     :userConfig="dataWithoutFilter"
+    :pidToCmd="pidToCmd"
     @startOne="startOne"
     @startCheck="afterStartCheck"
     @stopCheck="afterStopCheck"
@@ -442,6 +455,7 @@
     :isCanCancel="isCanCancel"
     v-model:setTimeStr="setTimeStr"
   ></set-time>
+  <my-terminal v-if="showPid" v-model:pid="showPid" />
 </template>
 
 <script>
@@ -450,6 +464,7 @@ import SearchInput from "./search-input/search-input.vue";
 import MyDialog from "./my-dialog/my-dialog.vue";
 import SetTime from "./setTime.vue";
 import userMap from "./userMap";
+import MyTerminal from "./myTerminal.vue";
 let platformToPortMap = {
   xiudong: "4010",
   damai: "5000",
@@ -464,6 +479,7 @@ export default {
     calcActivity,
     MyDialog,
     SearchInput,
+    MyTerminal,
   },
   props: {
     scrollTop: {
@@ -482,6 +498,10 @@ export default {
 
   data() {
     return {
+      onlyShowRunning: false,
+      showPid: "",
+      pidToCmd: {},
+      stoppingUsers: new Set(),
       indexToColor: {},
       isHideBorrow: false,
       isHideSlave: false,
@@ -501,6 +521,7 @@ export default {
       percent: 0,
       isShowAll: true,
       isShowRecover: false,
+      isShowSlaveRecover: false,
       scrollTopId: "",
       old: {
         scrollTop: 0,
@@ -547,6 +568,9 @@ export default {
   },
 
   watch: {
+    onlyShowRunning(val) {
+      this.filterData();
+    },
     // selectedActivityId(val) {
     //   this.queryItems.find((one) => one.column === "activityId").value = val;
     //   this.filterData();
@@ -610,6 +634,11 @@ export default {
         return this.host.replace("5000", "5010");
       }
       return this.host;
+    },
+    slaveHost() {
+      if (this.host.includes("5000")) {
+        return this.host.replace("5000", "5003");
+      }
     },
     userMap() {
       let obj = userMap;
@@ -806,6 +835,9 @@ export default {
   },
 
   methods: {
+    toggleRunning() {
+      this.onlyShowRunning = !this.onlyShowRunning;
+    },
     jieyong() {
       if (!this.editForm.remark.includes("借用")) {
         this.editForm.remark += "借用";
@@ -1006,6 +1038,15 @@ export default {
         url: this.host + "/recover",
       });
       this.failCmds = failCmds || [];
+      this.getConfig(true);
+      this.loading = false;
+    },
+    async recoverSlave() {
+      this.loading = true;
+      await request({
+        timeout: 2 * 60000,
+        url: this.slaveHost + "/recover",
+      });
       this.getConfig(true);
       this.loading = false;
     },
@@ -1217,7 +1258,10 @@ export default {
     },
     copyUsername(item) {
       let { phone, username, isUseSlave } = item;
-      let itemList = [username, "复制", "关闭并支付"];
+      let itemList = [username, "复制", "关闭并支付", "补录成功数据"];
+      if (item.runningCmd) {
+        itemList.push("查看输出");
+      }
       uni.showActionSheet({
         itemList,
         success: async (res) => {
@@ -1237,6 +1281,28 @@ export default {
               },
             });
             this.loading = false;
+          } else if (res.tapIndex === 3) {
+            await this.confirmAction("确认补录？");
+            this.loading = true;
+            await request({
+              method: "post",
+              url: this.host + "/loadSuccess",
+              data: {
+                phone,
+              },
+            });
+            this.loading = false;
+          } else if (res.tapIndex === 4) {
+            this.showPid = Object.keys(this.pidToCmd).find(
+              (one) => this.pidToCmd[one] === item.runningCmd
+            );
+            if (!this.showPid) {
+              uni.showToast({
+                icon: "none",
+                title: "没有找到PID",
+                duration: 2000,
+              });
+            }
           }
         },
       });
@@ -1723,6 +1789,7 @@ export default {
     },
     async stop(item) {
       this.loading = true;
+      this.stoppingUsers.add(item.username);
       await request({
         timeout: 60000,
         url: this.host + "/stopUser/" + item.username,
@@ -1730,10 +1797,15 @@ export default {
           isUseSlave: item.isUseSlave,
         },
       });
-      delete item.runningCmd;
+      let pid = Object.keys(this.pidToCmd).find(
+        (pid) => this.pidToCmd[pid] === item.cmd
+      );
+      delete this.pidToCmd[pid];
       item.isLoop = false;
+      delete item.runningCmd;
       console.log(item);
       this.loading = false;
+      this.stoppingUsers.delete(item.username);
     },
     filterData() {
       let items = this.queryItems.filter((item) => item.value);
@@ -1768,7 +1840,11 @@ export default {
       if (this.isHideSlave) {
         filteredData = filteredData.filter((one) => !one.isUseSlave);
       }
+      if (this.onlyShowRunning) {
+        filteredData = filteredData.filter((one) => one.runningCmd);
+      }
       let isHasFilter = filteredData.length !== this.dataWithoutFilter.length;
+      console.log(filteredData.length);
       this.getGroup(filteredData, isHasFilter);
     },
     checkIsExpired(one) {
@@ -1807,6 +1883,9 @@ export default {
             data: [one],
             isExpired: this.checkIsExpired(one),
           };
+          if (cur.isCheckRunning && cur.isExpired) {
+            request({ url: this.checkHost + "/stopCheck/" + one.port });
+          }
           res.push(cur);
         } else if (cur.group === one.activityName) {
           cur.data.push(one);
@@ -1861,13 +1940,23 @@ export default {
           cancelPre: true,
         });
 
+        let p5 = this.isDamai
+          ? request({
+              timeout: 1000,
+              url: this.slaveHost + "/getAllUserConfig",
+            })
+              .then((e) => true)
+              .catch((e) => false)
+          : Promise.resolve(false);
+
         this.runningCheckPorts = [];
         let [
           { config, pidToCmd },
           activityInfo,
           audienceInfo,
           runningCheckPorts = [],
-        ] = await Promise.all([p1, p2, p3, p4]);
+          isSlaveOnline,
+        ] = await Promise.all([p1, p2, p3, p4, p5]);
 
         this.runningCheckPorts = runningCheckPorts;
         Object.values(config).forEach((obj) => {
@@ -1921,6 +2010,10 @@ export default {
           one.showOrders = one.orders.join(",");
         });
         this.dataWithoutFilter = data;
+
+        let slaveData = isSlaveOnline && data.filter((one) => one.isUseSlave);
+        this.isShowSlaveRecover =
+          slaveData.length && slaveData.every((one) => !one.runningCmd);
         this.filterData();
       } catch (e) {
         console.log("出错", e);

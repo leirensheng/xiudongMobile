@@ -1,54 +1,47 @@
 <script>
-import globalData from './globalData.js'
+import globalData from "./globalData.js";
+import { removeTitle } from "@/utils.js";
 export default {
-	onLaunch: function () {
-		this.getHost()
-		if(document&&document.querySelector('.uni-page-head')){
-			let dom = document.querySelector('.uni-page-head')
-			dom.parentElement.removeChild(dom)
-		}
-	},
-	data() {
-		return {
-		}
-	},
-	watch: {
-	
-	},
-	methods: {
-		checkIsInLocal() {
-			return new Promise((resolve) => {
-				uni.request({
-					url: 'http://192.168.2.9:4000/ping',
-					timeout: 200,
-					success: () => {
-						resolve(true)
-					},
-					fail: () => {
-						resolve(false)
-					},
-				})
-			})
-		},
-		async getHost() {
-			let isLocal = false
-			let host = isLocal ? '192.168.2.15' : 'mticket.ddns.net'
+  onLaunch: function () {
+    this.getHost();
+    removeTitle();
+  },
+  data() {
+    return {};
+  },
+  watch: {},
+  methods: {
+    checkIsInLocal() {
+      return new Promise((resolve) => {
+        uni.request({
+          url: "http://192.168.2.9:4000/ping",
+          timeout: 200,
+          success: () => {
+            resolve(true);
+          },
+          fail: () => {
+            resolve(false);
+          },
+        });
+      });
+    },
+    async getHost() {
+      let isLocal = false;
+      let host = isLocal ? "192.168.2.15" : "mticket.ddns.net";
 
-			console.log('host',host)
-			globalData.pcHost = host
-			uni.$emit('hostDone', host)
-		},
+      console.log("host", host);
+      globalData.pcHost = host;
+      uni.$emit("hostDone", host);
+    },
+  },
 
-	
-	},
-
-	onShow: function () {
-		console.log('App Show')
-	},
-	onHide: function () {
-		console.log('App Hide')
-	}
-}
+  onShow: function () {
+    console.log("App Show");
+  },
+  onHide: function () {
+    console.log("App Hide");
+  },
+};
 </script>
 
 <style>
@@ -59,9 +52,9 @@ div,
 span,
 textarea,
 button {
-	box-sizing: border-box;
+  box-sizing: border-box;
 }
-@uni-page{
-	display:none
+@uni-page {
+  display: none;
 }
 </style>

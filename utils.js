@@ -99,7 +99,15 @@ let highlightOne = (str, keyword, color = "#42A64E") => {
     return `<span style="color:${color} !important">${res}</span>`;
   });
 };
+
+let removeTitle = () => {
+  if (document && document.querySelector(".uni-page-head")) {
+    let dom = document.querySelector(".uni-page-head");
+    dom.parentElement.removeChild(dom);
+  }
+};
 export {
+  removeTitle,
   debounce,
   request,
   getTagColor,

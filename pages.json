@@ -31,6 +31,13 @@
 			}
 		},
 		{
+			"path": "pages/snap/index",
+			"style": {
+				"enablePullDownRefresh": true,
+				"navigationBarTitleText": "接"
+			}
+		},
+		{
 			"path": "pages/damai/index",
 			"style": {
 				"enablePullDownRefresh": true,

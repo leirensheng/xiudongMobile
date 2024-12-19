@@ -84,6 +84,9 @@
 
   <uni-popup ref="check" type="top">
     <div class="check">
+      <div class="top-btns">
+        <div class="output" v-if="isRunning" @click="showTerminal">输出</div>
+      </div>
       <div class="target-types">
         <checkbox-group
           v-if="checkConfig && checkConfig.skuIdToTypeMap"
@@ -149,14 +152,18 @@
       </div>
     </div>
   </uni-popup>
+  <my-terminal v-if="showPid" v-model:pid="showPid" />
 </template>
 
 <script>
 import { request, sleep, getTime, randomColorWithoutGreen } from "@/utils.js";
+import MyTerminal from "./myTerminal.vue";
 
 export default {
+  components: { MyTerminal },
   data() {
     return {
+      showPid: "",
       machine: "all",
       indexToColor: {},
       isWeb: false,
@@ -186,6 +193,10 @@ export default {
     "startCheck",
   ],
   props: {
+    pidToCmd: {
+      type: Object,
+      default: () => {},
+    },
     userConfig: {
       type: Array,
       default: () => [],
@@ -248,6 +259,11 @@ export default {
     },
   },
   methods: {
+    showTerminal() {
+      this.showPid = Object.keys(this.pidToCmd).find((pid) =>
+        this.pidToCmd[pid].includes("npm run check " + this.port)
+      );
+    },
     async restartAll() {
       await this.confirmAction("确定重启所有？");
       this.loading = true;
@@ -712,6 +728,19 @@ export default {
   padding: 15px;
   overflow: auto;
   max-height: 75vh;
+  .top-btns {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    .output {
+      padding: 5px 10px;
+      margin: 0 auto;
+      display: inline-block;
+      background: purple;
+      color: white;
+      border-radius: 10px;
+    }
+  }
 
   .checkbox-group {
     > * {
