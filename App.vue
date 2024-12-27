@@ -37,6 +37,9 @@ export default {
 
   onShow: function () {
     console.log("App Show");
+    // #ifdef APP-PLUS
+    plus.device.setWakelock(true); 
+    // #endif
   },
   onHide: function () {
     console.log("App Hide");

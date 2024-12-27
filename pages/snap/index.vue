@@ -61,6 +61,9 @@
         <span>到期时间: {{ firstExpireTime }} </span>
         <span style="margin-left: 15px">{{ leftTime }}分钟</span>
       </div>
+      <div class="expire-time">
+        <span>当前时间: {{ currentTime }} </span>
+      </div>
       <div class="input-wrap">
         <input
           class="input"
@@ -183,9 +186,11 @@ export default {
       readyUsers: [],
       loading: false,
       hasCancel: false,
+      currentTime: "",
     };
   },
   async onPullDownRefresh() {
+    this.currentTime = "";
     this.status = [];
     this.timer = null;
     clearInterval(this.timer);
@@ -235,12 +240,15 @@ export default {
       if (val) {
         clearInterval(this.timer);
         this.timer = setInterval(() => {
-          this.leftTime = Math.ceil(
-            (new Date(val).getTime() - Date.now()) / 1000 / 60
-          );
+          this.leftTime = (
+            (new Date(val).getTime() - Date.now()) /
+            1000 /
+            60
+          ).toFixed(2);
           if (this.leftTime <= 0) {
             clearInterval(this.timer);
           }
+          this.currentTime = getTime(new Date());
         }, 1000);
       } else {
         this.leftTime = 0;
@@ -417,6 +425,7 @@ export default {
       console.log("开始", this.selectedUserList);
 
       this.selectedUserList.forEach(async (one, index) => {
+        await sleep(index * 100);
         await request({
           method: "post",
           timeout: 60000,
@@ -518,9 +527,9 @@ export default {
         one.activityName = one.msg.match(/<\/a>】-(.*?),/)[1];
         one.isJie = one.msg.includes("借");
       });
-      this.successList = this.successList.filter(
-        (one) => new Date(one.endTime).getTime() > Date.now()
-      );
+      // this.successList = this.successList.filter(
+      //   (one) => new Date(one.endTime).getTime() > Date.now()
+      // );
       console.log(this.successList);
       this.topList = [...this.successList];
 
@@ -611,7 +620,7 @@ export default {
     border-radius: 4px;
   }
   .middle {
-    margin-bottom: 10px;
+    margin: 15px 0;
   }
   .message {
     margin: 15px;
@@ -646,7 +655,7 @@ export default {
   }
 
   .expire-time {
-    line-height: 4;
+    line-height: 2;
     font-weight: bold;
     // margin-top: 20px;
     color: red;

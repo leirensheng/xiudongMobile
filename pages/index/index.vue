@@ -26,7 +26,7 @@
 
         <image
           class="sync"
-          style="width: 30px; height: 30px; flex-shrink: 0;margin-left: 10px"
+          style="width: 30px; height: 30px; flex-shrink: 0; margin-left: 10px"
           src="/static/snap.svg"
           @click="toSnap"
         />
@@ -253,14 +253,20 @@
 </template>
 
 <script>
-import { request,removeTitle, sleep, randomColor, highlightOne } from "@/utils.js";
+import {
+  request,
+  removeTitle,
+  sleep,
+  randomColor,
+  highlightOne,
+} from "@/utils.js";
 import SearchInput from "@/components/search-input/search-input.vue";
 import userMap from "@/components/userMap.js";
 import CheckPermission from "../../components/checkPermission.vue";
 
 export default {
-  onShow(){
-    removeTitle()
+  onShow() {
+    removeTitle();
   },
   data() {
     return {
@@ -423,7 +429,6 @@ export default {
     }, 5000);
     // #endif
     // #ifdef APP-PLUS
-    // 监听在线消息事件
     plus.push.addEventListener(
       "receive",
       ({ title, content, payload }) => {
@@ -470,10 +475,10 @@ export default {
     this.isWeb = !!document;
   },
   methods: {
-    toSnap(){
+    toSnap() {
       uni.navigateTo({
-        url: "/pages/snap/index"
-      })
+        url: "/pages/snap/index",
+      });
     },
     async changeToAble(val) {
       let { phone } = this.userMap[val];
@@ -1183,7 +1188,8 @@ export default {
               method: "get",
               url: host,
             });
-            item.hasRead = true;
+            let target = this.msgArr.find((one) => one.id === item.id);
+            target.hasRead = true;
           } else if (res.tapIndex === 4) {
             uni.setClipboardData({
               data: itemList.includes("复制口令")

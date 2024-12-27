@@ -883,6 +883,7 @@ export default {
     afterStartCheck(port) {
       let target = this.groupData.find((one) => one.port === port);
       target.isCheckRunning = true;
+      this.getConfig();
     },
     afterStopCheck(port) {
       let target = this.groupData.find((one) => one.port === port);
@@ -1316,6 +1317,7 @@ export default {
       try {
         await this.start(item);
         this.$refs.calc.refreshDialog();
+        this.getConfig();
       } catch (e) {
         console.log(e);
       }
