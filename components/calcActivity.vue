@@ -11,23 +11,40 @@
           最小:
           <switch :checked="isMin" @change="changeIsMin" />
         </div>
-        <div>
-          单张:
-          <switch :checked="isSingle" @change="changeIsSingle" />
-        </div>
       </div>
-      <div class="machines">
-        <span @click="machine = 'all'" :class="machine === 'all' && 'active'"
-          >所有</span
-        >
-        <span @click="machine = 'main'" :class="machine === 'main' && 'active'"
-          >主机</span
-        >
-        <span
-          @click="machine = 'slave'"
-          :class="machine === 'slave' && 'active'"
-          >从机</span
-        >
+      <div class="switches">
+        <div class="machines">
+          <span @click="machine = 'all'" :class="machine === 'all' && 'active'"
+            >所有</span
+          >
+          <span
+            @click="machine = 'main'"
+            :class="machine === 'main' && 'active'"
+            >主机</span
+          >
+          <span
+            @click="machine = 'slave'"
+            :class="machine === 'slave' && 'active'"
+            >从机</span
+          >
+        </div>
+        <div class="machines">
+          <span
+            @click="ticketType = 'all'"
+            :class="ticketType === 'all' && 'active'"
+            >所有</span
+          >
+          <span
+            @click="ticketType = 'onlyOne'"
+            :class="ticketType === 'onlyOne' && 'active'"
+            >单张</span
+          >
+          <span
+            @click="ticketType = 'multiple'"
+            :class="ticketType === 'multiple' && 'active'"
+            >连坐</span
+          >
+        </div>
       </div>
       <div
         v-if="data.length"
@@ -173,7 +190,7 @@ export default {
       data: [],
       isMin: true,
       allRunningLength: 0,
-      isSingle: true,
+      ticketType: "all",
       isRunning: false,
       loading: false,
       checkConfig: {},
@@ -225,6 +242,9 @@ export default {
   mounted() {},
   watch: {
     machine() {
+      this.getCalc();
+    },
+    ticketType() {
       this.getCalc();
     },
     loading(val) {
@@ -457,8 +477,8 @@ export default {
           this.host +
           "/activityInfo/" +
           this.activityId +
-          "?isSingle=" +
-          (this.isSingle ? 1 : 0) +
+          "?ticketType=" +
+          this.ticketType +
           "&machine=" +
           this.machine,
       });
@@ -480,10 +500,6 @@ export default {
     },
     changeIsMin(e) {
       this.isMin = e.detail.value;
-    },
-    changeIsSingle(e) {
-      this.isSingle = e.detail.value;
-      this.getCalc();
     },
     getScore(name, allConfig) {
       let config = allConfig.find((one) => one.username === name);
@@ -605,6 +621,7 @@ export default {
       this.$emit("update:modelValue", e.show);
       if (!e.show) {
         this.machine = "all";
+        this.ticketType = "onlyOne";
       }
     },
     getOneUserAllTypes(name) {
@@ -684,6 +701,12 @@ export default {
 
   .top {
     padding: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .switches {
+    padding: 0 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
