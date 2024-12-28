@@ -79,6 +79,9 @@ let getTime = (date) => {
     hour
   )}:${formatNumber(minute)}:${formatNumber(second)}`;
 };
+
+let getTimeWithoutDate = (date) => getTime(date).split(" ")[1];
+
 let sleep = (time) => new Promise((r) => setTimeout(r, time));
 
 let debounce = (fn) => {
@@ -116,4 +119,5 @@ export {
   randomColor,
   randomColorWithoutGreen,
   highlightOne,
+  getTimeWithoutDate
 };

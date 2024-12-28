@@ -57,8 +57,8 @@
     </div>
 
     <div class="middle">
-      <div class="expire-time">
-        <span>到期时间: {{ firstExpireTime }} </span>
+      <div class="expire-time" v-if="firstExpireTime">
+        <span>到期时间: {{ firstExpireTime.split(" ")[1] }} </span>
         <span style="margin-left: 15px">{{ leftTime }}分钟</span>
       </div>
       <div class="expire-time">
@@ -72,6 +72,13 @@
           v-model="setCancelMin"
         />
         <button @click="setLastTime" size="mini">设置最晚</button>
+      </div>
+      <div>
+        准备好就取消:
+        <switch
+          :checked="isCancelWhenIsReady"
+          @change="changeIsCancelWhenIsReady"
+        />
       </div>
       <div class="status">
         <div class="one-status" v-for="(item, index) in status" :key="index">
@@ -88,6 +95,9 @@
           :style="{
             background: item.num > 1 ? '#f74444' : 'rgb(58 190 58)',
             color: item.isJie ? 'blue' : 'white',
+            border: readySuccessUsers.includes(item.nickname)
+              ? '5px solid rgb(206 53 172)'
+              : '',
           }"
         >
           <div class="text">
@@ -164,11 +174,12 @@
 </template>
 
 <script>
-import { request, getTime, sleep } from "@/utils.js";
+import { request, getTime, sleep, getTimeWithoutDate } from "@/utils.js";
 
 export default {
   data() {
     return {
+      isCancelWhenIsReady: true,
       successUser: "",
       timer: "",
       leftTime: 0,
@@ -184,6 +195,7 @@ export default {
       showUserList: [],
       status: [],
       readyUsers: [],
+      readySuccessUsers: [],
       loading: false,
       hasCancel: false,
       currentTime: "",
@@ -207,6 +219,8 @@ export default {
     this.selectedUserList = [];
     this.userList = [];
     this.showUserList = [];
+    this.readySuccessUsers = [];
+    this.isCancelWhenIsReady = true;
     await this.init();
     uni.stopPullDownRefresh();
   },
@@ -248,7 +262,7 @@ export default {
           if (this.leftTime <= 0) {
             clearInterval(this.timer);
           }
-          this.currentTime = getTime(new Date());
+          this.currentTime = getTimeWithoutDate(new Date());
         }, 1000);
       } else {
         this.leftTime = 0;
@@ -258,13 +272,14 @@ export default {
     readyUsersLength(val) {
       if (val) {
         if (val === this.selectedUserList.length) {
-          this.status.push(`【${getTime()}】所有用户都准备好了`);
+          this.status.push(`所有用户都准备好了`);
+          this.checkIsEveryIsReady();
           if (!this.hasCancel) {
             this.hasCancel = true;
             this.cancel();
           }
         } else if (val / this.selectedUserList.length >= 0.5) {
-          this.status.push(`【${getTime()}】一半用户都准备好了`);
+          this.addStatus("一半用户都准备好了");
           if (!this.hasCancel) {
             this.hasCancel = true;
             this.cancel();
@@ -274,6 +289,12 @@ export default {
     },
   },
   methods: {
+    addStatus(str) {
+      this.status.push(`【${getTimeWithoutDate()}】${str}`);
+    },
+    changeIsCancelWhenIsReady(e) {
+      this.isCancelWhenIsReady = e.detail.value;
+    },
     setLastTime() {
       this.setCancelMin = (
         (new Date(this.firstExpireTime).getTime() - Date.now() - 7000) /
@@ -305,8 +326,26 @@ export default {
         url: "http://mticket.ddns.net:5000/cancelCancel/",
       });
     },
+    async checkIsEveryIsReady() {
+      if (
+        this.isCancelWhenIsReady &&
+        this.readySuccessUsers.length === this.bottomList.length &&
+        this.readyUsersLength === this.selectedUserList.length
+      ) {
+        let hasTime = new Date(this.cancelTime).getTime() - Date.now() > 20000;
+        if (hasTime) {
+          await request({
+            url:
+              "http://mticket.ddns.net:5000/setIsCancelImmediately?isCancelImmediately=" +
+              1,
+            cancelPre: true,
+          });
+          this.addStatus("发送立即取消的请求");
+        }
+      }
+    },
     async cancel() {
-      this.status.push(`【${getTime()}】开始打开取消页面`); //todo:关闭取消中的
+      this.addStatus("开始打开取消页面");
       for (let one of this.bottomList) {
         await request({
           method: "post",
@@ -323,11 +362,12 @@ export default {
             "http://mticket.ddns.net:4000/waitUntilCancelIsOk/" +
             encodeURIComponent(one.nickname),
         });
+        this.addStatus(msg);
         if (isCanCancel) {
-          this.status.push(`【${getTime()}】` + msg);
+          this.readySuccessUsers.push(one.nickname);
+          this.checkIsEveryIsReady();
         } else {
-          this.status.push(`【${getTime()}】` + msg);
-          this.status.push(`【${getTime()}】取消中断！！`); //todo:关闭取消中的
+          this.addStatus("取消中断！！");
           throw new Error("取消失败");
         }
       }
@@ -345,7 +385,7 @@ export default {
               "http://mticket.ddns.net:4000/waitUntilCancelDone/" +
               encodeURIComponent(one.nickname),
           });
-          this.status.push(`【${getTime()}】【${one.nickname}】取消完成！`);
+          this.addStatus(`【${one.nickname}】取消完成！`);
           let host = `http://mticket.ddns.net:4000/removeAppMsg`;
           await request({
             method: "post",
@@ -354,8 +394,6 @@ export default {
               id: one.id,
             },
           });
-
-          // this.status.push(`【${getTime()}】【${one.nickname}】开始打开页面`);
         });
         this.checkHasSuccess();
       }, gap);
@@ -365,7 +403,7 @@ export default {
         timeout: 60000,
         url: "http://mticket.ddns.net:4000/waitUntilNewSuccess",
       });
-      this.status.push(`【${getTime()}】有用户成功了: ` + this.successUser);
+      this.addStatus(`有用户成功了: ` + this.successUser);
       this.readyUsers = [];
     },
     confirmAction(title) {
@@ -395,6 +433,12 @@ export default {
       this.readyUsers = [];
       let num = this.bottomList.length;
       await request({
+        url:
+          "http://mticket.ddns.net:5000/setIsCancelImmediately?isCancelImmediately=" +
+          0,
+        cancelPre: true,
+      });
+      await request({
         url: "http://mticket.ddns.net:5000/setSnapNum?num=" + num,
         cancelPre: true,
       });
@@ -408,7 +452,7 @@ export default {
           1000;
       baseTime = getTime(new Date(baseTime));
       this.cancelTime = baseTime;
-      this.status.push(`【${getTime()}】取消时间:` + baseTime);
+      this.addStatus(`取消时间:` + baseTime);
       // if (new Date(this.firstExpireTime).getTime() - Date.now() < 30000) {
       //   this.status.push("时间不够了30秒了, 取消执行");
       //   this.loading = false;
@@ -417,7 +461,7 @@ export default {
       if (
         new Date(baseTime).getTime() > new Date(this.firstExpireTime).getTime()
       ) {
-        this.status.push(`【${getTime()}】接盘时间超过了到期时间, 取消执行！`);
+        this.addStatus(`接盘时间超过了到期时间, 取消执行！`);
         this.loading = false;
         return;
       }
@@ -443,7 +487,7 @@ export default {
             "http://mticket.ddns.net:4000/waitUntilOneSnapIsOk/" +
             encodeURIComponent(one.username),
         });
-        this.status.push(`【${getTime()}】【${one.username}】准备好了`);
+        this.addStatus(`【${one.username}】准备好了`);
         this.readyUsers.push(one.username);
       });
       // this.status += "\r\n" + "设置取消时间为" + this.firstExpireTime;
