@@ -341,11 +341,15 @@ export default {
             cancelPre: true,
           });
           this.addStatus("发送立即取消的请求");
+          this.waitResult(0);
+          return true;
         }
       }
+      return false;
     },
     async cancel() {
       this.addStatus("开始打开取消页面");
+      let isImmediateOk;
       for (let one of this.bottomList) {
         await request({
           method: "post",
@@ -363,20 +367,25 @@ export default {
             encodeURIComponent(one.nickname),
         });
         this.addStatus(msg);
+
         if (isCanCancel) {
           this.readySuccessUsers.push(one.nickname);
-          this.checkIsEveryIsReady();
+          isImmediateOk = this.checkIsEveryIsReady();
         } else {
           this.addStatus("取消中断！！");
           throw new Error("取消失败");
         }
       }
 
-      let gap = new Date(this.cancelTime).getTime() - Date.now() - 20000;
-      if (gap < 0) {
-        gap = 0;
+      if (!isImmediateOk) {
+        let gap = new Date(this.cancelTime).getTime() - Date.now() - 20000;
+        if (gap < 0) {
+          gap = 0;
+        }
+        this.waitResult(gap);
       }
-
+    },
+    waitResult(gap) {
       setTimeout(async () => {
         this.bottomList.forEach(async (one) => {
           await request({
