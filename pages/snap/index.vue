@@ -360,6 +360,7 @@ export default {
             isUseSlave: one.isUseSlave,
           },
         });
+        this.addStatus("发送了closeAndCancelOrder");
         let { isCanCancel, msg } = await request({
           timeout: 60000,
           url:
@@ -580,9 +581,9 @@ export default {
         one.activityName = one.msg.match(/<\/a>】-(.*?),/)[1];
         one.isJie = one.msg.includes("借");
       });
-      // this.successList = this.successList.filter(
-      //   (one) => new Date(one.endTime).getTime() > Date.now()
-      // );
+      this.successList = this.successList.filter(
+        (one) => new Date(one.endTime).getTime() > Date.now()
+      );
       console.log(this.successList);
       this.topList = [...this.successList];
 

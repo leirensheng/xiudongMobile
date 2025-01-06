@@ -108,7 +108,7 @@ export default {
         xingqiu: "activityName",
         xiecheng: "activityName",
         damai: "nameNoHtml",
-        activity: "activityName"
+        activity: "activityName",
       };
       return map[this.platform];
     },
@@ -250,15 +250,11 @@ export default {
         };
       } else if (this.platform === "damai") {
         let test = await request({
-          noHandleCode: true,
-          header: {
-            Referer: "https://search.damai.cn/search.html",
-            "Referrer-Policy": "strict-origin-when-cross-origin",
-          },
           url:
-            "https://search.damai.cn/searchajax.html?cty=&ctl=&sctl=&tsg=0&st=&et=&order=0&pageSize=30&currPage=1&keyword=" +
+            "http://mticket.ddns.net:5001/searchActivity?keyword=" +
             encodeURIComponent(this.showValue),
         });
+       
         // console.log(123, test);
         let {
           pageData: { resultData },
@@ -280,7 +276,7 @@ export default {
           one.activityName?.includes(this.showValue)
         );
         // console.log(records)
-        res= {
+        res = {
           records,
           total: records.length,
         };
