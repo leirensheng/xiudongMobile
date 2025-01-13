@@ -67,34 +67,35 @@
     </div>
   </uni-popup>
 
-  <uni-popup ref="oneType" type="top">
+  <uni-popup ref="oneType" type="top" @change="changeOneTypePopup">
     <div class="one-type">
       <div class="cur-type" @click="restartAll">{{ curType }}</div>
+
       <div class="user-list">
-        <div
+        <one-item
           class="user"
           :class="
-            nextStartUser === item.name
+            nextStartUser === item.username
               ? 'will-restart'
-              : curTypeRunningUsers.includes(item.name)
+              : curTypeRunningUsers.includes(item.username)
               ? 'running'
               : ''
           "
           v-for="(item, index) in curTypeUsers"
           :key="index"
-          @click="stopOrStart(item, curTypeRunningUsers.includes(item.name))"
-        >
-          <div class="name" :class="item.isFake ? 'is-fake' : ''">
-            {{ item.name }}
-          </div>
-          <div class="score">{{ item.score }}</div>
-          <image
-            mode="widthFix"
-            src="/static/close.svg"
-            class="close"
-            @click.stop="removeUser(item, index)"
-          ></image>
-        </div>
+          :platform="platform"
+          :item="item"
+          :host="host"
+          :pidToCmd="pidToCmd"
+          :isCalc="true"
+          :stoppingUsers="stoppingUsers"
+          v-model:loading="loading"
+          @stopDone="stopDone"
+          @openEditDialog="$emit('openEditDialog', item)"
+          @startDone="startDone"
+          @showCmd="(val) => (showPid = val)"
+          @snapOrCancel="snapOrCancel(item)"
+        ></one-item>
       </div>
     </div>
   </uni-popup>
@@ -175,9 +176,10 @@
 <script>
 import { request, sleep, getTime, randomColorWithoutGreen } from "@/utils.js";
 import MyTerminal from "./myTerminal.vue";
+import OneItem from "./oneItem.vue";
 
 export default {
-  components: { MyTerminal },
+  components: { MyTerminal, OneItem },
   data() {
     return {
       showPid: "",
@@ -195,6 +197,7 @@ export default {
       loading: false,
       checkConfig: {},
       nextStartUser: "",
+      isShowOneTypePopup: false,
     };
   },
   created() {
@@ -208,8 +211,13 @@ export default {
     "update:modelValue",
     "stopCheck",
     "startCheck",
+    "openEditDialog",
   ],
   props: {
+    stoppingUsers: {},
+    platform: {
+      type: String,
+    },
     pidToCmd: {
       type: Object,
       default: () => {},
@@ -279,6 +287,12 @@ export default {
     },
   },
   methods: {
+    stopDone() {
+      this.refreshDialog();
+    },
+    startDone() {
+      this.refreshDialog();
+    },
     showTerminal() {
       this.showPid = Object.keys(this.pidToCmd).find((pid) =>
         this.pidToCmd[pid].includes("npm run check " + this.port)
@@ -288,8 +302,8 @@ export default {
       await this.confirmAction("确定重启所有？");
       this.loading = true;
       let items = this.curTypeUsers.map((one) => ({
-        name: one.name,
-        isRunning: this.curTypeRunningUsers.includes(one.name),
+        username: one.username,
+        isRunning: this.curTypeRunningUsers.includes(one.username),
       }));
 
       let gap = (2.5 * 60000) / items.length;
@@ -303,17 +317,17 @@ export default {
         let start = Date.now();
         if (one.isRunning) {
           await new Promise((resolve) => {
-            uni.$once("stop" + one.name + "done", (data) => {
+            uni.$once("stop" + one.username + "done", (data) => {
               setTimeout(() => {
                 resolve();
               }, 3000);
             });
-            this.$emit("stopOne", one.name);
+            this.$emit("stopOne", one.username);
           });
         }
         let used = Date.now() - start;
-        console.log("启动", one.name + "结束耗时" + used);
-        this.$emit("startOne", one.name, false);
+        console.log("启动", one.username + "结束耗时" + used);
+        this.$emit("startOne", one.username, false);
         let title = "启动了" + Math.floor(((i + 1) / items.length) * 100) + "%";
         console.log(title);
         uni.showToast({
@@ -322,7 +336,7 @@ export default {
           duration: 2000,
         });
         if (i !== items.length - 1) {
-          this.nextStartUser = items[i].name;
+          this.nextStartUser = items[i].username;
           await sleep(gap - used);
         } else {
           this.nextStartUser = "";
@@ -348,12 +362,12 @@ export default {
       });
     },
     async removeUser(item, index) {
-      await this.confirmAction(`确定删除用户【${item.name}】`);
+      await this.confirmAction(`确定删除用户【${item.username}】`);
       this.loading = true;
       await request({
         method: "post",
         url: this.host + "/removeConfig/",
-        data: { username: item.name },
+        data: { username: item.username },
       });
       this.curTypeUsers.splice(index, 1);
       this.getCalc();
@@ -454,23 +468,27 @@ export default {
       await this.getCalc();
       let item = this.data.find((one) => one.type === this.curType);
       this.curTypeRunningUsers = item.running;
+      if (this.isShowOneTypePopup) {
+        this.showInfo(item);
+      }
     },
     showInfo(item) {
       this.curType = item.type;
       this.curTypeUsers = item.all
         .map((one) => ({
           name: one,
-          isFake: this.checkIsFake(one),
           score: this.getScore(one, this.userConfig),
         }))
         .sort((a, b) => b.score - a.score);
       this.curTypeRunningUsers = item.running;
+
+      this.curTypeUsers = this.curTypeUsers.map((one) => {
+        let target = this.userConfig.find((item) => item.username === one.name);
+        return target;
+      });
       this.$refs.oneType.open("top");
     },
-    checkIsFake(name) {
-      let target = this.userConfig.find((one) => one.username === name);
-      return target.remark && target.remark.includes("借");
-    },
+
     async getCalc() {
       let data = await request({
         url:
@@ -535,7 +553,6 @@ export default {
         score = 0;
       } else if (config.remark.match(/胜|姐/)) {
         let nameNum = name.match(/(胜|姐)(\d+)/);
-        console.log(name, nameNum);
         if (nameNum) {
           if (nameNum) {
             nameNum = nameNum[2];
@@ -616,6 +633,9 @@ export default {
     setTime() {
       this.checkConfig.waitForTime = getTime();
     },
+    changeOneTypePopup(e) {
+      this.isShowOneTypePopup = e.show;
+    },
     changePopup(e) {
       this.data = [];
       this.$emit("update:modelValue", e.show);
@@ -627,52 +647,6 @@ export default {
     getOneUserAllTypes(name) {
       let arr = this.data.filter((one) => one.all.includes(name));
       return arr.map((one) => one.type);
-    },
-
-    async stopOrStart(item, running) {
-      let types =
-        this.getOneUserAllTypes(item.name).join("______") + item.remark;
-      let config = await request({
-        url: this.host + "/getOneUserConfig/" + item.name,
-      });
-
-      if (running) {
-        uni.showModal({
-          title: `【${config.isUseSlave ? "从机" : "主机"}】确定停止${
-            item.name
-          }？`,
-          content: types + `==========> ${config && config.remark}`,
-          success: (res) => {
-            if (res.confirm) {
-              this.$emit("stopOne", item.name);
-            } else if (res.cancel) {
-              console.log("用户取消操作");
-            }
-          },
-        });
-      } else {
-        uni.showModal({
-          title: `【${config.isUseSlave ? "从机" : "主机"}】确定启动【${
-            item.name
-          }】？`,
-          content: types + `==========> ${config && config.remark}`,
-          success: (res) => {
-            if (res.confirm) {
-              setTimeout(() => {
-                uni.showModal({
-                  title: `是否循环点击/打开浏览器？`,
-                  cancelText: "否",
-                  success: (res) => {
-                    this.$emit("startOne", item.name, res.confirm);
-                  },
-                });
-              }, 200);
-            } else if (res.cancel) {
-              console.log("用户取消操作");
-            }
-          },
-        });
-      }
     },
   },
 };
@@ -816,8 +790,9 @@ export default {
 
 .one-type {
   background: white;
-  padding: 15px;
-
+  padding: 15px 0;
+  overflow: auto;
+  max-height: 80vh;
   .cur-type {
     text-align: center;
     font-weight: bold;
@@ -827,17 +802,12 @@ export default {
   }
 
   .user-list {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
+    // display: flex;
+    // gap: 20px;
+    // flex-wrap: wrap;
 
     .user {
       // display: inline-block;
-      margin-right: 10px;
-      color: white;
-      background: purple;
-      border-radius: 4px;
-      padding: 10px;
       position: relative;
 
       &.running {

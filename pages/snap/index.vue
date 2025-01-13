@@ -296,6 +296,7 @@ export default {
       this.isCancelWhenIsReady = e.detail.value;
     },
     setLastTime() {
+      this.isCancelWhenIsReady = false;
       this.setCancelMin = (
         (new Date(this.firstExpireTime).getTime() - Date.now() - 7000) /
         1000 /
@@ -361,20 +362,24 @@ export default {
           },
         });
         this.addStatus("发送了closeAndCancelOrder");
-        let { isCanCancel, msg } = await request({
-          timeout: 60000,
-          url:
-            "http://mticket.ddns.net:4000/waitUntilCancelIsOk/" +
-            encodeURIComponent(one.nickname),
-        });
-        this.addStatus(msg);
+        try {
+          let { isCanCancel, msg } = await request({
+            timeout: 60000,
+            url:
+              "http://mticket.ddns.net:4000/waitUntilCancelIsOk/" +
+              encodeURIComponent(one.nickname),
+          });
+          this.addStatus(msg);
 
-        if (isCanCancel) {
-          this.readySuccessUsers.push(one.nickname);
-          isImmediateOk = this.checkIsEveryIsReady();
-        } else {
-          this.addStatus("取消中断！！");
-          throw new Error("取消失败");
+          if (isCanCancel) {
+            this.readySuccessUsers.push(one.nickname);
+            iFsImmediateOk = this.checkIsEveryIsReady();
+          } else {
+            this.addStatus("取消中断！！");
+            throw new Error("取消失败");
+          }
+        } catch (e) {
+          this.addStatus("打开取消页面超时");
         }
       }
 

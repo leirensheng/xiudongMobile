@@ -29,7 +29,7 @@ let request = (options) =>
           });
         }
         if (code !== 0) {
-          reject();
+          reject(result);
         } else {
           resolve(data);
         }

@@ -145,116 +145,21 @@
           >
             <!-- <div class="activity" v-if="index===0|| (item.activityName!== data[index-1].activityName )">{{item.activityName}}</div> -->
 
-            <div
-              class="item"
-              :style="getStyle(item)"
-              :key="item.username + item.phone"
-              :id="item.username + item.phone"
-            >
-              <div class="first">
-                <!-- <div v-if="item.uid">
-                  <image
-                    class="msg-icon"
-                    src="/static/msg.svg"
-                    @click="openMsg(item.uid)"
-                  />
-                </div> -->
-
-                <div @click="callOrCopyPhone(item)">
-                  {{ item.phone }}
-                </div>
-                <div class="name" @click="copyUsername(item)">
-                  {{ item.username }}
-                </div>
-
-                <switch
-                  :disabled="item.runningCmd || loading"
-                  :checked="item.isUseSlave"
-                  @change="(e) => handleSlaveChange(e, item)"
-                />
-
-                <div class="order">
-                  <checkbox-group @change="item.isShow = !item.isShow">
-                    <checkbox :checked="item.isShow">
-                      <div>{{ item.showOrders }}</div>
-                    </checkbox>
-                  </checkbox-group>
-                </div>
-
-                <div class="audience-list">
-                  <div
-                    class="audience"
-                    v-for="(audience, audienceIndex) in item.audienceList"
-                    :key="audience"
-                    :class="item.orders.includes(audienceIndex) ? 'active' : ''"
-                    @click="
-                      clickAudience(
-                        item,
-                        audience,
-                        audienceIndex,
-                        item.phone,
-                        one
-                      )
-                    "
-                  >
-                    {{
-                      audienceIndex === item.audienceList.length - 1
-                        ? `${audience}(${audienceIndex + 1})`
-                        : audience
-                    }}
-                  </div>
-                </div>
-              </div>
-
-              <div class="targetTypes">
-                <div
-                  class="target-type"
-                  v-for="(targetType, index) in item.targetTypes"
-                  :key="index"
-                  :style="{ background: getTagColor(targetType) }"
-                >
-                  {{ targetType }}
-                </div>
-              </div>
-
-              <div class="remark">
-                {{ item.remark }}
-              </div>
-
-              <div class="btns">
-                <image
-                  class="copy"
-                  src="/static/edit.svg"
-                  @click="openEditDialog(item)"
-                />
-                <button
-                  class="btn"
-                  size="mini"
-                  type="warn"
-                  :disabled="loading && stoppingUsers.has(item.username)"
-                  v-if="item.runningCmd"
-                  @click="stop(item)"
-                >
-                  <span class="stop-wrap">
-                    <span>停止</span>
-                  </span>
-                </button>
-                <button
-                  class="btn"
-                  size="mini"
-                  type="primary"
-                  v-else
-                  @click="start(item)"
-                >
-                  启动
-                </button>
-                <image
-                  class="copy"
-                  src="/static/copy.svg"
-                  @click="openCopyDialog(item)"
-                />
-              </div>
-            </div>
+            <one-item
+              :platform="platform"
+              :item="item"
+              :host="host"
+              :pidToCmd="pidToCmd"
+              :stoppingUsers="stoppingUsers"
+              v-model:loading="loading"
+              @addStoppingUsers="(name) => stoppingUsers.add(name)"
+              @stopDone="(name) => stoppingUsers.delete(name)"
+              @openCopyDialog="() => openCopyDialog(item)"
+              @openEditDialog="openEditDialog(item)"
+              @getConfig="(val) => getConfig(val)"
+              @showCmd="(val) => (showPid = val)"
+              @snapOrCancel="snapOrCancel(item)"
+            ></one-item>
           </uni-swipe-action-item>
         </template>
       </template>
@@ -262,7 +167,48 @@
   </div>
   <!-- <page-meta :page-style="'overflow:' + (show ? 'hidden' : 'visible')"></page-meta> -->
 
-  <uni-popup ref="popup" type="bottom" @touchmove.stop @change="changePopup">
+  <my-dialog v-model:value="msgDialogShow">
+    <div class="dialog msg-dialog" @touchmove.stop>
+      <div class="msg-template">
+        <button @click="setTestMsg">测试</button>
+        <button @click="setXingqiuMsg">星球</button>
+        <button @click="setDamaiMsg">大麦</button>
+      </div>
+      <textarea type="textarea" v-model="msgToUser" />
+      <div class="btn-wrap">
+        <button size="medium" @click="msgToUser = ''">清空</button>
+        <button size="medium" class="btn" type="primary" @click="sendMsgToUser">
+          发送
+        </button>
+      </div>
+    </div>
+  </my-dialog>
+  <calc-activity
+    ref="calc"
+    v-model="isShowCalc"
+    :host="host"
+    :port="calcPort"
+    :platform="platform"
+    :activityName="calcActivityName"
+    :activityId="calcActivityId"
+    :userConfig="dataWithoutFilter"
+    :pidToCmd="pidToCmd"
+    :stoppingUsers="stoppingUsers"
+    @startOne="startOne"
+    @startCheck="afterStartCheck"
+    @stopCheck="afterStopCheck"
+    @stopOne="stopOne"
+    @openEditDialog="openEditDialog"
+    @autoStartUsers="autoStartUsers"
+  ></calc-activity>
+
+  <uni-popup
+    ref="popup"
+    type="bottom"
+    @touchmove.stop
+    @change="changePopup"
+    :z-index="9999"
+  >
     <div class="dialog" :class="isWeb ? 'is-web' : ''" @touchmove.stop>
       <image
         mode="widthFix"
@@ -417,38 +363,6 @@
     </div>
   </uni-popup>
 
-  <my-dialog v-model:value="msgDialogShow">
-    <div class="dialog msg-dialog" @touchmove.stop>
-      <div class="msg-template">
-        <button @click="setTestMsg">测试</button>
-        <button @click="setXingqiuMsg">星球</button>
-        <button @click="setDamaiMsg">大麦</button>
-      </div>
-      <textarea type="textarea" v-model="msgToUser" />
-      <div class="btn-wrap">
-        <button size="medium" @click="msgToUser = ''">清空</button>
-        <button size="medium" class="btn" type="primary" @click="sendMsgToUser">
-          发送
-        </button>
-      </div>
-    </div>
-  </my-dialog>
-  <calc-activity
-    ref="calc"
-    v-model="isShowCalc"
-    :host="host"
-    :port="calcPort"
-    :activityName="calcActivityName"
-    :activityId="calcActivityId"
-    :userConfig="dataWithoutFilter"
-    :pidToCmd="pidToCmd"
-    @startOne="startOne"
-    @startCheck="afterStartCheck"
-    @stopCheck="afterStopCheck"
-    @stopOne="stopOne"
-    @autoStartUsers="autoStartUsers"
-  ></calc-activity>
-
   <set-time
     v-model:isShow="isSetTimeShow"
     ref="setTime"
@@ -465,6 +379,7 @@ import MyDialog from "./my-dialog/my-dialog.vue";
 import SetTime from "./setTime.vue";
 import userMap from "./userMap";
 import MyTerminal from "./myTerminal.vue";
+import OneItem from "./oneItem.vue";
 let platformToPortMap = {
   xiudong: "4010",
   damai: "5000",
@@ -472,10 +387,11 @@ let platformToPortMap = {
   xingqiu: "6100",
   maoyan: "7000",
 };
-import { request, getTagColor, randomColor, debounce } from "@/utils.js";
+import { request, randomColor, debounce } from "@/utils.js";
 export default {
   components: {
     SetTime,
+    OneItem,
     calcActivity,
     MyDialog,
     SearchInput,
@@ -835,6 +751,53 @@ export default {
   },
 
   methods: {
+    async openEditDialog(item) {
+      this.editForm = { targetTypes: [], ...item };
+      this.isEdit = true;
+      this.$refs.popup.open("bottom");
+      this.readDataFromClip();
+    },
+    async snapOrCancel(item) {
+      let { username: nickname, hasSuccess, isUseSlave } = item;
+      if (hasSuccess) {
+        let time = await this.$refs.setTime.paste();
+        this.checkShouldCancel(time);
+        this.$refs.setTime.mode = "取消订单";
+        let cancelTime = await this.$refs.setTime.setTimeForParent();
+        this.loading = true;
+        item.cancelTime = cancelTime;
+        await request({
+          method: "post",
+          url: this.host + "/closeAndCancelOrder/",
+          data: {
+            cancelTime,
+            nickname,
+            isUseSlave,
+          },
+        });
+        this.loading = false;
+      } else {
+        this.setTimeStr =
+          item.snappedTime && new Date(item.snappedTime) > new Date()
+            ? item.cancelTime
+            : "";
+        this.$refs.setTime.mode = "接盘";
+        let snappedTime = await this.$refs.setTime.setTimeForParent();
+        this.loading = true;
+        item.snappedTime = snappedTime;
+        item.isLoop = true;
+        await request({
+          method: "post",
+          url: this.host + "/closeAndSetSnappedTime/",
+          data: {
+            snappedTime,
+            nickname,
+            isUseSlave,
+          },
+        });
+        this.loading = false;
+      }
+    },
     toggleRunning() {
       this.onlyShowRunning = !this.onlyShowRunning;
     },
@@ -865,21 +828,7 @@ export default {
       }
       return this.indexToColor[i];
     },
-    async handleSlaveChange(e, item) {
-      item.isUseSlave = e.detail.value;
-      this.loading = true;
-      await request({
-        method: "post",
-        url: this.host + "/editConfig/",
-        data: {
-          username: item.username,
-          config: {
-            isUseSlave: e.detail.value,
-          },
-        },
-      });
-      this.loading = false;
-    },
+
     afterStartCheck(port) {
       let target = this.groupData.find((one) => one.port === port);
       target.isCheckRunning = true;
@@ -946,79 +895,7 @@ export default {
         });
       }
     },
-    async removeOneAudience(audience, item) {
-      let data = {
-        audience,
-        phone: item.phone,
-      };
-      await this.confirmAction(`确定删除【${audience}】？`);
-      this.loading = true;
-      await request({
-        url: this.host + "/removeAudience",
-        data,
-        timeout: 50000,
-        method: "post",
-      });
-      uni.showToast({
-        icon: "none",
-        title: "删除成功",
-        duration: 2000,
-      });
-      this.loading = false;
-      this.getConfig(true);
-    },
-    clickAudience(item, audience, index, phone, group) {
-      let itemList = ["删除", "复制", "切换", "检测"];
-      uni.showActionSheet({
-        itemList,
-        success: async (res) => {
-          if ([0].includes(res.tapIndex)) {
-            this.removeOneAudience(audience, item);
-          } else if (res.tapIndex === 1) {
-            uni.setClipboardData({
-              data: audience,
-            });
-          } else if (res.tapIndex === 2) {
-            let isSelected = item.orders.some((one) => Number(one) === index);
-            let orders = item.orders.map((one) => Number(one));
-            if (isSelected) {
-              let i = item.orders.indexOf(index);
-              orders.splice(i, 1);
-            } else {
-              orders.push(index);
-            }
-            this.loading = true;
-            await request({
-              method: "post",
-              url: this.host + "/editConfig/",
-              data: {
-                username: item.username,
-                config: {
-                  orders,
-                },
-              },
-            });
-            this.loading = false;
-            this.getConfig(true);
-          } else {
-            let isNeedToDelete = await request({
-              url:
-                this.host +
-                `/checkAudience?phone=${phone}&audienceIndex=${index}`,
-            });
-            let name = item.audienceList[index];
-            uni.showToast({
-              icon: "none",
-              title: `【${name}】` + (isNeedToDelete ? `可以删除` : "不可删除"),
-              duration: 2000,
-            });
-            if (isNeedToDelete) {
-              await this.removeOneAudience(name, item);
-            }
-          }
-        },
-      });
-    },
+
     async checkIsCanBuy() {
       this.isTesting = true;
       let res = await request({
@@ -1166,90 +1043,7 @@ export default {
         "你好, 目前需要验证码登录哦, 麻烦收到后退出账号再把验证码发给闲鱼卖家, 谢谢";
       this.msgDialogShow = true;
     },
-    getTagColor,
-    callOrCopyPhone(item) {
-      let { phone, username: nickname, hasSuccess, isUseSlave, orderId } = item;
-      let itemList = [
-        phone,
-        "复制",
-        "关闭并截图",
-        hasSuccess ? "关闭并取消订单" : "关闭并接盘",
-      ];
-      uni.showActionSheet({
-        itemList,
-        success: async (res) => {
-          if ([0].includes(res.tapIndex)) {
-            uni.makePhoneCall({
-              phoneNumber: phone,
-            });
-          } else if (res.tapIndex === 1) {
-            uni.setClipboardData({
-              data: phone,
-            });
-          } else if (res.tapIndex === 2) {
-            if (this.platform === "xingqiu" && !orderId) {
-              uni.showToast({
-                icon: "none",
-                title: "没有订单ID",
-                duration: 2000,
-              });
-              return;
-            }
 
-            this.loading = true;
-            await request({
-              method: "post",
-              url: this.host + "/closeAndScreenshot/",
-              data: {
-                isUseSlave,
-                nickname,
-                orderId,
-              },
-            });
-            this.loading = false;
-          } else if (res.tapIndex === 3) {
-            if (hasSuccess) {
-              let time = await this.$refs.setTime.paste();
-              this.checkShouldCancel(time);
-              this.$refs.setTime.mode = "取消订单";
-              let cancelTime = await this.$refs.setTime.setTimeForParent();
-              this.loading = true;
-              item.cancelTime = cancelTime;
-              await request({
-                method: "post",
-                url: this.host + "/closeAndCancelOrder/",
-                data: {
-                  cancelTime,
-                  nickname,
-                  isUseSlave,
-                },
-              });
-              this.loading = false;
-            } else {
-              this.setTimeStr =
-                item.snappedTime && new Date(item.snappedTime) > new Date()
-                  ? item.cancelTime
-                  : "";
-              this.$refs.setTime.mode = "接盘";
-              let snappedTime = await this.$refs.setTime.setTimeForParent();
-              this.loading = true;
-              item.snappedTime = snappedTime;
-              item.isLoop = true;
-              await request({
-                method: "post",
-                url: this.host + "/closeAndSetSnappedTime/",
-                data: {
-                  snappedTime,
-                  nickname,
-                  isUseSlave,
-                },
-              });
-              this.loading = false;
-            }
-          }
-        },
-      });
-    },
     checkShouldCancel(time) {
       let target = this.dataWithoutFilter.find(
         (one) => one.snappedTime && one.snappedTime.includes(time)
@@ -1257,57 +1051,7 @@ export default {
       this.isCanCancel =
         target && new Date(time).getTime() - Date.now() > 15000;
     },
-    copyUsername(item) {
-      let { phone, username, isUseSlave } = item;
-      let itemList = [username, "复制", "关闭并支付", "补录成功数据"];
-      if (item.runningCmd) {
-        itemList.push("查看输出");
-      }
-      uni.showActionSheet({
-        itemList,
-        success: async (res) => {
-          if ([0, 1].includes(res.tapIndex)) {
-            uni.setClipboardData({
-              data: username,
-            });
-          } else if (res.tapIndex === 2) {
-            await this.confirmAction("确认支付？");
-            this.loading = true;
-            await request({
-              method: "post",
-              url: this.host + "/closeAndPay/",
-              data: {
-                nickname: username,
-                isUseSlave,
-              },
-            });
-            this.loading = false;
-          } else if (res.tapIndex === 3) {
-            await this.confirmAction("确认补录？");
-            this.loading = true;
-            await request({
-              method: "post",
-              url: this.host + "/loadSuccess",
-              data: {
-                phone,
-              },
-            });
-            this.loading = false;
-          } else if (res.tapIndex === 4) {
-            this.showPid = Object.keys(this.pidToCmd).find(
-              (one) => this.pidToCmd[one] === item.runningCmd
-            );
-            if (!this.showPid) {
-              uni.showToast({
-                icon: "none",
-                title: "没有找到PID",
-                duration: 2000,
-              });
-            }
-          }
-        },
-      });
-    },
+
     toggleForm() {
       this.isShowAll = !this.isShowAll;
     },
@@ -1452,16 +1196,13 @@ export default {
         });
         this.$refs.popup.close();
         await this.getConfig();
+        if (this.isShowCalc) {
+          this.$refs.calc.refreshDialog();
+        }
         this.loading = false;
       }
     },
 
-    async openEditDialog(item) {
-      this.editForm = { targetTypes: [], ...item };
-      this.isEdit = true;
-      this.$refs.popup.open("bottom");
-      this.readDataFromClip();
-    },
     async activityClick({ index }, groupName, activityId) {
       if (index === 0) {
         this.getConfig(true);
@@ -1731,37 +1472,6 @@ export default {
           }
         },
       });
-    },
-
-    getStyle(item) {
-      let arr = [
-        {
-          condition: item.hasSuccess,
-          background: "#aaffaa",
-        },
-        {
-          condition: item.isLoop,
-          background: "cyan",
-        },
-        {
-          condition: item.remark?.includes("借用"),
-          background: "rgb(225, 223, 223)",
-        },
-        {
-          condition: !item.uid,
-          background: "rgb(254, 214, 91)",
-        },
-        {
-          condition: item.remark?.includes("优先"),
-          background: "#21a1ab",
-          color: "white",
-        },
-      ];
-      let target = arr.find((one) => one.condition);
-      return {
-        background: target ? target.background : "white",
-        color: target ? target.color || "black" : "black",
-      };
     },
 
     async start(item, isNoRefresh) {
