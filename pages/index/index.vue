@@ -236,6 +236,15 @@
           </div>
         </div>
       </uni-popup>
+      <uni-popup ref="captcha" type="top">
+        <div class="popup-content">
+          <my-input type="text" v-model="captcha" placeholder="验证码" />
+          <div>
+            <button @click="closeCaptcha">取消</button>
+            <button @click="sendCaptcha">确定</button>
+          </div>
+        </div>
+      </uni-popup>
 
       <uni-popup ref="shutdown" type="top">
         <div class="popup-content">
@@ -270,6 +279,7 @@ export default {
   },
   data() {
     return {
+      captcha: "",
       shutdownMin: 30,
       notOkPhoneInfo: [],
       isWx: false,
@@ -475,6 +485,16 @@ export default {
     this.isWeb = !!document;
   },
   methods: {
+    async sendCaptcha() {
+      await request({
+        method: "post",
+        data: {
+          endPoint: this.endPoint,
+        },
+        url: "http://mticket.ddns.net:5001/sendCaptcha/" + this.captcha,
+      });
+      this.closeCaptcha();
+    },
     toSnap() {
       uni.navigateTo({
         url: "/pages/snap/index",
@@ -545,6 +565,9 @@ export default {
       }
       if (payload.type === "success") {
         this.playSong();
+      }
+      if (payload.type === "login") {
+        this.playSong(true);
       } else if (payload.msg.includes("未支付")) {
         this.playSong();
       } else if (!this.isNoSound) {
@@ -556,6 +579,10 @@ export default {
     },
     closePay() {
       this.$refs.pay.close();
+    },
+    closeCaptcha() {
+      this.captcha = "";
+      this.$refs.captcha.close();
     },
     async payWithMessage() {
       this.loading = true;
@@ -966,6 +993,9 @@ export default {
         this.endPoint = item.endPoint;
         this.isUseSlave = item.isUseSlave;
         this.$refs.pay.open();
+      } else if (item.isCaptcha) {
+        this.endPoint = item.endPoint;
+        this.$refs.captcha.open();
       } else if (item.msg.includes("截图") && !this.isWeb) {
         await this.confirmAction("确定保存图片吗？");
         let url = /'(.*?)'/.exec(item.msg)[1].trim();

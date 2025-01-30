@@ -318,7 +318,7 @@ export default {
         url: "http://mticket.ddns.net:5000/startUserFromRemote/",
         data: {
           isUseSlave: item.isUseSlave,
-          cmd: `npm run start ${item.username}`,
+          cmd: `npm run start ${item.username} 1 loop`,
         },
       });
     },

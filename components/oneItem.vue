@@ -24,7 +24,7 @@
           <checkbox :checked="item.isShow">
             <div
               :class="
-                isCalc && item.orders.length !== item.audienceList.length
+                isCalc && item.orders.length !== item.audienceList?.length
                   ? 'not-match'
                   : ''
               "
@@ -65,7 +65,7 @@
         :key="index"
         :style="{ background: getTagColor(targetType) }"
       >
-        {{ targetType }}
+        {{ removeYear(targetType) }}
       </div>
     </div>
 
@@ -152,6 +152,10 @@ export default {
   created() {},
   mounted() {},
   methods: {
+    removeYear(str) {
+      let year = new Date().getFullYear();
+      return str.replace(year + "-", "");
+    },
     async start(item, isNoRefresh) {
       this.$emit("update:loading", true);
       let cmd =

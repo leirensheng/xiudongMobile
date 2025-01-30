@@ -46,24 +46,26 @@
           >
         </div>
       </div>
-      <div
-        v-if="data.length"
-        class="item-wrap"
-        v-for="(item, index) in data"
-        :key="index"
-        :style="getStyle(item.percent)"
-      >
+      <div class="content">
         <div
-          class="item"
-          :style="getStyle(item.runningPercent, data, index)"
-          @click="showInfo(item)"
+          v-if="data.length"
+          class="item-wrap"
+          v-for="(item, index) in data"
+          :key="index"
+          :style="getStyle(item.percent)"
         >
-          <div class="text">
-            {{ item.type }}__({{ item.runningLength }}/{{ item.allLength }})
+          <div
+            class="item"
+            :style="getStyle(item.runningPercent, data, index)"
+            @click="showInfo(item)"
+          >
+            <div class="text">
+              {{ item.type }}__({{ item.runningLength }}/{{ item.allLength }})
+            </div>
           </div>
         </div>
+        <div v-else class="loading">加载中...</div>
       </div>
-      <div v-else class="loading">加载中...</div>
     </div>
   </uni-popup>
 
@@ -72,30 +74,36 @@
       <div class="cur-type" @click="restartAll">{{ curType }}</div>
 
       <div class="user-list">
-        <one-item
-          class="user"
-          :class="
-            nextStartUser === item.username
-              ? 'will-restart'
-              : curTypeRunningUsers.includes(item.username)
-              ? 'running'
-              : ''
-          "
+        <uni-swipe-action-item
           v-for="(item, index) in curTypeUsers"
-          :key="index"
-          :platform="platform"
-          :item="item"
-          :host="host"
-          :pidToCmd="pidToCmd"
-          :isCalc="true"
-          :stoppingUsers="stoppingUsers"
-          v-model:loading="loading"
-          @stopDone="stopDone"
-          @openEditDialog="$emit('openEditDialog', item)"
-          @startDone="startDone"
-          @showCmd="(val) => (showPid = val)"
-          @snapOrCancel="snapOrCancel(item)"
-        ></one-item>
+          :right-options="rightOptions"
+          :key="item.username + item.phone"
+          @click="swipeClick($event, item, one)"
+          :disabled="!!item.runningCmd"
+        >
+          <one-item
+            class="user"
+            :class="
+              nextStartUser === item.username
+                ? 'will-restart'
+                : curTypeRunningUsers.includes(item.username)
+                ? 'running'
+                : ''
+            "
+            :platform="platform"
+            :item="item"
+            :host="host"
+            :pidToCmd="pidToCmd"
+            :isCalc="true"
+            :stoppingUsers="stoppingUsers"
+            v-model:loading="loading"
+            @stopDone="stopDone"
+            @openEditDialog="$emit('openEditDialog', item)"
+            @startDone="startDone"
+            @showCmd="(val) => (showPid = val)"
+            @snapOrCancel="snapOrCancel(item)"
+          ></one-item>
+        </uni-swipe-action-item>
       </div>
     </div>
   </uni-popup>
@@ -182,6 +190,14 @@ export default {
   components: { MyTerminal, OneItem },
   data() {
     return {
+      rightOptions: [
+        {
+          text: "删除",
+          style: {
+            backgroundColor: "#dd524d",
+          },
+        },
+      ],
       showPid: "",
       machine: "all",
       indexToColor: {},
@@ -212,6 +228,7 @@ export default {
     "stopCheck",
     "startCheck",
     "openEditDialog",
+    "getConfig",
   ],
   props: {
     stoppingUsers: {},
@@ -287,6 +304,22 @@ export default {
     },
   },
   methods: {
+    async swipeClick({ index }, item, group) {
+      let { username } = item;
+      if (index === 0) {
+        this.loading = true;
+        await request({
+          method: "post",
+          url: this.host + "/removeConfig/",
+          data: { username },
+        });
+        let i = this.curTypeUsers.findIndex((one) => one.username === username);
+        this.curTypeUsers.splice(i, 1);
+        this.refreshDialog();
+        this.$emit("getConfig");
+        this.loading = false;
+      }
+    },
     stopDone() {
       this.refreshDialog();
     },
@@ -656,10 +689,9 @@ export default {
 .dialog {
   min-height: 30vh;
   background-color: white;
-  max-height: 80vh;
-  overflow: auto;
+  position: relative;
   &.is-web {
-    padding-bottom: 60px;
+    padding-bottom: 50px;
   }
 
   .activityName {
@@ -680,6 +712,9 @@ export default {
     align-items: center;
   }
   .switches {
+    position: sticky;
+    top: 0;
+
     padding: 0 10px;
     display: flex;
     justify-content: space-between;
@@ -701,20 +736,24 @@ export default {
       background: #20be1d;
     }
   }
-  .item-wrap {
-    line-height: 2.5;
-    position: relative;
-    background-image: linear-gradient(rgb(155, 243, 177), rgb(178, 249, 177));
-    background-repeat: no-repeat;
-
-    .item {
-      z-index: 3;
-      background: transparent;
-      background-image: linear-gradient(rgb(114, 231, 143), rgb(38, 228, 35));
+  .content {
+    max-height: calc(80vh - 120px);
+    overflow: auto;
+    .item-wrap {
+      line-height: 2.5;
+      position: relative;
+      background-image: linear-gradient(rgb(155, 243, 177), rgb(178, 249, 177));
       background-repeat: no-repeat;
 
-      .text {
-        margin-left: 15px;
+      .item {
+        z-index: 3;
+        background: transparent;
+        background-image: linear-gradient(rgb(114, 231, 143), rgb(38, 228, 35));
+        background-repeat: no-repeat;
+
+        .text {
+          margin-left: 15px;
+        }
       }
     }
   }
@@ -791,6 +830,7 @@ export default {
 .one-type {
   background: white;
   padding: 15px 0;
+  padding-bottom: 0;
   overflow: auto;
   max-height: 80vh;
   .cur-type {

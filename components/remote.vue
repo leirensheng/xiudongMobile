@@ -18,7 +18,7 @@
       </div>
     </div>
 
-    <!-- {{ clientid }} -->
+    {{ clientid }}
     <!-- <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
@@ -200,6 +200,7 @@
     @stopOne="stopOne"
     @openEditDialog="openEditDialog"
     @autoStartUsers="autoStartUsers"
+    @getConfig="getConfig"
   ></calc-activity>
 
   <uni-popup
