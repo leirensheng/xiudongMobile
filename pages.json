@@ -46,6 +46,14 @@
 			}
 		},
 		{
+			"path": "pages/ha/index",
+			"style": {
+				"enablePullDownRefresh": true,
+
+				"navigationBarTitleText": "亚冬会"
+			}
+		},
+		{
 			"path": "pages/xingqiu/index",
 			"style": {
 				"enablePullDownRefresh": true,
@@ -85,6 +93,10 @@
 			{
 				"pagePath": "pages/damai/index",
 				"text": "大麦"	
+			},
+			{
+				"pagePath": "pages/ha/index",
+				"text": "亚冬会"	
 			},
 			{
 				"pagePath": "pages/xingqiu/index",
