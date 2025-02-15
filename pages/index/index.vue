@@ -236,12 +236,24 @@
           </div>
         </div>
       </uni-popup>
-      <uni-popup ref="captcha" type="top">
-        <div class="popup-content">
-          <my-input type="text" v-model="captcha" placeholder="验证码" />
-          <div>
-            <button @click="closeCaptcha">取消</button>
-            <button @click="sendCaptcha">确定</button>
+      <uni-popup ref="captcha" type="bottom">
+        <div style="background: white; padding: 10px; padding-bottom: 30vh">
+          <div v-html="currentMsg"></div>
+          <my-input
+            type="text"
+            v-model="captcha"
+            placeholder="验证码"
+            style="margin-top: 10px"
+          />
+          <div style="display: flex; margin-top: 20px">
+            <button
+              @click="sendCaptcha"
+              :loading="sending"
+              :disabled="sending"
+              style="flex: 1"
+            >
+              确定
+            </button>
           </div>
         </div>
       </uni-popup>
@@ -279,6 +291,8 @@ export default {
   },
   data() {
     return {
+      sending: false,
+      currentMsg: "",
       captcha: "",
       shutdownMin: 30,
       notOkPhoneInfo: [],
@@ -462,6 +476,11 @@ export default {
     // #endif
   },
   watch: {
+    captcha(val) {
+      if (val.length === 4) {
+        this.sendCaptcha();
+      }
+    },
     loading(val) {
       if (val) {
         uni.showLoading({
@@ -486,14 +505,24 @@ export default {
   },
   methods: {
     async sendCaptcha() {
-      await request({
+      this.sending = true;
+      let isOk = await request({
         method: "post",
         data: {
           endPoint: this.endPoint,
         },
         url: "http://mticket.ddns.net:5001/sendCaptcha/" + this.captcha,
       });
-      this.closeCaptcha();
+      if (isOk) {
+        this.closeCaptcha();
+      } else {
+        uni.showToast({
+          icon: "none",
+          title: "验证码错误或者账号密码不对",
+          duration: 2000,
+        });
+      }
+      this.sending = false;
     },
     toSnap() {
       uni.navigateTo({
@@ -995,6 +1024,7 @@ export default {
         this.$refs.pay.open();
       } else if (item.isCaptcha) {
         this.endPoint = item.endPoint;
+        this.currentMsg = item.msg;
         this.$refs.captcha.open();
       } else if (item.msg.includes("截图") && !this.isWeb) {
         await this.confirmAction("确定保存图片吗？");

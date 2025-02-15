@@ -111,7 +111,7 @@
     <uni-swipe-action>
       <template v-for="(one, index) in groupData" :key="one.group + index">
         <div class="activity" :style="getTitleStyle(one)">
-          <img
+          <image
             mode="widthFix"
             src="../static/down.svg"
             @click="one.isShow = !one.isShow"
@@ -201,13 +201,6 @@
       <scroll-view scroll-y :style="scrollViewHeight">
         <div class="form" v-if="isEdit">
           <template class="basic-form" v-if="isShowAll">
-            <search-input
-              placeholder="查询演出"
-              :platform="platform"
-              v-model:value="searchActivityName"
-              @itemChange="activityChange"
-            ></search-input>
-
             <div
               v-for="(field, index) in inputFields"
               :key="index"
@@ -230,15 +223,8 @@
                   @change="handleSwitchChange"
                 />
               </div>
-              <image class="jie" src="/static/borrow.svg" @click="jieyong" />
               <!-- <div class="jie" @click="jieyong">借用</div> -->
-              <div class="is-success">
-                <span>重新获取：</span>
-                <switch
-                  :checked="editForm.isRefresh"
-                  @change="handleRefreshChange"
-                />
-              </div>
+   
             </div>
           </template>
 
