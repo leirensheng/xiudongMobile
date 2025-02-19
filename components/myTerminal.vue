@@ -29,6 +29,10 @@ export default {
       type: String,
       default: "",
     },
+    platform: {
+      type: String,
+      default: "damai",
+    },
   },
   emits: [],
   setup() {},
@@ -50,7 +54,15 @@ export default {
   components: {
     MyDialog,
   },
-  computed: {},
+  computed: {
+    port() {
+      let map = {
+        damai: 5000,
+        f1: 5006,
+      };
+      return map[this.platform];
+    },
+  },
 
   mounted() {
     this.init();
@@ -64,7 +76,7 @@ export default {
     },
     async init() {
       console.log(this.pid);
-      const url = "ws:/mticket.ddns.net:5000/socket/" + this.pid;
+      const url = `ws:/mticket.ddns.net:${this.port}/socket/` + this.pid;
 
       console.log("连接进程:", this.pid);
 
