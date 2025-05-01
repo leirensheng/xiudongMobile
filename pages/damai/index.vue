@@ -1,7 +1,6 @@
 <template>
-  <check-permission>
+  <check-permission #default="{pcHost}">
     <remote-config
-      v-if="isReady"
       platform="damai"
       ref="remote"
       :pcHost="pcHost"
@@ -24,7 +23,7 @@ export default {
   data() {
     return {
       isReady: false,
-      pcHost: "",
+      // pcHost: "",
       scrollTop: 0,
     };
   },
@@ -32,15 +31,15 @@ export default {
     this.scrollTop = e.scrollTop;
   },
   created() {
-    if (globalData.pcHost) {
-      this.isReady = true;
-      this.pcHost = globalData.pcHost;
-    } else {
-      uni.$on("hostDone", (val) => {
-        this.pcHost = val;
-        this.isReady = true;
-      });
-    }
+    // if (globalData.pcHost) {
+    //   this.isReady = true;
+    //   this.pcHost = globalData.pcHost;
+    // } else {
+    //   uni.$on("hostDone", (val) => {
+    //     this.pcHost = val;
+    //     this.isReady = true;
+    //   });
+    // }
   },
   onShow() {
     if (this.$refs.remote && this.$refs.remote.show) {

@@ -1,5 +1,5 @@
 <template>
-  <check-permission>
+  <check-permission @pcHost="handleReady">
     <view class="content">
       <!-- <div class="status">
 			<div>连接状态: </div>
@@ -32,6 +32,13 @@
         />
 
         <image
+          class="sync"
+          style="width: 30px; height: 30px; flex-shrink: 0; margin-left: 10px"
+          src="/static/check.svg"
+          @click="checkHasLeft"
+        />
+
+        <image
           class="audience"
           style="width: 35px; height: 35px"
           src="/static/audience.svg"
@@ -39,12 +46,19 @@
         />
       </div>
       <div class="status">
-        <image
+        <!-- <image
           class="sync"
           style="width: 35px; height: 35px"
           src="/static/sleep.svg"
         />
-        <switch :checked="isNoSound" @change="handleNOSoundChange" />
+        <switch :checked="isNoSound" @change="handleNOSoundChange" /> -->
+
+        <image
+          class="sync"
+          style="width: 35px; height: 35px"
+          src="/static/error.svg"
+        />
+        <switch :checked="isOnlyShowError" @change="handleShowError" />
 
         <image
           class="sync"
@@ -291,6 +305,8 @@ export default {
   },
   data() {
     return {
+      pcHost: "",
+      isOnlyShowError: false,
       sending: false,
       currentMsg: "",
       captcha: "",
@@ -314,7 +330,9 @@ export default {
       firstMsg: "",
       audienceList: [],
       checkedAudience: [],
-      isNoSound: !!uni.getStorageSync("isNoSound"),
+      // isNoSound: !!uni.getStorageSync("isNoSound"),
+      isNoSound: true,
+
       isOnlySuccess: !!uni.getStorageSync("isOnlySuccess"),
 
       activityRightOptions: [
@@ -340,6 +358,25 @@ export default {
     CheckPermission,
   },
   computed: {
+    xiudongHost() {
+      return `http://${this.pcHost}:4000`;
+    },
+    damaiHost() {
+      return `http://${this.pcHost}:5000`;
+    },
+    slideHost() {
+      return `http://${this.pcHost}:5001`;
+    },
+    subSlideHost() {
+      return this.pcHost.includes("mticket")
+        ? `http://${this.pcHost}:5002`
+        : "http://192.168.2.76:5001";
+    },
+    subDamaiHost() {
+      return this.pcHost.includes("mticket")
+        ? `http://${this.pcHost}:5003`
+        : "http://192.168.2.76:5000";
+    },
     userInfo() {
       let arr = Object.keys(this.userMap).map((name) => {
         let phone = this.userMap[name] && this.userMap[name].phone;
@@ -399,14 +436,25 @@ export default {
 
       if (this.isWx) {
         arr = arr.filter((one) => one.msg.includes("微信"));
+      } else if (this.isOnlyShowError) {
+        arr = arr.filter((one) => one.type === "error");
       }
       if (this.keyword) {
         let words = this.keyword.split(/\s+/).filter(Boolean);
         let res = arr.filter((one) =>
-          words.every((word) => one.msg.replace(/\s{2}/, " ").includes(word))
+          words.every((word) => {
+            // console.log(one.msg)
+            // console.log("=>=====>",one.msg.replace(/(【\d{2}:\d{2}:\d{2}】)|(wxid_.{14})/g, ""))
+            return one.msg
+              .replace(/(【\d{2}:\d{2}:\d{2}】)|(wxid_.{14})/g, "")
+              .includes(word);
+          })
         );
         return res.map((one) => {
           let obj = { ...one };
+          if (one.msg.includes("image")) {
+            return obj;
+          }
           for (let one of words) {
             obj.msg = highlightOne(obj.msg, one, "red");
           }
@@ -421,60 +469,7 @@ export default {
       }
     },
   },
-  onLoad() {
-    this.getAllActivity();
-    this.loadAllMsg();
-    this.getNotOkPhoneInfo();
-    // #ifdef WEB
-    setInterval(async () => {
-      let host = `http://mticket.ddns.net:4000/getAllAppMsg`;
-      let arr = await request({
-        method: "get",
-        url: host,
-      });
-      if (arr.length && this.msgArr.length && arr[0].id !== this.msgArr[0].id) {
-        console.log("更新消息");
-        if (this.isWeb) {
-          arr.forEach((one) => {
-            one.msg = one.msg.replace("orange", "#420bfe;font-weight:bold");
-          });
-        }
-        let addLength = arr.length - this.msgArr.length;
-        if (addLength < 1) {
-          addLength = 1;
-        }
-
-        arr.slice(0, addLength).forEach((one) => {
-          console.log(one);
-          this.handleReceiveOneMsg(one);
-        });
-        this.msgArr = arr;
-      }
-    }, 5000);
-    // #endif
-    // #ifdef APP-PLUS
-    plus.push.addEventListener(
-      "receive",
-      ({ title, content, payload }) => {
-        let routes = getCurrentPages();
-        let curRoute = routes[routes.length - 1].route;
-        if (curRoute !== "pages/index/index") {
-          uni.showToast({
-            icon: "none",
-            title: JSON.stringify(payload),
-            duration: 2000,
-          });
-        }
-        let hasAdd = this.msgArr.find((one) => one.id === payload.id);
-        if (hasAdd) return;
-        this.msgArr.unshift(payload);
-
-        this.handleReceiveOneMsg(payload);
-      },
-      false
-    );
-    // #endif
-  },
+  onLoad() {},
   watch: {
     captcha(val) {
       if (val.length === 4) {
@@ -504,6 +499,73 @@ export default {
     this.isWeb = !!document;
   },
   methods: {
+    async handleReady(val) {
+      this.pcHost = val;
+      this.init();
+    },
+    init() {
+      this.getAllActivity();
+      this.loadAllMsg();
+      this.getNotOkPhoneInfo();
+      // #ifdef WEB
+      setInterval(async () => {
+        let host = `${this.xiudongHost}/getAllAppMsg`;
+        let arr = await request({
+          method: "get",
+          url: host,
+        });
+        if (
+          arr.length &&
+          this.msgArr.length &&
+          arr[0].id !== this.msgArr[0].id
+        ) {
+          if (this.isWeb) {
+            arr.forEach((one) => {
+              one.msg = one.msg.replace("orange", "#420bfe;font-weight:bold");
+            });
+          }
+          let addLength = arr.length - this.msgArr.length;
+          if (addLength < 1) {
+            addLength = 1;
+          }
+
+          arr.slice(0, addLength).forEach((one) => {
+            this.handleReceiveOneMsg(one);
+          });
+          this.msgArr = arr;
+        }
+      }, 5000);
+      // #endif
+      // #ifdef APP-PLUS
+      plus.push.addEventListener(
+        "receive",
+        ({ title, content, payload }) => {
+          let routes = getCurrentPages();
+          let curRoute = routes[routes.length - 1].route;
+          if (curRoute !== "pages/index/index") {
+            uni.showToast({
+              icon: "none",
+              title: JSON.stringify(payload),
+              duration: 2000,
+            });
+          }
+          let hasAdd = this.msgArr.find((one) => one.id === payload.id);
+          if (hasAdd) return;
+          this.msgArr.unshift(payload);
+
+          this.handleReceiveOneMsg(payload);
+        },
+        false
+      );
+      //#endif
+    },
+    async checkHasLeft() {
+      let config = await request({
+        method: "get",
+        url: this.damaiHost + "/getAllUserConfig",
+      });
+      console.log(config);
+    },
     async sendCaptcha() {
       this.sending = true;
       let isOk = await request({
@@ -511,7 +573,7 @@ export default {
         data: {
           endPoint: this.endPoint,
         },
-        url: "http://mticket.ddns.net:5001/sendCaptcha/" + this.captcha,
+        url: this.slideHost + "/sendCaptcha/" + this.captcha,
       });
       if (isOk) {
         this.closeCaptcha();
@@ -537,12 +599,12 @@ export default {
       if (isDisabled) {
         await request({
           method: "post",
-          url: "http://mticket.ddns.net:5001/removeNotOkPhone/" + phone,
+          url: this.slideHost + "/removeNotOkPhone/" + phone,
         });
       } else {
         await request({
           method: "post",
-          url: "http://mticket.ddns.net:5001/setNotOkPhone/" + phone,
+          url: this.slideHost + "/setNotOkPhone/" + phone,
         });
       }
       await this.getNotOkPhoneInfo();
@@ -578,13 +640,13 @@ export default {
     async getNotOkPhoneInfo() {
       this.notOkPhoneInfo = await request({
         method: "get",
-        url: "http://mticket.ddns.net:5001/getNotOkPhone",
+        url: this.slideHost + "/getNotOkPhone",
       });
     },
     async getAllActivity() {
       this.allActivityInfo = await request({
         method: "get",
-        url: "http://mticket.ddns.net:5001/getAllActivityInfo",
+        url: this.slideHost + "/getAllActivityInfo",
       });
     },
     handleReceiveOneMsg(payload) {
@@ -616,7 +678,7 @@ export default {
     async payWithMessage() {
       this.loading = true;
       await request({
-        url: "http://mticket.ddns.net:5000/payWithMessage",
+        url: this.damaiHost + "/payWithMessage",
         data: {
           isUseSlave: this.isUseSlave,
           endPoint: this.endPoint,
@@ -631,15 +693,11 @@ export default {
       await this.confirmAction("确定关机？");
       this.loading = true;
       await request({
-        url:
-          "http://mticket.ddns.net:5001/laterShutdown?minute=" +
-          this.shutdownMin,
+        url: this.slideHost + "/laterShutdown?minute=" + this.shutdownMin,
         method: "get",
       });
       await request({
-        url:
-          "http://mticket.ddns.net:5002/laterShutdown?minute=" +
-          this.shutdownMin,
+        url: this.subSlideHost + "/laterShutdown?minute=" + this.shutdownMin,
         method: "get",
       });
       this.loading = false;
@@ -648,11 +706,11 @@ export default {
     async restartSlide() {
       this.restarting = true;
       await request({
-        url: "http://mticket.ddns.net:5000/restartSlideServer",
+        url: this.damaiHost + "/restartSlideServer",
         method: "get",
       });
       await request({
-        url: "http://mticket.ddns.net:5010/restartSlideServer",
+        url: this.subDamaiHost + "/restartSlideServer",
         method: "get",
       });
       await sleep(3000);
@@ -662,14 +720,14 @@ export default {
       this.loading = false;
       this.syncIng = true;
       let { pidToCmd } = await request({
-        url: "http://mticket.ddns.net:5003/getAllUserConfig/",
+        url: this.subDamaiHost + "/getAllUserConfig/",
       });
 
       let cmds = Object.values(pidToCmd);
       cmds = cmds.filter((one) => one.includes("npm run start"));
 
       await request({
-        url: "http://mticket.ddns.net:5000/saveSlavePid",
+        url: this.damaiHost + "/saveSlavePid",
         method: "post",
         data: {
           cmds,
@@ -682,7 +740,7 @@ export default {
     async startOne(name) {
       await request({
         method: "post",
-        url: "http://mticket.ddns.net:5000/startUserFromRemote/",
+        url: this.damaiHost + "/startUserFromRemote/",
         data: {
           cmd: `npm run start ${name}`,
         },
@@ -703,7 +761,7 @@ export default {
       this.successInfo = {};
       let records = await request({
         method: "post",
-        url: "http://mticket.ddns.net:5000/searchSeat/",
+        url: this.damaiHost + "/searchSeat/",
         data: {
           keyword: activityName.replace(/【.*?】/, ""),
         },
@@ -737,7 +795,7 @@ export default {
       this.getValidUser(this.form.activityId);
     },
     async addAudience() {
-      let url = "http://mticket.ddns.net:5000/addAudience";
+      let url = this.damaiHost + "/addAudience";
       this.loading = true;
       try {
         for (let { audience, number } of this.selectedAudienceList) {
@@ -779,7 +837,7 @@ export default {
       };
     },
     async getPort(activityId) {
-      let url = "http://mticket.ddns.net:5010/getCheckConfig/" + activityId;
+      let url = this.damaiHost + "/getCheckConfig/" + activityId;
       console.log(url);
       let { port } = await request({
         url,
@@ -788,7 +846,7 @@ export default {
     },
     async getValidUser() {
       let { config } = await request({
-        url: "http://mticket.ddns.net:5000/getAllUserConfig/",
+        url: this.damaiHost + "/getAllUserConfig/",
       });
       let numbers = Object.keys(config)
         .filter((one) => one.includes("me"))
@@ -832,7 +890,7 @@ export default {
 
       let { username } = await request({
         method: "post",
-        url: "http://mticket.ddns.net:5000/addInfo/",
+        url: this.damaiHost + "/addInfo/",
         data,
         timeout: 120000,
       });
@@ -865,7 +923,7 @@ export default {
       this.loading = true;
       this.msgArr = await request({
         method: "post",
-        url: "http://mticket.ddns.net:4000/removeMessages",
+        url: this.xiudongHost + "/removeMessages",
         data: {
           ids: this.showArr.map((one) => one.id),
         },
@@ -887,10 +945,19 @@ export default {
     },
     handleToggleWx(e) {
       this.isWx = e.detail.value;
+      if (this.isWx) {
+        this.isOnlySuccess = false;
+      }
+    },
+    handleShowError(e) {
+      this.isOnlyShowError = e.detail.value;
+      this.isWx = false;
+      this.isOnlySuccess = false;
     },
     handleOnlySuccessChange(e) {
       this.isOnlySuccess = e.detail.value;
       if (this.isOnlySuccess) {
+        this.isWx = false;
         uni.setStorageSync("isOnlySuccess", "1");
       } else {
         uni.removeStorageSync("isOnlySuccess");
@@ -913,7 +980,7 @@ export default {
     },
     async removeOneMsg(id) {
       this.loading = true;
-      let host = `http://mticket.ddns.net:4000/removeAppMsg`;
+      let host = `${this.xiudongHost}/removeAppMsg`;
       await request({
         method: "post",
         url: host,
@@ -932,7 +999,7 @@ export default {
     },
 
     async loadAllMsg() {
-      let host = `http://mticket.ddns.net:4000/getAllAppMsg`;
+      let host = `${this.xiudongHost}/getAllAppMsg`;
       let arr = await request({
         method: "get",
         url: host,
@@ -1071,7 +1138,7 @@ export default {
         try {
           await request({
             method: "post",
-            url: "http://mticket.ddns.net:5000/startUserFromRemote/",
+            url: this.damaiHost + "/startUserFromRemote/",
             data: { cmd: `npm run start ${item.canStart} 1` },
           });
         } catch (e) {
@@ -1108,12 +1175,33 @@ export default {
           this.$refs.popup.open();
           this.audienceInfo = await request({
             method: "get",
-            url: "http://mticket.ddns.net:5001/getAllAudienceInfo",
+            url: this.slideHost + "/getAllAudienceInfo",
           });
           this.getActivityFromMsg(
             item.targetWords.map((one) => one.replace("】", ""))
           );
         }
+      } else if (item.payUrl) {
+        uni.setClipboardData({
+          data: item.payUrl,
+        });
+        uni.showToast({
+          icon: "none",
+          title: "复制支付链接成功",
+          duration: 2000,
+        });
+        if (this.isWeb) {
+          window.open(item.payUrl);
+        }
+      } else if (item.addSeatUrl) {
+        uni.setClipboardData({
+          data: item.addSeatUrl,
+        });
+        uni.showToast({
+          icon: "none",
+          title: "复制座位链接成功",
+          duration: 2000,
+        });
       }
     },
     getAudienceFromWxMsg(msg, res = []) {
@@ -1129,7 +1217,7 @@ export default {
     },
     async removeOneAudience(audience, phone, platform) {
       let hostMap = {
-        大麦: "http://mticket.ddns.net:5000",
+        大麦: this.damaiHost,
         星球: "http://mticket.ddns.net:6100",
       };
       let data = {
@@ -1180,7 +1268,7 @@ export default {
       await this.confirmAction("确定清空吗?");
       this.loading = true;
       this.msgArr = [];
-      let host = `http://mticket.ddns.net:4000/removeAllAppMsg`;
+      let host = `${this.xiudongHost}/removeAllAppMsg`;
       await request({
         method: "get",
         url: host,
@@ -1230,9 +1318,15 @@ export default {
       } else {
         itemList.push("复制一个观演人", "跳转");
       }
+      if (item.email) {
+        itemList.push("复制email");
+      }
+      itemList.push("查相关信息");
+
       uni.showActionSheet({
         itemList,
         success: async (res) => {
+          console.log(res);
           if ([0, 1].includes(res.tapIndex)) {
             // item.type = "success-call";
             uni.makePhoneCall({
@@ -1243,13 +1337,17 @@ export default {
               data: phoneNumber,
             });
           } else if (res.tapIndex === 3) {
-            let host = `http://mticket.ddns.net:4000/setHasRead/${item.id}`;
+            await this.confirmAction(`确定通知了吗? 【${phoneNumber}】`);
+            let host = `${this.xiudongHost}/setHasRead/${item.id}`;
             await request({
               method: "get",
               url: host,
             });
             let target = this.msgArr.find((one) => one.id === item.id);
             target.hasRead = true;
+          } else if (res.tapIndex === itemList.length - 1) {
+            this.keyword = item.nickname;
+            this.isOnlySuccess = false;
           } else if (res.tapIndex === 4) {
             uni.setClipboardData({
               data: itemList.includes("复制口令")
@@ -1261,6 +1359,12 @@ export default {
               uni.setStorageSync("searchUser", item.nickname);
               uni.switchTab({
                 url: "/pages/damai/index",
+              });
+            }
+          } else if (res.tapIndex === 6) {
+            if (itemList.includes("复制email")) {
+              uni.setClipboardData({
+                data: item.email,
               });
             }
           }

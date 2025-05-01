@@ -14,8 +14,8 @@ export default {
     checkIsInLocal() {
       return new Promise((resolve) => {
         uni.request({
-          url: "http://192.168.2.9:4000/ping",
-          timeout: 200,
+          url: "http://192.168.2.75:4000/ping",
+          timeout: 100,
           success: () => {
             resolve(true);
           },
@@ -26,8 +26,8 @@ export default {
       });
     },
     async getHost() {
-      let isLocal = false;
-      let host = isLocal ? "192.168.2.15" : "mticket.ddns.net";
+      let isLocal = await this.checkIsInLocal();
+      let host = isLocal ? "192.168.2.75" : "mticket.ddns.net";
 
       console.log("host", host);
       globalData.pcHost = host;

@@ -65,6 +65,10 @@ export default {
     };
   },
   props: {
+    slideHost: {
+      type: String,
+      default: "",
+    },
     platform: {
       type: String,
       default: "xingqiu",
@@ -249,12 +253,14 @@ export default {
           total: performanceVOList.length,
         };
       } else if (this.platform === "damai") {
+        console.log(111, this.slideHost);
         let test = await request({
           url:
-            "http://mticket.ddns.net:5001/searchActivity?keyword=" +
+            (this.slideHost || "http://mticket.ddns.net:5001") +
+            "/searchActivity?keyword=" +
             encodeURIComponent(this.showValue),
         });
-       
+
         // console.log(123, test);
         let {
           pageData: { resultData },

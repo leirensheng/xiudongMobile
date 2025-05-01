@@ -29,6 +29,10 @@ export default {
       type: String,
       default: "",
     },
+    host: {
+      type: String,
+      default: "",
+    },
     platform: {
       type: String,
       default: "damai",
@@ -60,7 +64,24 @@ export default {
         damai: 5000,
         f1: 5006,
       };
-      return map[this.platform];
+      let val = map[this.platform];
+      if (this.pid.includes("slave")) {
+        if (this.host.includes("mticket")) {
+          val = 5003;
+        }
+      }
+      return val;
+    },
+    url() {
+      let ip = this.host.replace("http://", "");
+      ip = ip.replace(/:\d+$/, "");
+
+      if (this.pid.includes("slave") && !this.host.includes("mticket")) {
+        ip = ip.replace("75", "76");
+      }
+      let pid = this.pid.replace("slave", "");
+
+      return `ws://${ip}:${this.port}/socket/` + pid;
     },
   },
 
@@ -75,10 +96,7 @@ export default {
       this.isZoom = !this.isZoom;
     },
     async init() {
-      console.log(this.pid);
-      const url = `ws:/mticket.ddns.net:${this.port}/socket/` + this.pid;
-
-      console.log("连接进程:", this.pid);
+      const url = this.url;
 
       uni.connectSocket({
         url,

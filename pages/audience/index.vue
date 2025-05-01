@@ -5,13 +5,15 @@
 
 <script>
 import RemoteConfig from '../../components/remote.vue'
+import globalData from "@/globalData.js";
+
 export default {
     components:{
         RemoteConfig
     },
     data() {
         return {
-            src:"http://mticket.ddns.net:7777/#/audience?agent=me&platform=damai&t="+Date.now()
+            src:`http://${globalData.pcHost}:7777/#/audience?agent=me&platform=damai&t=`+Date.now()
         };
     },
     created() {

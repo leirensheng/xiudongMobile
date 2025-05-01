@@ -178,7 +178,7 @@
       </div>
     </div>
   </uni-popup>
-  <my-terminal v-if="showPid" v-model:pid="showPid" />
+  <my-terminal v-if="showPid" v-model:pid="showPid" :host="host" />
 </template>
 
 <script>
@@ -334,10 +334,12 @@ export default {
     async restartAll() {
       await this.confirmAction("确定重启所有？");
       this.loading = true;
-      let items = this.curTypeUsers.map((one) => ({
-        username: one.username,
-        isRunning: this.curTypeRunningUsers.includes(one.username),
-      }));
+      let items = this.curTypeUsers
+        .filter((one) => !one.remark.match(/坤|椰|魔|火|(block)/))
+        .map((one) => ({
+          username: one.username,
+          isRunning: this.curTypeRunningUsers.includes(one.username),
+        }));
 
       let gap = (2.5 * 60000) / items.length;
       uni.showToast({
@@ -519,6 +521,7 @@ export default {
         let target = this.userConfig.find((item) => item.username === one.name);
         return target;
       });
+      console.log("curTypeUsers", this.curTypeUsers);
       this.$refs.oneType.open("top");
     },
 

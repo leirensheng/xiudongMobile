@@ -17,13 +17,18 @@
         {{ item }}
       </div>
     </div>
-
     {{ clientid }}
     <!-- <div class="pcs">
             <div class="pc" v-for="(item, index) in pcs" :key="index" @click="choose(item)" :class="selected
                 === item.hostname ? 'selected' : ''">{{ item.name }}</div>
         </div> -->
     <div class="search">
+      <image
+        class="audience"
+        style="width: 25px; height: 25px"
+        src="/static/recoverAll.svg"
+        @click="recoverAll"
+      />
       <image
         class="audience"
         style="width: 35px; height: 35px"
@@ -149,6 +154,7 @@
               :platform="platform"
               :item="item"
               :host="host"
+              :slideHost="slideHost"
               :pidToCmd="pidToCmd"
               :stoppingUsers="stoppingUsers"
               v-model:loading="loading"
@@ -159,6 +165,8 @@
               @getConfig="(val) => getConfig(val)"
               @showCmd="(val) => (showPid = val)"
               @snapOrCancel="snapOrCancel(item)"
+              @getSingleJie="(type) => handleJieToOneType(type, item, 1)"
+              @getMultiJie="(type) => handleJieToOneType(type, item, 2)"
             ></one-item>
           </uni-swipe-action-item>
         </template>
@@ -225,6 +233,7 @@
               placeholder="查询演出"
               :platform="platform"
               v-model:value="searchActivityName"
+              :slideHost="slideHost"
               @itemChange="activityChange"
             ></search-input>
 
@@ -251,6 +260,8 @@
                 />
               </div>
               <image class="jie" src="/static/borrow.svg" @click="jieyong" />
+              <image class="jie" src="/static/black.svg" @click="toBlack" />
+
               <!-- <div class="jie" @click="jieyong">借用</div> -->
               <div class="is-success">
                 <span>重新获取：</span>
@@ -293,6 +304,7 @@
               ref="searchInput"
               placeholder="查询演出"
               :platform="platform"
+              :slideHost="slideHost"
               v-model:value="searchActivityName"
               @itemChange="activityChange"
             ></search-input>
@@ -357,6 +369,7 @@
             >
               {{ testBtnText }}
             </button>
+            <button class="btn" type="primary" @click="getPort">PORT</button>
             <button class="btn" type="primary" @click="add">新增</button>
           </div>
         </div>
@@ -370,7 +383,7 @@
     :isCanCancel="isCanCancel"
     v-model:setTimeStr="setTimeStr"
   ></set-time>
-  <my-terminal v-if="showPid" v-model:pid="showPid" />
+  <my-terminal v-if="showPid" v-model:pid="showPid" :host="host"/>
 </template>
 
 <script>
@@ -388,7 +401,7 @@ let platformToPortMap = {
   xingqiu: "6100",
   maoyan: "7000",
 };
-import { request, randomColor, debounce } from "@/utils.js";
+import { request, randomColor, debounce, sleep } from "@/utils.js";
 export default {
   components: {
     SetTime,
@@ -538,6 +551,9 @@ export default {
   },
   mounted() {},
   computed: {
+    slideHost() {
+      return this.isDamai ? this.host.replace("5000", "5001") : "";
+    },
     currentTypes() {
       return Object.values(this.editForm.skuIdToTypeMap);
     },
@@ -553,9 +569,10 @@ export default {
       return this.host;
     },
     slaveHost() {
-      if (this.host.includes("5000")) {
+      if (this.host.includes("mticket")) {
         return this.host.replace("5000", "5003");
       }
+      return this.host.replace("75", "76");
     },
     userMap() {
       let obj = userMap;
@@ -752,6 +769,156 @@ export default {
   },
 
   methods: {
+    formatNum(val) {
+      if (val < 10) {
+        return "0" + val;
+      }
+      return String(val);
+    },
+    async toBlack() {
+      let date = new Date();
+      let month = date.getMonth() + 1;
+      let day = date.getDate();
+      console.log(month, day);
+
+      this.editForm.remark +=
+        "号不行" + this.formatNum(month) + this.formatNum(day);
+      this.editForm.hasSuccess = false;
+    },
+    async handleJieToOneType(type, item, num) {
+      let target = this.dataWithoutFilter.filter(
+        (one) =>
+          one.remark.includes("借") &&
+          !one.remark.includes("不行") &&
+          one.orders.length === num &&
+          this.audienceInfo[one.phone] &&
+          Number(one.activityId) === 827391921261
+      );
+      console.log(target);
+      if (!target.length) {
+        uni.showToast({
+          icon: "none",
+          title: "没有找到借用号",
+          duration: 2000,
+        });
+        return;
+      }
+
+      target.sort((a, b) => {
+        let nickname1 = a.username.match(/(\d+)$/)?.[1];
+        let nickname2 = b.username.match(/(\d+)$/)?.[1];
+        return nickname1 - nickname2;
+      });
+
+      let tui = target.filter((one) => one.remark?.includes("退"));
+      let left = target.filter((one) => !tui.includes(one));
+
+      let arr = [...tui, ...left];
+
+      setTimeout(() => {
+        uni.showToast({
+          icon: "none",
+          title: `剩下${arr.length}个借用号`,
+          duration: 2000,
+        });
+      }, 1500);
+      target = arr[0];
+
+      this.editForm = {
+        ...target,
+        targetTypes: [type],
+        activityId: item.activityId,
+        port: item.port,
+        hasSuccess: false,
+      };
+      await this.confirmEdit();
+
+      this.queryItems.find((one) => one.column === "username").value =
+        target.username;
+      this.getConfig();
+    },
+    async getPort() {
+      let checkMap = await request({
+        url: (this.slideHost || this.host) + "/getCheckMap",
+        cancelPre: true,
+      });
+      let used = Object.keys(checkMap);
+      let start = this.isDamai ? 5011 : 6011;
+      let end = this.isDamai ? 6000 : 7000;
+
+      for (let i = start; i < end; i++) {
+        if (!used.includes(i.toString())) {
+          this.form.port = i.toString();
+          break;
+        }
+      }
+    },
+    async recoverAll() {
+      let allCmds = Object.values(this.pidToCmd);
+
+      let users = allCmds
+        .filter((one) => one.includes("npm run start"))
+        .map((one) => one.split(/\s/)[3]);
+      let slaveUsers = users.filter((one) => {
+        let target = this.dataWithoutFilter.find(
+          (item) => item.username === one
+        );
+        if (!target) {
+          console.log("没有找到用户", one);
+          return false;
+        }
+        return target.isUseSlave;
+      });
+
+      let mainUsers = users.filter((one) => {
+        let target = this.dataWithoutFilter.find(
+          (item) => item.username === one
+        );
+        if (!target) {
+          console.log("没有找到用户", one);
+          return false;
+        }
+        return !target.isUseSlave;
+      });
+
+      console.log(slaveUsers.length, mainUsers.length);
+      let p1 = async () => {
+        let num = 0;
+        for (let user of slaveUsers) {
+          let target = allCmds.find((one) =>
+            one.includes("npm run start " + user)
+          );
+          let isLoop = target.includes("loop");
+          await this.stopOne(user, true);
+          await sleep(1000);
+          await this.startOne(user, isLoop, true);
+          num++;
+          uni.showToast({
+            icon: "none",
+            title: "从机重启" + num + "/" + slaveUsers.length,
+            duration: 2000,
+          });
+          await sleep(1000);
+        }
+      };
+      let p2 = async () => {
+        let num = 0;
+        for (let user of mainUsers) {
+          await this.stopOne(user, true);
+          await sleep(1000);
+          await this.startOne(user, false, true);
+          num++;
+          uni.showToast({
+            icon: "none",
+            title: "主机重启" + num + "/" + mainUsers.length,
+            duration: 2000,
+          });
+          await sleep(1000);
+        }
+      };
+
+      await Promise.all([p1(), p2()]);
+    },
     async openEditDialog(item) {
       this.editForm = { targetTypes: [], ...item };
       this.isEdit = true;
@@ -850,10 +1017,10 @@ export default {
     },
     getShowActivityName(name) {
       let str = (name || "").replace(
-        /（Galaxy Express）|(\s+)|」|「|(巡回)|(A-LINK with PASSENGERS)|(演唱会)|(Ugly)|(Beauty)|(FINALE)|(世界)|(Infinity Arena)|(WORLDTOUR)|MACAU|巡演|YELLOW/g,
+        /DREAM LIVE -9th Tour “Trapezium #Orion”|（Galaxy Express）|(\s+)|」|「|(巡回)|(A-LINK with PASSENGERS)|(演唱会)|(Ugly)|(Beauty)|(FINALE)|(世界)|(Infinity Arena)|(WORLDTOUR)|MACAU|巡演|YELLOW|COMETOGETHER-|项目|见面会/g,
         ""
       );
-      // console.log(name, str);
+      console.log(name, str);
 
       let result = [];
       let length = 0;
@@ -1056,21 +1223,26 @@ export default {
     toggleForm() {
       this.isShowAll = !this.isShowAll;
     },
-    async startOne(user, isShow) {
+    async startOne(user, isShow, isNoDialog) {
       let item = this.dataWithoutFilter.find((one) => one.username === user);
       item.isShow = isShow;
       try {
         await this.start(item);
-        this.$refs.calc.refreshDialog();
+        if (!isNoDialog) {
+          this.$refs.calc.refreshDialog();
+        }
+
         this.getConfig();
       } catch (e) {
         console.log(e);
       }
     },
-    async stopOne(user) {
+    async stopOne(user, isNoDialog) {
       let item = this.dataWithoutFilter.find((one) => one.username === user);
       await this.stop(item);
-      this.$refs.calc.refreshDialog();
+      if (!isNoDialog) {
+        this.$refs.calc.refreshDialog();
+      }
       uni.$emit("stop" + user + "done");
     },
     async autoStartUsers(users) {
@@ -1670,6 +1842,7 @@ export default {
           runningCheckPorts = [],
           isSlaveOnline,
         ] = await Promise.all([p1, p2, p3, p4, p5]);
+        this.audienceInfo = audienceInfo;
 
         this.runningCheckPorts = runningCheckPorts;
         Object.values(config).forEach((obj) => {
@@ -1719,7 +1892,7 @@ export default {
           );
           one.isLoop = one.runningCmd?.includes("loop");
           one.pid = cmdToPid[cmd];
-          one.orders = one.orders.map((one) => Number(one));
+          one.orders = one.orders ? one.orders.map((one) => Number(one)) : [0];
           one.showOrders = one.orders.join(",");
         });
         this.dataWithoutFilter = data;

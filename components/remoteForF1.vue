@@ -158,6 +158,7 @@
               @getConfig="(val) => getConfig(val)"
               @showCmd="(val) => (showPid = val)"
               @snapOrCancel="snapOrCancel(item)"
+              @filterType="filterType"
             ></one-item>
           </uni-swipe-action-item>
         </template>
@@ -261,7 +262,18 @@
             <span :style="{ color: item.isSpecial ? 'red' : 'black' }"
               >{{ item.name }}:</span
             >
-
+            <radio-group
+              v-if="item.name === 'myUsers'"
+              @change="(e) => changeMyUser(e)"
+            >
+              <radio
+                v-for="(user, index) in item.radioOptions"
+                :value="user"
+                :key="index"
+              >
+                {{ user }}
+              </radio>
+            </radio-group>
             <my-input
               type="text"
               v-model="form[item.id]"
@@ -277,10 +289,16 @@
             >
               <checkbox
                 :value="item"
-                v-for="(item, index) in Object.values(skuIdToTypeMap)"
+                v-for="(item, index) in currentTypes"
                 :key="index"
                 :checked="form.targetTypes.includes(item)"
-                >{{ item }}
+                ><span
+                  :style="{
+                    color: 'white',
+                    backgroundColor: getTypesColor(currentTypes, index),
+                  }"
+                  >{{ item }}</span
+                >
               </checkbox>
             </checkbox-group>
           </scroll-view>
@@ -315,7 +333,7 @@ let platformToPortMap = {
   xiecheng: "6200",
   xingqiu: "6100",
   maoyan: "7000",
-  ha: 5006,
+  f1: 5006,
 };
 import eventCode from "./eventCode.js";
 import { request, randomColor, debounce } from "@/utils.js";
@@ -523,14 +541,14 @@ export default {
     let res = uni.getSystemInfoSync();
     console.log(res);
     this.windowHeight = res.windowHeight;
-    setTimeout(() => {
-      console.log(this.skuIdToTypeMap);
-    }, 1000);
+
   },
   mounted() {},
   computed: {
     currentTypes() {
-      return Object.values(this.skuIdToTypeMap);
+      let arr = Object.values(this.skuIdToTypeMap);
+      arr.sort();
+      return arr;
     },
     scrollViewHeight() {
       return {
@@ -550,9 +568,6 @@ export default {
     },
     userMap() {
       let obj = userMap;
-      if (!this.isDamai) {
-        delete obj["姐司"];
-      }
       return obj;
     },
     isAddMine() {
@@ -613,12 +628,20 @@ export default {
       return this.platform === "xiecheng";
     },
     addItems() {
-      let fields = ["phone", "email", "password", "remark", "showOrders"];
+      let fields = [
+        "myUsers",
+        "phone",
+        "email",
+        "password",
+        "remark",
+        "showOrders",
+      ];
 
       return fields.map((one) => ({
         name: one,
         id: one,
         isSpecial: one === "showOrders",
+        radioOptions: one === "myUsers" ? Object.keys(this.userMap) : [],
       }));
     },
     rightOptions() {
@@ -654,20 +677,17 @@ export default {
     },
     editFields() {
       let map = {
-        ha: [
-          "password",
-          "remark",
-          "createTime",
-          "targetTypes",
-          "showOrders",
-          "hasSuccess",
-        ],
+        f1: ["email","password", "remark", "targetTypes", "showOrders", "hasSuccess"],
       };
       return map[this.platform];
     },
   },
 
   methods: {
+    filterType(val) {
+      this.queryItems.find((one) => one.column === "targetTypes").value = val;
+      this.filterData();
+    },
     async openEditDialog(item) {
       this.editForm = { targetTypes: [], ...item };
       this.isEdit = true;
@@ -735,8 +755,12 @@ export default {
       if (i === 0) {
         this.indexToColor[i] = randomColor();
       } else {
-        let preDate = all[i - 1].split("_")[0];
-        let curDate = all[i].split("_")[0];
+        let arr = all[i - 1].split("_");
+        let preDate = arr[0] + "_" + arr[1];
+        console.log("pre", preDate);
+
+        let curDate = all[i].split("_")[0] + "_" + all[i].split("_")[1];
+        console.log(curDate);
         if (preDate === curDate) {
           this.indexToColor[i] = this.indexToColor[i - 1];
         } else {
@@ -785,11 +809,10 @@ export default {
       return result.join("");
     },
     changeMyUser(e) {
-      let { phone, password } = this.userMap[e.detail.value];
+      let { phone, email } = this.userMap[e.detail.value];
       this.form.phone = phone;
-
+      this.form.email = email;
       this.form.username = "me" + Math.ceil(Math.random() * 10000);
-      this.getPhoneRunningLength(phone, this.form.activityId);
     },
     getPhoneRunningLength(phone, activityId) {
       let data = this.dataWithoutFilter.filter(
@@ -1398,19 +1421,31 @@ export default {
       let items = this.queryItems.filter((item) => item.value);
       let filteredData = this.dataWithoutFilter.filter((one) => {
         return items.every(({ value, column }) => {
-          if (!["username", "targetType"].includes(column)) {
+          if (!["username", "targetTypes"].includes(column)) {
             return (
               String(one[column])
                 .toLowerCase()
                 .indexOf(String(value).toLowerCase()) !== -1
             );
-          } else {
+          } else if (column === "username") {
             let usernameMatch =
               String(one["username"])
                 .toLowerCase()
                 .indexOf(String(value).toLowerCase()) !== -1;
-
-            return usernameMatch;
+            let targetAudience = one.orders
+              .map((index) => one.audienceList && one.audienceList[index])
+              .filter(Boolean);
+            let audienceMatch = targetAudience.some((audience) =>
+              audience.includes(value)
+            );
+            return usernameMatch || audienceMatch;
+          } else {
+            return one.targetTypes.some((type) => {
+              let words = value.split(/\s+/).filter(Boolean);
+              return words.every((word) =>
+                type.replace(/\s{2}/, " ").includes(word)
+              );
+            });
           }
         });
       });

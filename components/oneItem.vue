@@ -64,6 +64,7 @@
         v-for="(targetType, index) in item.targetTypes"
         :key="index"
         :style="{ background: getTagColor(targetType) }"
+        @click="copyType(targetType)"
       >
         {{ removeYear(targetType) }}
       </div>
@@ -125,6 +126,9 @@ export default {
     host: {
       type: String,
     },
+    slideHost: {
+      type: String,
+    },
     platform: {
       type: String,
     },
@@ -152,16 +156,32 @@ export default {
   created() {},
   mounted() {},
   methods: {
+    copyType(val) {
+      let itemList = ["查", "借用单张", "借用连坐"];
+      uni.showActionSheet({
+        itemList,
+        success: async (res) => {
+          if (res.tapIndex === 0) {
+            this.$emit("filterType", val);
+          } else if (res.tapIndex === 1) {
+            this.$emit("getSingleJie", val);
+          } else if (res.tapIndex === 2) {
+            this.$emit("getMultiJie", val);
+          }
+        },
+      });
+    },
     removeYear(str) {
       let year = new Date().getFullYear();
       return str.replace(year + "-", "");
     },
     async start(item, isNoRefresh) {
       this.$emit("update:loading", true);
-      let cmd =
-        item.cmd +
-        (item.isShow ? (this.platform === "damai" ? ` 1 loop` : " show") : "");
+      let isLoop = this.platform === "damai" && item.isShow;
+      let cmd = item.cmd + (item.isShow ? (isLoop ? ` 1 loop` : " show") : "");
       item.runningCmd = cmd;
+      console.log(item.runningCmd);
+      item.isLoop = isLoop;
 
       try {
         let { pid } = await request({
@@ -174,7 +194,7 @@ export default {
             isStopWhenLogin: isNoRefresh,
           },
         });
-        this.pidToCmd[pid] = cmd;
+        this.pidToCmd[item.isUseSlave ? "slave" + pid : pid] = cmd;
       } catch (e) {
         if (e.pid) {
           this.pidToCmd[e.pid] = cmd;
@@ -196,7 +216,7 @@ export default {
         },
       });
       let pid = Object.keys(this.pidToCmd).find(
-        (pid) => this.pidToCmd[pid] === item.cmd
+        (pid) => this.pidToCmd[pid] === item.runningCmd
       );
       delete this.pidToCmd[pid];
       item.isLoop = false;
@@ -312,9 +332,12 @@ export default {
     },
     copyUsername(item) {
       let { phone, username, isUseSlave } = item;
-      let itemList = [username, "复制", "关闭并支付", "补录成功数据"];
+      let itemList = [username, "复制", "关闭并支付"];
       if (item.runningCmd) {
         itemList.push("查看输出");
+      }
+      if (username.includes("me")) {
+        itemList.push("补录成功数据");
       }
       uni.showActionSheet({
         itemList,
@@ -335,44 +358,46 @@ export default {
               },
             });
             this.$emit("update:loading", false);
-          } else if (res.tapIndex === 3) {
-            await this.confirmAction("确认补录？");
-            this.$emit("update:loading", true);
-            await request({
-              method: "post",
-              url: this.host + "/loadSuccess",
-              data: {
-                phone,
-              },
-            });
-            this.$emit("update:loading", false);
-          } else if (res.tapIndex === 4) {
-            let showPid = Object.keys(this.pidToCmd).find(
-              (one) => this.pidToCmd[one] === item.runningCmd
-            );
-            if (!showPid) {
-              uni.showToast({
-                icon: "none",
-                title: "没有找到PID",
-                duration: 2000,
+          } else {
+            let val = itemList[res.tapIndex];
+            if (val === "查看输出") {
+              let showPid = Object.keys(this.pidToCmd).find(
+                (one) => this.pidToCmd[one] === item.runningCmd
+              );
+              if (!showPid) {
+                uni.showToast({
+                  icon: "none",
+                  title: "没有找到PID",
+                  duration: 2000,
+                });
+              }
+              this.$emit("showCmd", showPid);
+            } else if (val === "补录成功数据") {
+              await this.confirmAction("确认补录？");
+              this.$emit("update:loading", true);
+              await request({
+                method: "post",
+                url: this.host + "/loadSuccess",
+                data: {
+                  phone,
+                },
               });
+              this.$emit("update:loading", false);
             }
-            this.$emit("showCmd", showPid);
           }
         },
       });
     },
     callOrCopyPhone(item) {
       let { phone, username: nickname, hasSuccess, isUseSlave, orderId } = item;
-      let itemList = [
-        phone,
-        "复制",
-        "关闭并截图",
-        hasSuccess ? "关闭并取消订单" : "关闭并接盘",
-      ];
+      let itemList = [phone, "复制", "关闭并截图"];
+      if (nickname.includes("me")) {
+        itemList.push("清理观演人");
+      }
       uni.showActionSheet({
         itemList,
         success: async (res) => {
+          let name = itemList[res.tapIndex];
           if ([0].includes(res.tapIndex)) {
             uni.makePhoneCall({
               phoneNumber: phone,
@@ -402,8 +427,23 @@ export default {
               },
             });
             this.$emit("update:loading", false);
-          } else if (res.tapIndex === 3) {
-            this.$emit("snapOrCancel", item);
+          } else if (name.includes("清理观演人")) {
+            uni.showToast({
+              icon: "none",
+              title: "开始清理观演人",
+              duration: 2000,
+            });
+            await request({
+              url: `${this.slideHost}/cleanAudience?phone=${phone}`,
+              timeout: 300000,
+            });
+            uni.showToast({
+              icon: "none",
+              title: `【${phone}】清理观演人完成`,
+              duration: 2000,
+            });
+            // let name = item.audienceList[index];
+            // this.$emit("snapOrCancel", item);
           }
         },
       });
@@ -423,7 +463,15 @@ export default {
           background: "rgb(225, 223, 223)",
         },
         {
-          condition: !item.uid,
+          condition:
+            this.platform !== "f1"
+              ? !item.uid
+              : [
+                  "15521373109",
+                  "18124935302",
+                  "19128713692",
+                  "18027645865",
+                ].includes(String(item.phone)),
           background: "rgb(254, 214, 91)",
         },
         {

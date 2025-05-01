@@ -10,9 +10,7 @@
 		{
 			"path": "pages/xiudong/index",
 			"style": {
-				"navigationBarTitleText": "秀动",
-				"enablePullDownRefresh": true
-
+				"navigationBarTitleText": "秀动"
 			}
 		},
 		// {
@@ -53,14 +51,14 @@
 				"navigationBarTitleText": "亚冬会"
 			}
 		},
-		{
-			"path": "pages/f1/index",
-			"style": {
-				"enablePullDownRefresh": true,
+		// {
+		// 	"path": "pages/f1/index",
+		// 	"style": {
+		// 		"enablePullDownRefresh": true,
 
-				"navigationBarTitleText": "f1"
-			}
-		},
+		// 		"navigationBarTitleText": "f1"
+		// 	}
+		// },
 		{
 			"path": "pages/xingqiu/index",
 			"style": {
@@ -106,10 +104,10 @@
 			// 	"pagePath": "pages/ha/index",
 			// 	"text": "亚冬会"	
 			// },
-			{
-				"pagePath": "pages/f1/index",
-				"text": "f1"	
-			},
+			// {
+			// 	"pagePath": "pages/f1/index",
+			// 	"text": "f1"	
+			// },
 			{
 				"pagePath": "pages/xingqiu/index",
 				"text": "星球"	

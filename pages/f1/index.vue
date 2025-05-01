@@ -2,7 +2,7 @@
     <check-permission>
       <remote-config
         v-if="isReady"
-        platform="ha"
+        platform="f1"
         ref="remote"
         :pcHost="pcHost"
         :scrollTop="scrollTop"

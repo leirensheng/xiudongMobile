@@ -1,184 +1,194 @@
 <template>
-  <div class="snap">
-    <div class="top">
-      <div class="success-wrap">
-        <div
-          v-for="(item, index) in topList"
-          :key="item.id"
-          class="message"
-          :style="{
-            background: item.num > 1 ? '#f74444' : 'rgb(58 190 58)',
-            color: item.isJie ? 'blue' : 'white',
-          }"
-        >
-          <div class="text">
-            <div>{{ item.endTime.split(/\s+/)[1] }}__{{ item.nickname }}</div>
-            <div>{{ item.ticketType }}</div>
-            <div>{{ item.activityName }}</div>
-            <div v-if="item.remark">{{ item.remark }}</div>
-          </div>
-
-          <image
-            class="icon"
-            style="width: 25px; height: 25px; flex-shrink: 0"
-            src="/static/add2.svg"
-            @click="add(index, item)"
-          />
-        </div>
-      </div>
-
-      <div class="user-list">
-        <div
-          class="user"
-          v-for="(item, index) in showUserList"
-          :key="item.username"
-        >
+  <check-permission @pcHost="handleReady">
+    <div class="snap">
+      <div class="top">
+        <div class="success-wrap">
           <div
+            v-for="(item, index) in topList"
+            :key="item.id"
+            class="message"
             :style="{
+              background: item.num > 1 ? '#f74444' : 'rgb(58 190 58)',
               color: item.isJie ? 'blue' : 'white',
-              background: item.isMulti ? '#f74444' : 'rgb(58 190 58)',
             }"
-            class="name"
           >
-            <div>
-              【{{ item.isUseSlave ? "从" : "主" }}】{{ item.username }}
+            <div class="text">
+              <div>{{ item.endTime.split(/\s+/)[1] }}__{{ item.nickname }}</div>
+              <div>{{ item.ticketType }}</div>
+              <div>{{ item.activityName }}</div>
+              <div v-if="item.remark">{{ item.remark }}</div>
             </div>
-            <div v-for="one in item.targetTypes" :key="one">{{ one }}</div>
-            <div v-if="item.remark">{{ item.remark }}</div>
+
+            <image
+              class="icon"
+              style="width: 25px; height: 25px; flex-shrink: 0"
+              src="/static/add2.svg"
+              @click="add(index, item)"
+            />
           </div>
-          <image
-            class="icon"
-            style="width: 25px; height: 25px; flex-shrink: 0"
-            src="/static/add2.svg"
-            @click="addUser(index, item)"
-          />
         </div>
-      </div>
-    </div>
 
-    <div class="middle">
-      <div class="expire-time" v-if="firstExpireTime">
-        <span>到期时间: {{ firstExpireTime.split(" ")[1] }} </span>
-        <span style="margin-left: 15px">{{ leftTime }}分钟</span>
-      </div>
-      <div class="expire-time">
-        <span>当前时间: {{ currentTime }} </span>
-      </div>
-      <div class="input-wrap">
-        <input
-          class="input"
-          type="text"
-          placeholder="设置取消时间(分钟)"
-          v-model="setCancelMin"
-        />
-        <button @click="setLastTime" size="mini">设置最晚</button>
-      </div>
-      <div>
-        准备好就取消:
-        <switch
-          :checked="isCancelWhenIsReady"
-          @change="changeIsCancelWhenIsReady"
-        />
-      </div>
-      <div class="status">
-        <div class="one-status" v-for="(item, index) in status" :key="index">
-          {{ item }}
-        </div>
-      </div>
-    </div>
-    <div class="bottom">
-      <div class="to-cancel">
-        <div
-          v-for="(item, index) in bottomList"
-          :key="item.id"
-          class="message"
-          :style="{
-            background: item.num > 1 ? '#f74444' : 'rgb(58 190 58)',
-            color: item.isJie ? 'blue' : 'white',
-            border: readySuccessUsers.includes(item.nickname)
-              ? '5px solid rgb(206 53 172)'
-              : '',
-          }"
-        >
-          <div class="text">
-            <div>{{ item.endTime.split(/\s+/)[1] }}__{{ item.nickname }}</div>
-            <div>{{ item.ticketType }}</div>
-            <div>{{ item.activityName }}</div>
-            <div v-if="item.remark">{{ item.remark }}</div>
-          </div>
-
-          <image
-            class="icon"
-            style="width: 25px; height: 25px; flex-shrink: 0"
-            src="/static/close2.svg"
-            @click="remove(index, item)"
-          />
-        </div>
-      </div>
-
-      <div class="user-list">
-        <div
-          class="user"
-          v-for="(item, index) in selectedUserList"
-          :key="item.username"
-        >
+        <div class="user-list">
           <div
+            class="user"
+            v-for="(item, index) in showUserList"
+            :key="item.username"
+          >
+            <div
+              :style="{
+                color: item.isJie ? 'blue' : 'white',
+                background: item.isMulti ? '#f74444' : 'rgb(58 190 58)',
+              }"
+              class="name"
+            >
+              <div>
+                【{{ item.isUseSlave ? "从" : "主" }}】{{ item.username }}
+              </div>
+              <div class="audience">
+                {{ item.audiences.join("_") }}
+              </div>
+              <div v-for="one in item.targetTypes" :key="one">{{ one }}</div>
+              <div v-if="item.remark">{{ item.remark }}</div>
+            </div>
+            <image
+              class="icon"
+              style="width: 25px; height: 25px; flex-shrink: 0"
+              src="/static/add2.svg"
+              @click="addUser(index, item)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="middle">
+        <div class="expire-time" v-if="firstExpireTime">
+          <span>到期时间: {{ firstExpireTime.split(" ")[1] }} </span>
+          <span style="margin-left: 15px">{{ leftTime }}分钟</span>
+        </div>
+        <div class="expire-time">
+          <span>当前时间: {{ currentTime }} </span>
+        </div>
+        <div class="input-wrap">
+          <input
+            class="input"
+            type="text"
+            placeholder="设置取消时间(分钟)"
+            v-model="setCancelMin"
+          />
+          <button @click="setLastTime" size="mini">设置最晚</button>
+        </div>
+        <div>
+          准备好就取消:
+          <switch
+            :checked="isCancelWhenIsReady"
+            @change="changeIsCancelWhenIsReady"
+          />
+        </div>
+        <div class="status">
+          <div class="one-status" v-for="(item, index) in status" :key="index">
+            {{ item }}
+          </div>
+        </div>
+      </div>
+      <div class="bottom">
+        <div class="to-cancel">
+          <div
+            v-for="(item, index) in bottomList"
+            :key="item.id"
+            class="message"
             :style="{
+              background: item.num > 1 ? '#f74444' : 'rgb(58 190 58)',
               color: item.isJie ? 'blue' : 'white',
-              background: item.isMulti ? '#f74444' : 'rgb(58 190 58)',
-              border: readyUsers.includes(item.username)
+              border: readySuccessUsers.includes(item.nickname)
                 ? '5px solid rgb(206 53 172)'
                 : '',
             }"
-            :class="item.username === successUser ? 'success' : ''"
-            class="name"
           >
-            <button
-              size="mini"
-              @click="restartUser(item)"
-              v-if="
-                successUser !== item.username &&
-                !readyUsers.includes(item.username)
-              "
-            >
-              重启
-            </button>
-            <div>
-              【{{ item.isUseSlave ? "从" : "主" }}】{{ item.username }}
+            <div class="text">
+              <div>{{ item.endTime.split(/\s+/)[1] }}__{{ item.nickname }}</div>
+              <div>{{ item.ticketType }}</div>
+              <div>{{ item.activityName }}</div>
+              <div v-if="item.remark">{{ item.remark }}</div>
             </div>
-            <div v-for="one in item.targetTypes" :key="one">{{ one }}</div>
-            <div v-if="item.remark">{{ item.remark }}</div>
+
+            <image
+              class="icon"
+              style="width: 25px; height: 25px; flex-shrink: 0"
+              src="/static/close2.svg"
+              @click="remove(index, item)"
+            />
           </div>
-          <image
-            class="icon"
-            style="width: 25px; height: 25px; flex-shrink: 0"
-            src="/static/close2.svg"
-            @click="removeUser(index, item)"
-          />
+        </div>
+
+        <div class="user-list">
+          <div
+            class="user"
+            v-for="(item, index) in selectedUserList"
+            :key="item.username"
+          >
+            <div
+              :style="{
+                color: item.isJie ? 'blue' : 'white',
+                background: item.isMulti ? '#f74444' : 'rgb(58 190 58)',
+                border: readyUsers.includes(item.username)
+                  ? '5px solid rgb(206 53 172)'
+                  : '',
+              }"
+              :class="item.username === successUser ? 'success' : ''"
+              class="name"
+            >
+              <button
+                size="mini"
+                @click="restartUser(item)"
+                v-if="
+                  successUser !== item.username &&
+                  !readyUsers.includes(item.username)
+                "
+              >
+                重启
+              </button>
+              <div>
+                【{{ item.isUseSlave ? "从" : "主" }}】{{ item.username }}
+              </div>
+              <div class="audience">
+                {{ item.audiences.join("_") }}
+              </div>
+              <div v-for="one in item.targetTypes" :key="one">{{ one }}</div>
+              <div v-if="item.remark">{{ item.remark }}</div>
+            </div>
+            <image
+              class="icon"
+              style="width: 25px; height: 25px; flex-shrink: 0"
+              src="/static/close2.svg"
+              @click="removeUser(index, item)"
+            />
+          </div>
         </div>
       </div>
-    </div>
 
-    <div>
-      <button
-        class="confirm"
-        @click="confirm"
-        :disabled="disabled"
-        v-if="!loading"
-      >
-        确定
-      </button>
-      <button v-else class="confirm" @click="cancelCancel">取消</button>
+      <div>
+        <button
+          class="confirm"
+          @click="confirm"
+          :disabled="disabled"
+          v-if="!loading"
+        >
+          确定
+        </button>
+        <button v-else class="confirm" @click="cancelCancel">取消</button>
+      </div>
     </div>
-  </div>
+  </check-permission>
 </template>
 
 <script>
+import CheckPermission from "@/components/checkPermission.vue";
 import { request, getTime, sleep, getTimeWithoutDate } from "@/utils.js";
 
 export default {
   data() {
     return {
+      pcHost: "",
       isCancelWhenIsReady: true,
       successUser: "",
       timer: "",
@@ -224,7 +234,19 @@ export default {
     await this.init();
     uni.stopPullDownRefresh();
   },
+  components: {
+    CheckPermission,
+  },
   computed: {
+    xiudongHost() {
+      return `http://${this.pcHost}:4000`;
+    },
+    damaiHost() {
+      return `http://${this.pcHost}:5000`;
+    },
+    slideHost() {
+      return `http://${this.pcHost}:5001`;
+    },
     readyUsersLength() {
       return this.readyUsers.length;
     },
@@ -249,6 +271,9 @@ export default {
       return this.bottomList.map((one) => one.endTime).sort((a, b) => a - b)[0];
     },
   },
+  beforeDestroy() {
+    clearInterval(this.timer);
+  },
   watch: {
     firstExpireTime(val) {
       if (val) {
@@ -270,25 +295,26 @@ export default {
       }
     },
     readyUsersLength(val) {
-      if (val) {
-        if (val === this.selectedUserList.length) {
-          this.status.push(`所有用户都准备好了`);
-          this.checkIsEveryIsReady();
-          if (!this.hasCancel) {
-            this.hasCancel = true;
-            this.cancel();
-          }
-        } else if (val / this.selectedUserList.length >= 0.5) {
+      if (val / this.selectedUserList.length >= 0.5) {
+        if (!this.hasCancel) {
+          this.hasCancel = true;
           this.addStatus("一半用户都准备好了");
-          if (!this.hasCancel) {
-            this.hasCancel = true;
-            this.cancel();
+          this.cancel();
+        } else {
+          let isImmediateOk = this.checkIsEveryIsReady();
+          if (isImmediateOk) {
+            this.cancelImmediately();
           }
         }
       }
     },
   },
   methods: {
+    async handleReady(val) {
+      this.pcHost = val;
+      this.init();
+    },
+    init() {},
     addStatus(str) {
       this.status.push(`【${getTimeWithoutDate()}】${str}`);
     },
@@ -306,7 +332,7 @@ export default {
     async restartUser(item) {
       await request({
         timeout: 60000,
-        url: "http://mticket.ddns.net:5000/stopUser/" + item.username,
+        url: this.damaiHost + "/stopUser/" + item.username,
         data: {
           isUseSlave: item.isUseSlave,
         },
@@ -315,7 +341,7 @@ export default {
       await request({
         method: "post",
         timeout: 40000,
-        url: "http://mticket.ddns.net:5000/startUserFromRemote/",
+        url: this.damaiHost + "/startUserFromRemote/",
         data: {
           isUseSlave: item.isUseSlave,
           cmd: `npm run start ${item.username} 1 loop`,
@@ -324,7 +350,7 @@ export default {
     },
     async cancelCancel() {
       request({
-        url: "http://mticket.ddns.net:5000/cancelCancel/",
+        url: this.damaiHost + "/cancelCancel/",
       });
     },
     async checkIsEveryIsReady() {
@@ -335,26 +361,29 @@ export default {
       ) {
         let hasTime = new Date(this.cancelTime).getTime() - Date.now() > 20000;
         if (hasTime) {
-          await request({
-            url:
-              "http://mticket.ddns.net:5000/setIsCancelImmediately?isCancelImmediately=" +
-              1,
-            cancelPre: true,
-          });
-          this.addStatus("发送立即取消的请求");
-          this.waitResult(0);
           return true;
         }
       }
       return false;
     },
+
+    async cancelImmediately() {
+      await request({
+        url:
+          this.damaiHost + "/setIsCancelImmediately?isCancelImmediately=" + 1,
+        cancelPre: true,
+      });
+      this.addStatus("发送立即取消的请求");
+      this.waitResult(0);
+    },
+
     async cancel() {
       this.addStatus("开始打开取消页面");
       let isImmediateOk;
       for (let one of this.bottomList) {
         await request({
           method: "post",
-          url: "http://mticket.ddns.net:5000/closeAndCancelOrder/",
+          url: this.damaiHost + "/closeAndCancelOrder/",
           data: {
             cancelTime: this.cancelTime,
             nickname: one.nickname,
@@ -366,24 +395,27 @@ export default {
           let { isCanCancel, msg } = await request({
             timeout: 60000,
             url:
-              "http://mticket.ddns.net:4000/waitUntilCancelIsOk/" +
+              this.xiudongHost +
+              "/waitUntilCancelIsOk/" +
               encodeURIComponent(one.nickname),
           });
           this.addStatus(msg);
 
           if (isCanCancel) {
             this.readySuccessUsers.push(one.nickname);
-            iFsImmediateOk = this.checkIsEveryIsReady();
+            isImmediateOk = this.checkIsEveryIsReady();
           } else {
             this.addStatus("取消中断！！");
             throw new Error("取消失败");
           }
         } catch (e) {
-          this.addStatus("打开取消页面超时");
+          this.addStatus("打开取消页面超时" + e.message);
         }
       }
 
-      if (!isImmediateOk) {
+      if (isImmediateOk) {
+        this.cancelImmediately();
+      } else {
         let gap = new Date(this.cancelTime).getTime() - Date.now() - 20000;
         if (gap < 0) {
           gap = 0;
@@ -397,11 +429,12 @@ export default {
           await request({
             timeout: 14 * 60000,
             url:
-              "http://mticket.ddns.net:4000/waitUntilCancelDone/" +
+              this.xiudongHost +
+              "/waitUntilCancelDone/" +
               encodeURIComponent(one.nickname),
           });
           this.addStatus(`【${one.nickname}】取消完成！`);
-          let host = `http://mticket.ddns.net:4000/removeAppMsg`;
+          let host = `${this.xiudongHost}/removeAppMsg`;
           await request({
             method: "post",
             url: host,
@@ -416,7 +449,7 @@ export default {
     async checkHasSuccess() {
       this.successUser = await request({
         timeout: 60000,
-        url: "http://mticket.ddns.net:4000/waitUntilNewSuccess",
+        url: this.xiudongHost + "/waitUntilNewSuccess",
       });
       this.addStatus(`有用户成功了: ` + this.successUser);
       this.readyUsers = [];
@@ -449,22 +482,17 @@ export default {
       let num = this.bottomList.length;
       await request({
         url:
-          "http://mticket.ddns.net:5000/setIsCancelImmediately?isCancelImmediately=" +
-          0,
+          this.damaiHost + "/setIsCancelImmediately?isCancelImmediately=" + 0,
         cancelPre: true,
       });
       await request({
-        url: "http://mticket.ddns.net:5000/setSnapNum?num=" + num,
+        url: this.damaiHost + "/setSnapNum?num=" + num,
         cancelPre: true,
       });
       this.status = ["设置取消的个数为" + num];
-      let gap = 280;
-      let timeArr = [2, 2.5, 3];
+      let gap = 80; // 不是立即取消的时候, 每个用户的间隔时间, 立即取消的间隔在snapServer.js
       let baseTime =
-        new Date().getTime() +
-        (this.setCancelMin || timeArr[this.selectedUserList.length - 1]) *
-          60 *
-          1000;
+        new Date().getTime() + (this.setCancelMin || 2) * 60 * 1000;
       baseTime = getTime(new Date(baseTime));
       this.cancelTime = baseTime;
       this.addStatus(`取消时间:` + baseTime);
@@ -488,7 +516,7 @@ export default {
         await request({
           method: "post",
           timeout: 60000,
-          url: "http://mticket.ddns.net:5000/closeAndSetSnappedTime/",
+          url: this.damaiHost + "/closeAndSetSnappedTime/",
           data: {
             snappedTime: baseTime + "." + (index + 1) * gap,
             nickname: one.username,
@@ -499,7 +527,8 @@ export default {
         await request({
           timeout: 120000,
           url:
-            "http://mticket.ddns.net:4000/waitUntilOneSnapIsOk/" +
+            this.xiudongHost +
+            "/waitUntilOneSnapIsOk/" +
             encodeURIComponent(one.username),
         });
         this.addStatus(`【${one.username}】准备好了`);
@@ -557,25 +586,36 @@ export default {
       this.showUserList.push(item);
     },
     async getUserList() {
-      let { config } = await request({
-        url: "http://mticket.ddns.net:5000/getAllUserConfig",
+      let p1 = request({
+        url: this.damaiHost + "/getAllUserConfig",
         cancelPre: true,
       });
+      let p2 = request({
+        url: this.slideHost + "/getAllAudienceInfo",
+        cancelPre: true,
+      });
+      let [{ config }, audienceInfo] = await Promise.all([p1, p2]);
+      console.log(audienceInfo);
       let userList = Object.keys(config).map((key) => {
         let item = config[key];
         item.username = key;
+        item.audiences = audienceInfo[item.phone]
+          ? item.orders.map((i) => audienceInfo[item.phone][i])
+          : [];
         return item;
       });
       this.userList = userList;
       this.selectedUserList = [];
     },
     async init() {
-      let host = `http://mticket.ddns.net:4000/getAllAppMsg`;
+      let host = `${this.xiudongHost}/getAllAppMsg`;
       let arr = await request({
         method: "get",
         url: host,
       });
-      this.successList = arr.filter((one) => one.type === "success");
+      this.successList = arr.filter(
+        (one) => one.type === "success" && one.msg.includes("大麦")
+      );
       let today = getTime().split(/\s+/)[0];
       this.successList.forEach((one) => {
         let endTime = one.msg.match(/color: orange">【(.*?)】/)[1];
@@ -597,7 +637,6 @@ export default {
   },
   created() {
     // this.test();
-    this.init();
   },
 };
 </script>
@@ -630,6 +669,10 @@ export default {
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        .audience {
+          font-family: 楷体;
+          color: white;
+        }
         > div {
           margin: 5px 0;
         }

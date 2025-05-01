@@ -4,16 +4,19 @@
       <my-input v-model="password" class="input"></my-input>
       <button @click="confirm" :disabled="loading">确定</button>
     </div>
-    <slot v-else></slot>
+    <slot v-if="isReady && !noPermission" :pcHost="pcHost"></slot>
   </div>
 </template>
 
 <script>
 import { request, sleep } from "@/utils.js";
+import globalData from "@/globalData.js";
 
 export default {
   data() {
     return {
+      isReady: false,
+      pcHost: "",
       localPass: "",
       loading: false,
       noPermission: true,
@@ -22,14 +25,7 @@ export default {
     };
   },
   created() {
-    this.localPass = uni.getStorageSync("localPass");
-    this.isWeb = uni.getSystemInfoSync().uniPlatform === "web";
-    if (this.localPass) {
-      this.verifyPass();
-    }
-    if (!this.isWeb|| location.href.indexOf("localhost")!== -1) {
-      this.noPermission = false;
-    }
+    this.init();
   },
   mounted() {},
   computed: {
@@ -46,6 +42,35 @@ export default {
     // },
   },
   methods: {
+    async init() {
+      await this.waitReady();
+
+      this.localPass = uni.getStorageSync("localPass");
+      this.isWeb = uni.getSystemInfoSync().uniPlatform === "web";
+      if (this.localPass) {
+        await this.verifyPass();
+      }
+      if (!this.isWeb || location.href.indexOf("localhost") !== -1) {
+        this.noPermission = false;
+      }
+      console.log("emit",this.pcHost)
+      this.$emit("pcHost", this.pcHost);
+    },
+    async waitReady() {
+      await new Promise((resolve) => {
+        if (globalData.pcHost) {
+          this.isReady = true;
+          this.pcHost = globalData.pcHost;
+          resolve();
+        } else {
+          uni.$on("hostDone", (val) => {
+            this.pcHost = val;
+            this.isReady = true;
+            resolve();
+          });
+        }
+      });
+    },
     async confirm() {
       this.loading = true;
       uni.setStorageSync("localPass", this.password);
@@ -54,7 +79,7 @@ export default {
       this.loading = false;
     },
     async verifyPass() {
-      let host = `http://mticket.ddns.net:5001/verifyPass`;
+      let host = `http://${this.pcHost}:5001/verifyPass`;
       let isOk = await request({
         method: "post",
         url: host,
@@ -80,9 +105,9 @@ export default {
     margin: 20px;
     // width: 50vw;
   }
-    button{
-      flex-grow: 0;
-      width: 100px;
-    }
+  button {
+    flex-grow: 0;
+    width: 100px;
+  }
 }
 </style>

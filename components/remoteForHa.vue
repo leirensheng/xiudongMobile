@@ -469,9 +469,7 @@ export default {
     let res = uni.getSystemInfoSync();
     console.log(res);
     this.windowHeight = res.windowHeight;
-    setTimeout(() => {
-      console.log(this.skuIdToTypeMap);
-    }, 1000);
+
   },
   mounted() {},
   computed: {
